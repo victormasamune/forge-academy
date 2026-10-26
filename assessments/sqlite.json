@@ -1,0 +1,451 @@
+{
+  "courseId": "sqlite",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Estoque local com representação explícita",
+      "scenario": "Um aplicativo local recebe quantidade e preço em centavos. Os itens pertencem a categorias existentes e a baixa deve indicar se realmente encontrou quantidade suficiente.",
+      "requiredLessons": [
+        2,
+        4,
+        5,
+        6,
+        7,
+        9
+      ],
+      "skills": [
+        "Afinidade e STRICT",
+        "Integridade por conexão",
+        "RETURNING e unidades"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "A tabela normal aceita a string doze numa coluna de afinidade INTEGER. O produto exige inteiro não negativo. Qual contrato deve ser reforçado?",
+          "options": [
+            "Confiar que INTEGER em qualquer tabela rejeita todo texto.",
+            "Trocar o número por uma lista de palavras sem validação.",
+            "Remover CHECK porque STRICT valida qualquer regra de negócio.",
+            "Usar uma tabela STRICT compatível e declarar NOT NULL e CHECK para o domínio, testando a entrada."
+          ],
+          "answer": 3,
+          "explanation": "Afinidade não é rigidez geral. STRICT trata o tipo, enquanto obrigatoriedade e intervalo ainda precisam de constraints próprias.",
+          "reviewLessons": [
+            2,
+            5
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "A aplicação abriu uma conexão nova e aceitou categoria inexistente, apesar da cláusula REFERENCES. O que deve fazer nessa conexão e testar?",
+          "options": [
+            "Ativar foreign_keys antes da transação e verificar a rejeição da referência inválida.",
+            "Trocar a FK por ORDER BY id.",
+            "Mudar id para TEXT para ativar referências automaticamente.",
+            "Executar RETURNING sem configurar a verificação."
+          ],
+          "answer": 0,
+          "explanation": "A declaração da referência e a ativação por conexão precisam trabalhar juntas. Testar a tentativa inválida confirma a configuração.",
+          "reviewLessons": [
+            4,
+            6
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "UPDATE reduz 3 unidades apenas quando qtd>=3 e usa RETURNING. Nenhuma linha voltou. O preço é guardado em centavos inteiros. Qual interpretação é correta?",
+          "options": [
+            "A baixa ocorreu e o cliente pode cobrar três vezes um valor em reais sem converter.",
+            "A baixa não foi aplicada por ausência ou condição não atendida; o cliente deve tratar isso, mantendo a unidade monetária definida.",
+            "RETURNING vazio significa obrigatoriamente três linhas alteradas.",
+            "O preço muda de centavos para reais automaticamente ao executar UPDATE."
+          ],
+          "answer": 1,
+          "explanation": "Escrita condicionada precisa ter seu efeito confirmado. Representação numérica não elimina o dever de explicitar unidades na aplicação.",
+          "reviewLessons": [
+            7,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Catálogo com análise, JSON e busca",
+      "scenario": "O catálogo exibe totais por cliente, um acumulado por movimento e busca textual em títulos. A interface lê uma view de preços e uma trigger registra mudanças efetivas.",
+      "requiredLessons": [
+        10,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "skills": [
+        "Granularidade e janelas",
+        "Busca com contrato",
+        "Views e auditoria"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "O relatório precisa manter clientes sem pedidos e mostrar acumulado sem perder cada movimento. Qual combinação atende?",
+          "options": [
+            "INNER JOIN seguido de GROUP BY para garantir todas as linhas originais.",
+            "COUNT(*) sem examinar a parte nula e janela sem ordem.",
+            "LEFT JOIN com medida que trate ausência e função de janela com ordem/frame definidos para o detalhe.",
+            "LIMIT 1 por cliente para substituir o acumulado."
+          ],
+          "answer": 2,
+          "explanation": "A junção externa preserva o pai e a janela acrescenta medida ao detalhe. Agregar em grupos altera a granularidade e não é substituto automático.",
+          "reviewLessons": [
+            10,
+            13
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Uma opção de busca vem de JSON e o usuário pode digitar operadores de MATCH. Qual cuidado protege a interpretação do produto?",
+          "options": [
+            "Assumir que qualquer JSON é válido e MATCH é idêntico a LIKE.",
+            "Usar a string null como valor padrão para qualquer ausência.",
+            "Desligar FTS5 e anunciar que a busca continua funcionando sem outra implementação.",
+            "Validar o campo JSON e definir como a linguagem FTS5 será interpretada ou escapada, em vez de tratá-la como substring comum."
+          ],
+          "answer": 3,
+          "explanation": "Extrair um valor não valida todo o contrato; MATCH possui linguagem própria. Presença, tipo e sintaxe permitida precisam de decisões explícitas.",
+          "reviewLessons": [
+            14,
+            15
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "A view deve refletir preço atual, mas a auditoria só deve registrar mudanças efetivas. Como tratar UPDATE que repete o mesmo preço?",
+          "options": [
+            "Manter a view como consulta e condicionar o trigger à diferença entre OLD e NEW conforme a regra de NULL.",
+            "Copiar a view toda a cada leitura e auditar qualquer SELECT.",
+            "Guardar dois históricos para toda consulta da view.",
+            "Supor que uma view comum materializa e sincroniza sozinha uma cópia externa."
+          ],
+          "answer": 0,
+          "explanation": "A view define leitura; o trigger define efeito de escrita. A condição de mudança evita auditoria sem alteração de valor.",
+          "reviewLessons": [
+            16,
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Reserva concorrente em WAL",
+      "scenario": "Duas conexões usam um arquivo local. A aplicação exige uma reserva aberta por recurso, consulta por cliente e retomada explícita quando há disputa de escritor.",
+      "requiredLessons": [
+        19,
+        20,
+        22,
+        23,
+        25,
+        26
+      ],
+      "skills": [
+        "Índice parcial",
+        "Locks e snapshot",
+        "Plano por padrão de acesso"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "A tela consulta disponibilidade antes da reserva, mas duas requisições podem passar nessa checagem. Qual defesa deve existir na escrita?",
+          "options": [
+            "Apenas esperar um segundo no botão antes do INSERT.",
+            "Uma restrição de unicidade parcial para reservas abertas e uma unidade transacional que trate a recusa.",
+            "Desligar a transação para permitir duas reservas abertas.",
+            "Usar ORDER BY na checagem e dispensar a restrição."
+          ],
+          "answer": 1,
+          "explanation": "A consulta anterior pode ficar obsoleta. O índice único parcial protege a invariante no momento da escrita, com erro tratado pela aplicação.",
+          "reviewLessons": [
+            20,
+            23
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Em WAL, B mantém snapshot antigo de leitura e A já é escritor. B tenta iniciar outra escrita e recebe BUSY. Qual conclusão é correta?",
+          "options": [
+            "WAL garante dois escritores e BUSY pode ser ignorado como sucesso.",
+            "O snapshot prova que A perdeu sua alteração.",
+            "WAL permite coexistência de leitura e escrita, mas não dois escritores; a aplicação precisa encerrar/reavaliar a unidade e limitar retries.",
+            "A solução é apagar -wal enquanto A escreve."
+          ],
+          "answer": 2,
+          "explanation": "A visão do leitor e a disputa pelo escritor são contratos distintos. WAL não remove a exclusividade de escrita nem o tratamento de erro.",
+          "reviewLessons": [
+            25,
+            26
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "A consulta filtra cliente_id e ordena por instante,id. Um índice composto foi criado. O que deve orientar sua avaliação?",
+          "options": [
+            "Quantidade de letras no nome do índice.",
+            "Um tempo fixo deduzido do número interno do plano.",
+            "Supor que qualquer índice elimina toda leitura.",
+            "Correspondência com filtro/ordem, resultado correto e estratégia observada em EQP, sem depender do texto exato do plano como API."
+          ],
+          "answer": 3,
+          "explanation": "A ordem do índice acompanha o acesso e EQP é diagnóstico. Formato e escolha de plano podem mudar; meça o trabalho relevante.",
+          "reviewLessons": [
+            19,
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Migração e recuperação verificáveis",
+      "scenario": "O aplicativo migra seu esquema, recebe filtros do usuário e precisa produzir uma cópia que possa ser aberta num diretório separado com dados e regras conferidos.",
+      "requiredLessons": [
+        28,
+        29,
+        30,
+        31,
+        32,
+        33
+      ],
+      "skills": [
+        "Binding e testes",
+        "Versionamento",
+        "Cópia independente"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Uma entrada com aspas foi ligada por placeholder e não alterou a consulta. Qual teste ainda é necessário para confiar no caminho de erro?",
+          "options": [
+            "Testar também a entrada legítima e confirmar que falhas esperadas têm causa e estado final corretos.",
+            "Tratar qualquer exceção como aprovação de todos os testes.",
+            "Concatenar a entrada para comparar desempenho sem controle.",
+            "Remover o fechamento da conexão porque binding o faz automaticamente."
+          ],
+          "answer": 0,
+          "explanation": "Binding resolve a separação de valores, mas testes devem distinguir sucesso, falha prevista e erro inesperado. Recursos também precisam de fechamento.",
+          "reviewLessons": [
+            28,
+            30
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "user_version foi alterado, mas a coluna nova não apareceu na cópia reaberta. O que o procedimento deveria garantir?",
+          "options": [
+            "Supor que user_version executa o ALTER por conta própria.",
+            "Aplicar a migração real e sua versão de forma coordenada, depois copiar e conferir o esquema/dados no destino.",
+            "Editar sqlite_schema manualmente para fingir a coluna.",
+            "Declarar recuperação válida só porque existe o arquivo."
+          ],
+          "answer": 1,
+          "explanation": "O inteiro é metadado da aplicação, não um motor de migrations. A cópia precisa preservar uma versão realmente aplicada e ser inspecionada.",
+          "reviewLessons": [
+            29,
+            31
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "VACUUM INTO gerou um destino novo. integrity_check retorna ok, mas a regra de domínio ainda não foi conferida. Qual sequência completa a evidência?",
+          "options": [
+            "Apagar a origem antes de qualquer leitura.",
+            "Assumir que ok conhece toda regra do produto.",
+            "Abrir o destino, verificar também referências e consultas de negócio com resultados conhecidos.",
+            "Copiar só o arquivo -shm e descartar a cópia gerada."
+          ],
+          "answer": 2,
+          "explanation": "Integridade estrutural é uma evidência; referências e invariantes do produto têm verificações próprias. A cópia precisa ser lida.",
+          "reviewLessons": [
+            32,
+            33
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Aplicativo local de reservas com recuperação",
+    "scenario": "Construa a persistência de um agendador local de recursos. O cliente pode ser uma CLI Python; todos os arquivos de ensaio devem ficar em diretório de laboratório identificado.",
+    "requirements": [
+      "Domínio explícito: tabelas STRICT compatíveis, unidades documentadas, chaves e referências habilitadas por conexão.",
+      "Reserva protegida: no máximo uma reserva aberta por recurso e alteração condicional que confirme seu efeito.",
+      "Concorrência observada: duas conexões reproduzem snapshot WAL e BUSY; retries são limitados e transações são curtas.",
+      "Leitura eficiente: relatórios preservam pais sem filhos e um índice é justificado por consulta, EQP e medição comparável.",
+      "Cliente evolutivo: valores parametrizados, conexões fechadas, migrations versionadas e testes de erro que conferem causa e estado.",
+      "Cópia recuperável: backup por API ou VACUUM INTO, reabertura independente e comparação de integridade, referências e dados conhecidos."
+    ],
+    "deliverables": [
+      "DDL, contrato das unidades e lista de capacidades do build SQLite.",
+      "CLI Python e scripts de migration versionados.",
+      "Testes reproduzíveis com duas conexões, casos inválidos e relatório de planos.",
+      "Runbook de cópia/reabertura com saídas e limites da implantação escolhida."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Domínio explícito",
+        "description": "Domínio explícito: tabelas STRICT compatíveis, unidades documentadas, chaves e referências habilitadas por conexão.",
+        "reviewLessons": [
+          2,
+          4,
+          5,
+          6,
+          9
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Reserva protegida",
+        "description": "Reserva protegida: no máximo uma reserva aberta por recurso e alteração condicional que confirme seu efeito.",
+        "reviewLessons": [
+          7,
+          20,
+          23
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Concorrência observada",
+        "description": "Concorrência observada: duas conexões reproduzem snapshot WAL e BUSY; retries são limitados e transações são curtas.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Leitura eficiente",
+        "description": "Leitura eficiente: relatórios preservam pais sem filhos e um índice é justificado por consulta, EQP e medição comparável.",
+        "reviewLessons": [
+          10,
+          19,
+          22
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Cliente evolutivo",
+        "description": "Cliente evolutivo: valores parametrizados, conexões fechadas, migrations versionadas e testes de erro que conferem causa e estado.",
+        "reviewLessons": [
+          28,
+          29,
+          30
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Cópia recuperável",
+        "description": "Cópia recuperável: backup por API ou VACUUM INTO, reabertura independente e comparação de integridade, referências e dados conhecidos.",
+        "reviewLessons": [
+          31,
+          32,
+          33,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Reserva e recusa concorrente",
+        "setup": "Recurso 1 sem reserva; duas conexões reais ao mesmo arquivo local.",
+        "input": "Tentar duas reservas abertas do recurso e concluir as transações conforme o protocolo.",
+        "expected": "Só uma reserva aberta persiste; a segunda recebe recusa tratada e não há efeito parcial.",
+        "reviewLessons": [
+          20,
+          23,
+          25,
+          30
+        ]
+      },
+      {
+        "title": "Snapshot de leitura",
+        "setup": "WAL confirmado; B abre transação e lê versão 1.",
+        "input": "A confirma versão 2; B lê antes e depois de encerrar seu snapshot.",
+        "expected": "B observa 1 dentro da transação antiga e 2 numa leitura posterior ao encerramento.",
+        "reviewLessons": [
+          23,
+          25,
+          26
+        ]
+      },
+      {
+        "title": "Migração e reabertura",
+        "setup": "Base na versão anterior com fixture conhecida e destino novo.",
+        "input": "Migrar, copiar pelo mecanismo escolhido, fechar e abrir a cópia em outra conexão.",
+        "expected": "Versão, esquema, dados e regras conferem no destino; não basta o nome do arquivo existir.",
+        "reviewLessons": [
+          29,
+          31,
+          32,
+          33
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "prompt": "A interface impede clique duplo, mas o banco aceita duas reservas abertas após duas conexões. O que precisa ser revisto?",
+        "options": [
+          "Somente a cor do botão.",
+          "Apenas o nome do arquivo de backup.",
+          "A contagem aproximada de tabelas.",
+          "A restrição no banco e o protocolo transacional/erro da escrita concorrente."
+        ],
+        "answer": 3,
+        "explanation": "A interface não coordena todas as requisições. A defesa final precisa existir na escrita e ser testada sob disputa.",
+        "reviewLessons": [
+          20,
+          23,
+          25
+        ]
+      },
+      {
+        "id": "q2",
+        "prompt": "O projeto copia apenas .db enquanto há WAL ativo e declara recuperação sem reabertura. Qual requisito está faltando?",
+        "options": [
+          "Cópia coordenada pelo mecanismo apropriado e prova de leitura/validação do destino.",
+          "Mais campos na tabela de usuários.",
+          "Um checkpoint anunciado como cópia remota.",
+          "Desligar FKs para evitar divergência no restore."
+        ],
+        "answer": 0,
+        "explanation": "Páginas confirmadas podem estar no WAL. A integridade da cópia e sua utilidade precisam de procedimento e conferência reais.",
+        "reviewLessons": [
+          27,
+          31,
+          33
+        ]
+      },
+      {
+        "id": "q3",
+        "prompt": "Os testes passam só em ordem fixa porque reutilizam o arquivo deixado pelo teste anterior. Qual melhoria torna a evidência mais confiável?",
+        "options": [
+          "Guardar a senha no arquivo de fixture.",
+          "Isolar fixtures, controlar migrations e permitir que cada cenário prepare e confira seu próprio estado.",
+          "Ignorar falhas da primeira execução.",
+          "Trocar assertions por mensagens de sucesso incondicionais."
+        ],
+        "answer": 1,
+        "explanation": "Testes devem separar implementação correta de efeitos acidentais do ambiente. Estado escondido reduz reprodutibilidade.",
+        "reviewLessons": [
+          29,
+          30,
+          36
+        ]
+      }
+    ]
+  }
+}

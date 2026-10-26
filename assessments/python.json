@@ -1,0 +1,466 @@
+{
+  "courseId": "python",
+  "combos": [
+    {
+      "title": "Importação de pedidos sem estado acidental",
+      "scenario": "Um script lê pedidos de um arquivo JSON UTF-8, agrupa por código e calcula totais. Registros inválidos devem ser recusados sem modificar pedidos já carregados nem compartilhar listas entre chamadas.",
+      "requiredLessons": [
+        2,
+        4,
+        5,
+        6,
+        8,
+        9
+      ],
+      "skills": [
+        "Mutabilidade",
+        "Contratos",
+        "JSON e exceções"
+      ],
+      "questions": [
+        {
+          "prompt": "A função usa def carregar(registro, erros=[]), acrescenta uma mensagem à lista e é chamada para dois arquivos. O segundo recebe erros do primeiro. Qual ajuste preserva independência por chamada?",
+          "options": [
+            "Usar erros=None, criar a lista dentro da função quando necessário e retornar explicitamente o resultado da importação.",
+            "Manter a lista padrão e chamar clear em qualquer momento, mesmo com consumidores usando-a.",
+            "Trocar a lista por variável global.",
+            "Ignorar erros do segundo arquivo para que a saída pareça limpa."
+          ],
+          "answer": 0,
+          "explanation": "O argumento padrão mutável é criado uma vez e reutilizado. O contrato precisa distinguir uma lista fornecida deliberadamente de uma lista nova por execução.",
+          "reviewLessons": [
+            4,
+            6,
+            8
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "copia = pedidos[:] copia a lista, mas copia[0][\"status\"] = \"pago\" também muda pedidos[0]. Como produzir uma alteração candidata independente para esse registro simples?",
+          "options": [
+            "Confiar que qualquer slice realiza cópia profunda de todo objeto.",
+            "Criar novos dicionários para os registros que serão alterados e só substituir o estado após validar os dados.",
+            "Alterar a entrada original e capturar uma exceção depois.",
+            "Converter a lista em string e considerar o objeto validado."
+          ],
+          "answer": 1,
+          "explanation": "A cópia da lista é rasa: os dicionários continuam compartilhados. Uma mudança candidata deve copiar os níveis mutáveis relevantes antes do efeito.",
+          "reviewLessons": [
+            4,
+            5,
+            6
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "Um arquivo contém JSON sintaticamente inválido; outro nem pode ser aberto. Qual tratamento mantém contexto útil sem esconder defeitos inesperados?",
+          "options": [
+            "Capturar BaseException e retornar lista vazia para qualquer problema.",
+            "Considerar um arquivo ausente como pedido confirmado.",
+            "Tratar as falhas esperadas de leitura e de parsing separadamente, associar o caminho ao diagnóstico e preservar a causa quando traduzir o erro.",
+            "Imprimir sucesso no finally independentemente do resultado."
+          ],
+          "answer": 2,
+          "explanation": "Falha de acesso e conteúdo inválido têm causas e ações diferentes. Lista vazia não deve fingir que a importação funcionou.",
+          "reviewLessons": [
+            6,
+            8,
+            9
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-1"
+    },
+    {
+      "title": "Relatório incremental com recursos fechados",
+      "scenario": "Um relatório percorre milhares de movimentos, valida cada registro e produz uma soma por categoria. O consumidor pode encerrar cedo e os testes devem conferir resultado, erro e liberação do arquivo.",
+      "requiredLessons": [
+        10,
+        11,
+        13,
+        15,
+        16,
+        18
+      ],
+      "skills": [
+        "Invariantes",
+        "Generators",
+        "Recursos e testes"
+      ],
+      "questions": [
+        {
+          "prompt": "A função recebe movimentos: Iterable[Movimento]. Isso garante em runtime que cada quantidade seja positiva?",
+          "options": [
+            "Sim, Python rejeita automaticamente qualquer quantidade negativa ao chamar a função.",
+            "Sim, Iterable valida todas as linhas antes de iterar.",
+            "Não, porque anotações obrigam usar somente listas.",
+            "Não; type hints descrevem o contrato, e os dados ainda precisam de validação de domínio na fronteira ou no modelo."
+          ],
+          "answer": 3,
+          "explanation": "Tipagem estática e verificação de valores cumprem papéis diferentes. O modelo deve rejeitar estados inválidos independentemente da origem dos dados.",
+          "reviewLessons": [
+            10,
+            11,
+            16
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Um generator mantém um arquivo aberto e a tela só consome as cinco primeiras linhas. Qual desenho permite encerrar esse recurso de forma previsível?",
+          "options": [
+            "Definir quem possui e fecha o recurso, usar contexto de duração delimitada e encerrar explicitamente o iterador quando o consumo for interrompido.",
+            "Esperar que a coleta de lixo ocorra imediatamente em qualquer implementação.",
+            "Carregar todo o arquivo para evitar pensar no ciclo de vida.",
+            "Deixar o arquivo aberto porque generators não usam recursos."
+          ],
+          "answer": 0,
+          "explanation": "Processamento incremental não elimina a posse do recurso. Interrupção do consumidor precisa fazer parte do protocolo de fechamento.",
+          "reviewLessons": [
+            13,
+            15,
+            18
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "O teste lê um arquivo do computador do autor e passa, mas falha em outra máquina. Como transformar esse caso em regressão reproduzível?",
+          "options": [
+            "Usar o caminho absoluto do autor em todas as máquinas.",
+            "Criar uma fixture pequena num diretório temporário, escrever o conteúdo conhecido e verificar a soma e o erro esperado sem depender de arquivos externos.",
+            "Ignorar a falha em outro sistema.",
+            "Testar somente se não ocorreu SyntaxError."
+          ],
+          "answer": 1,
+          "explanation": "O ensaio deve controlar sua entrada e seus recursos. Uma fixture mínima permite observar a regra e manter o contraexemplo encontrado.",
+          "reviewLessons": [
+            15,
+            16,
+            18
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-2"
+    },
+    {
+      "title": "CLI e cliente HTTP com confirmação SQLite",
+      "scenario": "Uma ferramenta recebe argumentos, consulta um serviço HTTP local e registra uma confirmação no SQLite. Resposta 404, JSON inválido e falha de escrita devem produzir resultados distintos e não deixar meia operação.",
+      "requiredLessons": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        27
+      ],
+      "skills": [
+        "CLI",
+        "HTTP",
+        "SQLite e composição"
+      ],
+      "questions": [
+        {
+          "prompt": "O servidor respondeu HTTP 404 com corpo JSON válido. A CLI pode tratá-lo como sucesso só porque json.loads funcionou?",
+          "options": [
+            "Sim, JSON válido implica operação bem-sucedida.",
+            "Sim, qualquer resposta HTTP confirma o domínio.",
+            "Não; deve interpretar o status e o contrato do corpo antes de registrar a confirmação e escolher o código de saída apropriado.",
+            "Não, porque 404 nunca pode ter corpo."
+          ],
+          "answer": 2,
+          "explanation": "Transporte, status e conteúdo são camadas distintas. Parsing bem-sucedido não autoriza efeitos no banco.",
+          "reviewLessons": [
+            20,
+            22,
+            24
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "O nome recebido contém uma aspa e texto semelhante a SQL. Qual construção conserva o valor como dado ao consultar SQLite?",
+          "options": [
+            "Concatenar o nome entre aspas e confiar no JSON.",
+            "Usar f-string para qualquer nome e chamar commit logo depois.",
+            "Remover todas as aspas e alterar o nome silenciosamente.",
+            "Usar placeholder e parâmetros do driver, mantendo o valor separado da estrutura do comando."
+          ],
+          "answer": 3,
+          "explanation": "O binding representa valores sem incorporá-los à sintaxe. Transação não corrige uma consulta construída por concatenação.",
+          "reviewLessons": [
+            22,
+            23,
+            24
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "Duas tarefas de um TaskGroup dependem da importação; uma falha antes da confirmação no banco. O que deve ser coordenado?",
+          "options": [
+            "O ciclo de vida das tarefas e o limite transacional, de modo que uma falha não seja ignorada nem confirme parte da unidade de negócio.",
+            "Criar tarefas sem aguardar e imprimir sucesso no fim da função principal.",
+            "Presumir que TaskGroup torna SQLite e HTTP uma única transação distribuída.",
+            "Confirmar cada linha antes de validar as respostas restantes."
+          ],
+          "answer": 0,
+          "explanation": "Concorrência estruturada ajuda a observar término e falha; atomicidade dos dados continua exigindo uma transação e um protocolo para efeitos externos.",
+          "reviewLessons": [
+            22,
+            24,
+            27
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-3"
+    },
+    {
+      "title": "API, fila limitada e recuperação de operação",
+      "scenario": "A mesma regra passa a servir CLI e uma API WSGI didática. Trabalho externo entra numa fila limitada; duplicatas, autorização, tempo de espera e medição precisam ter contratos explícitos.",
+      "requiredLessons": [
+        24,
+        28,
+        29,
+        30,
+        31,
+        35
+      ],
+      "skills": [
+        "Fronteiras",
+        "Backpressure",
+        "Idempotência e diagnóstico"
+      ],
+      "questions": [
+        {
+          "prompt": "A requisição traz usuario_id no JSON e solicita um registro de outra pessoa. Qual identidade deve orientar a autorização antes de alterar dados?",
+          "options": [
+            "Sempre o usuario_id do JSON, porque o cliente conhece sua conta.",
+            "A identidade autenticada pelo mecanismo de acesso, confrontada com o dono real do recurso; o corpo não pode escolher quem está autenticado.",
+            "O primeiro usuário encontrado no banco.",
+            "A identidade de qualquer requisição anterior no processo."
+          ],
+          "answer": 1,
+          "explanation": "Dados externos não definem a identidade verificada. A decisão de autorização precisa ocorrer sobre o recurso solicitado antes dos efeitos.",
+          "reviewLessons": [
+            29,
+            30
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "O produtor gera mil tarefas por segundo e o consumidor trata cem. A fila cresce sem limite. Qual correção combina desempenho e encerramento?",
+          "options": [
+            "Adicionar uma lista global sem limite para não perder o retorno do produtor.",
+            "Diminuir o intervalo de coleta de lixo e ignorar a taxa de entrada.",
+            "Definir capacidade e política de espera/recusa, propagar cancelamento e medir tamanho da fila e latência sob carga controlada.",
+            "Criar mais tarefas ilimitadamente, sem esperar seu término."
+          ],
+          "answer": 2,
+          "explanation": "A diferença sustentada de taxas exige pressão de fluxo ou recusa definida. Medição e limites de ciclo de vida evitam retenção sem controle.",
+          "reviewLessons": [
+            28,
+            31
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A confirmação SQLite terminou, mas a conexão HTTP caiu antes da resposta. Como a próxima tentativa reconhece o efeito anterior após reiniciar o processo?",
+          "options": [
+            "Guardar a chave apenas num set em memória e reiniciar para restaurá-la.",
+            "Gerar chave diferente a cada retry.",
+            "Presumir que falha de resposta significa rollback.",
+            "Consultar uma chave idempotente persistida atomicamente com a confirmação e conferir se o conteúdo da repetição corresponde à operação original."
+          ],
+          "answer": 3,
+          "explanation": "O resultado é incerto para o cliente, mas o banco pode registrar operação e efeito juntos. Memória do processo não garante reconhecimento após reinício.",
+          "reviewLessons": [
+            24,
+            28,
+            35
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-4"
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Central de empréstimos de ferramentas em Python",
+    "scenario": "Crie uma aplicação local para emprestar e devolver ferramentas, com CLI e API didática usando a mesma regra. Preserve histórico, evite baixa duplicada e demonstre recuperação de uma cópia SQLite.",
+    "requirements": [
+      "Validar identificadores, quantidades e transições por funções/classes com invariantes, sem confiar somente em type hints.",
+      "Usar SQLite com queries parametrizadas, referências e confirmação atômica de empréstimo/estoque/operação.",
+      "Expor os mesmos casos de uso por argparse e HTTP local, traduzindo falhas em códigos de saída ou status definidos.",
+      "Fechar arquivos e conexões, limitar a fila de tarefas e propagar timeout/cancelamento até o trabalho cooperativo.",
+      "Testar fronteiras, duplicação, autorização e falha intermediária com fixtures isoladas e dependências controladas.",
+      "Fornecer pyproject, ambiente reproduzível, logs sem segredos, medições justificadas e backup realmente reaberto."
+    ],
+    "deliverables": [
+      "Pacote Python com CLI, API e camada de persistência separadas.",
+      "Suíte de testes com fixtures temporárias e comandos de execução.",
+      "README de ambiente, contratos e decisões de concorrência.",
+      "Relatório de backup/restauração e limites operacionais observados."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Modelo e entrada",
+        "description": "Validar identificadores, quantidades e transições por funções/classes com invariantes, sem confiar somente em type hints.",
+        "reviewLessons": [
+          6,
+          10,
+          11,
+          30
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Persistência transacional",
+        "description": "Usar SQLite com queries parametrizadas, referências e confirmação atômica de empréstimo/estoque/operação.",
+        "reviewLessons": [
+          23,
+          24,
+          35
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Fronteiras reutilizáveis",
+        "description": "Expor os mesmos casos de uso por argparse e HTTP local, traduzindo falhas em códigos de saída ou status definidos.",
+        "reviewLessons": [
+          20,
+          22,
+          29,
+          34
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Recursos e concorrência",
+        "description": "Fechar arquivos e conexões, limitar a fila de tarefas e propagar timeout/cancelamento até o trabalho cooperativo.",
+        "reviewLessons": [
+          15,
+          25,
+          27,
+          28
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Testes observáveis",
+        "description": "Testar fronteiras, duplicação, autorização e falha intermediária com fixtures isoladas e dependências controladas.",
+        "reviewLessons": [
+          16,
+          17,
+          18,
+          30,
+          35
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Entrega e recuperação",
+        "description": "Fornecer pyproject, ambiente reproduzível, logs sem segredos, medições justificadas e backup realmente reaberto.",
+        "reviewLessons": [
+          19,
+          21,
+          31,
+          32,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Empréstimo confirmado",
+        "setup": "Ferramenta F possui 4 unidades disponíveis e operação emp-1 é inédita.",
+        "input": "Emprestar 2 unidades com emp-1.",
+        "expected": "Disponibilidade 2, um empréstimo e resultado da operação persistidos juntos.",
+        "reviewLessons": [
+          10,
+          23,
+          24,
+          35
+        ]
+      },
+      {
+        "title": "Falha sem efeito parcial",
+        "setup": "Ferramenta F possui 4 unidades; erro injetado após a baixa e antes de inserir histórico.",
+        "input": "Executar empréstimo e consultar a base depois do erro.",
+        "expected": "Disponibilidade permanece 4 e não existe empréstimo confirmado pela tentativa.",
+        "reviewLessons": [
+          16,
+          18,
+          24
+        ]
+      },
+      {
+        "title": "Repetição e reabertura",
+        "setup": "emp-1 já confirmou 2 unidades; copie a base por procedimento consistente e reabra o destino.",
+        "input": "Repetir emp-1 com mesmo conteúdo no estado recuperado.",
+        "expected": "Nenhuma segunda baixa; destino contém o empréstimo e os invariantes continuam válidos.",
+        "reviewLessons": [
+          23,
+          24,
+          35,
+          36
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "O projeto usa annotations, mas aceita quantidade negativa na API. Qual camada de garantia falta?",
+        "options": [
+          "Validação de valores e invariantes antes da transação, compartilhada pelos casos de uso.",
+          "Mais imports de typing apenas.",
+          "Converter toda quantidade em string.",
+          "Adicionar sleep antes do commit."
+        ],
+        "answer": 0,
+        "explanation": "Type hints não tornam valores de entrada válidos automaticamente; as fronteiras devem aplicar o contrato.",
+        "reviewLessons": [
+          10,
+          11,
+          30,
+          34
+        ],
+        "id": "q1"
+      },
+      {
+        "prompt": "Os testes substituem o relógio, mas ainda usam uma API externa aleatória. O resultado é totalmente determinístico?",
+        "options": [
+          "Sim, controlar uma dependência controla todas.",
+          "Não; a fronteira HTTP também precisa de respostas controladas para os cenários testados.",
+          "Sim, rede pública é sempre reproduzível.",
+          "Não, porque não se pode testar HTTP."
+        ],
+        "answer": 1,
+        "explanation": "Cada fonte de variação relevante deve ter contrato e controle no teste.",
+        "reviewLessons": [
+          17,
+          18,
+          22
+        ],
+        "id": "q2"
+      },
+      {
+        "prompt": "Um backup foi criado, mas as conexões do destino nunca foram abertas. Qual critério do projeto ainda não foi demonstrado?",
+        "options": [
+          "Que o arquivo possui algum nome.",
+          "Que a CLI aceita --help.",
+          "Recuperação dos dados e invariantes na cópia, com verificação e duração registradas.",
+          "Que Python permite imports."
+        ],
+        "answer": 2,
+        "explanation": "A comprovação exige leitura do estado recuperado, não só um arquivo produzido.",
+        "reviewLessons": [
+          23,
+          24,
+          36
+        ],
+        "id": "q3"
+      }
+    ]
+  }
+}

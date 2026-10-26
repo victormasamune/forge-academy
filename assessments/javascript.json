@@ -1,0 +1,468 @@
+{
+  "courseId": "javascript",
+  "combos": [
+    {
+      "title": "Relatório de carrinho sem alterar a entrada",
+      "scenario": "Um carrinho chega com preços textuais, produtos identificados por SKU e objetos compartilhados. O relatório deve validar números, calcular o total e ordenar uma cópia sem modificar o carrinho em uso.",
+      "requiredLessons": [
+        2,
+        4,
+        7,
+        8,
+        9
+      ],
+      "skills": [
+        "Conversão",
+        "Referências",
+        "Coleções e relatório"
+      ],
+      "questions": [
+        {
+          "prompt": "O preço recebido é \"12.50\" e a quantidade é 2. Qual sequência evita somar texto e mantém a validação na regra?",
+          "options": [
+            "Converter o preço explicitamente, verificar número finito e domínio e só então calcular numa função que retorna o total.",
+            "Usar preço + quantidade, porque + sempre converte tudo em número.",
+            "Confiar que qualquer string JSON é um preço válido.",
+            "Ordenar o carrinho antes de validar e tratar NaN como zero silenciosamente."
+          ],
+          "answer": 0,
+          "explanation": "Conversão e validação são etapas distintas. O operador + pode concatenar; um resultado inválido não deve virar total aceito.",
+          "reviewLessons": [
+            2,
+            4,
+            9
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "copia = [...carrinho] e copia[0].quantidade++ mudam o objeto observado pelo carrinho original. Qual é a explicação e a correção para esse campo simples?",
+          "options": [
+            "O spread realizou cópia profunda e o motor errou.",
+            "O spread copiou o array, mas manteve as referências aos objetos; criar também um novo objeto para o item a alterar.",
+            "Arrays nunca contêm referências a objetos.",
+            "É necessário transformar todos os objetos em variáveis globais."
+          ],
+          "answer": 1,
+          "explanation": "Copiar o contêiner não copia recursivamente seus elementos. O nível mutável alterado precisa ser independente para preservar a entrada.",
+          "reviewLessons": [
+            7,
+            8,
+            9
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "Uma Map armazena SKU A com quantidade 0. if (!map.get(\"A\")) informa que ele não existe. Como preservar a distinção entre presença e quantidade?",
+          "options": [
+            "Tratar zero como ausência em qualquer domínio.",
+            "Apagar a chave quando get retornar falso, sem outra regra.",
+            "Consultar map.has(\"A\") para presença e validar separadamente o valor retornado por get.",
+            "Usar o tamanho do nome do SKU como quantidade."
+          ],
+          "answer": 2,
+          "explanation": "Valor falsy não equivale a chave ausente. O contrato do catálogo deve separar identidade e valor do estoque.",
+          "reviewLessons": [
+            2,
+            8,
+            9
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-1"
+    },
+    {
+      "title": "Modelo testável com fronteira de entrada",
+      "scenario": "Um módulo ESM modela inscrições e depende de um repositório injetado. Entrada inválida não pode alterar o estado; os testes devem demonstrar a regra e não apenas a existência de uma classe.",
+      "requiredLessons": [
+        11,
+        12,
+        13,
+        16,
+        17,
+        18
+      ],
+      "skills": [
+        "Invariantes",
+        "Módulos",
+        "Validação e testes"
+      ],
+      "questions": [
+        {
+          "prompt": "A função de inscrição captura qualquer exceção e retorna sucesso vazio. O teste só verifica que não houve throw. Qual teste e tratamento são mais úteis?",
+          "options": [
+            "Continuar retornando sucesso para simplificar a interface.",
+            "Testar apenas o nome da função.",
+            "Remover toda validação porque o código é ESM.",
+            "Verificar a recusa esperada e a ausência de alteração, traduzindo só falhas conhecidas e preservando causas inesperadas."
+          ],
+          "answer": 3,
+          "explanation": "Um teste precisa distinguir sucesso real, recusa de domínio e defeito. Esconder exceção pode confirmar uma operação que não ocorreu.",
+          "reviewLessons": [
+            16,
+            17,
+            18
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "O domínio chama diretamente console e um armazenamento global. Como permitir o mesmo caso de uso em CLI e interface web com testes controlados?",
+          "options": [
+            "Receber dependências por contratos pequenos e retornar um resultado que cada adaptador apresenta no seu ambiente.",
+            "Copiar o método para cada tela e manter regras separadas.",
+            "Expor toda variável do módulo como global.",
+            "Guardar o elemento DOM dentro de cada entidade de domínio."
+          ],
+          "answer": 0,
+          "explanation": "Composição separa a decisão do efeito externo e da apresentação. O módulo pode ser testado com um repositório controlado.",
+          "reviewLessons": [
+            11,
+            12,
+            13,
+            18
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A entrada JSON contém status \"concluida\" e quantidade -2; a sintaxe JSON é válida. Em que momento a entidade deve rejeitar esses valores?",
+          "options": [
+            "Depois de salvar e enviar resposta 200.",
+            "Na fronteira de validação e nas operações que preservam o invariante, antes de salvar ou confirmar a transição.",
+            "Nunca, porque JSON válido significa domínio válido.",
+            "Somente quando o usuário atualizar a página."
+          ],
+          "answer": 1,
+          "explanation": "Formato válido não prova regra de negócio. Estados e quantidades precisam de validação explícita antes dos efeitos.",
+          "reviewLessons": [
+            11,
+            17,
+            18
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-2"
+    },
+    {
+      "title": "Formulário acessível e resposta HTTP segura",
+      "scenario": "Uma tela envia inscrições a uma API local. Ela deve bloquear submissões duplicadas durante a espera, explicar erros por texto e exibir nomes recebidos sem interpretá-los como HTML.",
+      "requiredLessons": [
+        19,
+        21,
+        23,
+        24,
+        25,
+        27
+      ],
+      "skills": [
+        "Assincronia",
+        "Acessibilidade",
+        "HTTP e renderização segura"
+      ],
+      "questions": [
+        {
+          "prompt": "fetch resolveu normalmente com status 409. A tela pode anunciar inscrição concluída só porque a Promise resolveu?",
+          "options": [
+            "Sim, fetch rejeita automaticamente qualquer status fora de 200.",
+            "Sim, uma Promise resolvida prova confirmação de negócio.",
+            "Não; deve verificar o status/contrato da resposta e apresentar o conflito de modo acessível.",
+            "Não, porque 409 nunca pode retornar JSON."
+          ],
+          "answer": 2,
+          "explanation": "fetch pode resolver em erros HTTP. A interface precisa distinguir transporte, status e resultado do domínio e comunicar o estado além de cor.",
+          "reviewLessons": [
+            19,
+            24,
+            25
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "O servidor devolveu o nome \"<img src=x onerror=...>\". Qual atualização mostra esse nome como dado e mantém a mensagem compreensível?",
+          "options": [
+            "Montar innerHTML com o nome para preservar o formato recebido.",
+            "Executar eval no texto antes de inserir.",
+            "Esconder o erro apenas mudando o botão para vermelho.",
+            "Atribuir o nome por textContent e publicar a mensagem de resultado numa região de status adequada."
+          ],
+          "answer": 3,
+          "explanation": "Texto não confiável não deve ser interpretado como marcação executável. A comunicação de estado também deve chegar a quem usa leitor de tela.",
+          "reviewLessons": [
+            23,
+            24,
+            27
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "O usuário sai da tela enquanto a requisição demora. Qual desenho evita uma atualização tardia em estado já descartado?",
+          "options": [
+            "Propagar cancelamento quando suportado e tratar o encerramento da tela, verificando se o resultado ainda pertence à interação ativa.",
+            "Deixar toda requisição atualizar qualquer tela para sempre.",
+            "Usar um timeout na aparência e supor que isso interrompeu o trabalho remoto.",
+            "Criar requisições ilimitadas para tentar obter uma resposta rápida."
+          ],
+          "answer": 0,
+          "explanation": "Limite de espera não garante parada do servidor. A interface precisa coordenar ciclo de vida, cancelamento e validade do resultado recebido.",
+          "reviewLessons": [
+            19,
+            21,
+            23,
+            25
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-3"
+    },
+    {
+      "title": "API com arquivos, pressão de fluxo e repetição",
+      "scenario": "O backend local processa um arquivo grande, publica um resultado HTTP e mantém operações idempotentes. O serviço deve observar limites, conservar resultados após reinício quando prometido e medir antes de otimizar.",
+      "requiredLessons": [
+        28,
+        29,
+        31,
+        32,
+        34,
+        35
+      ],
+      "skills": [
+        "Streams",
+        "Fronteiras",
+        "Diagnóstico e idempotência"
+      ],
+      "questions": [
+        {
+          "prompt": "O destino grava mais devagar do que a origem produz dados. Qual composição impede que o processo acumule todo o arquivo em memória?",
+          "options": [
+            "Transformar cada chunk em tarefa sem aguardar nem limitar.",
+            "Usar pipeline/streams com pressão do consumidor, tratar erros de todas as etapas e definir limites de recursos.",
+            "Ler tudo para uma variável global antes de iniciar a gravação.",
+            "Ignorar erros de escrita e contar bytes lidos como sucesso."
+          ],
+          "answer": 1,
+          "explanation": "Backpressure conecta o ritmo das etapas. Leitura concluída não comprova gravação e retenção ilimitada pode esgotar memória.",
+          "reviewLessons": [
+            28,
+            29,
+            34
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Um cálculo de CPU bloqueia a API. O que justifica mover essa etapa para worker threads?",
+          "options": [
+            "Qualquer uso de await prova paralelismo de CPU.",
+            "Workers tornam desnecessária a validação dos resultados.",
+            "Uma medição mostra custo de CPU relevante; o desenho controla mensagens, falhas e término do worker e compara o resultado correto.",
+            "Criar um worker por elemento sem limite sempre melhora desempenho."
+          ],
+          "answer": 2,
+          "explanation": "O uso de workers deve responder a uma evidência de custo e incluir ciclo de vida e limite. Assincronia sozinha não torna cálculo pesado paralelo.",
+          "reviewLessons": [
+            31,
+            32,
+            34
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A chave de confirmação só existe numa Map em memória. Depois de reiniciar, o mesmo pedido baixa estoque outra vez. Qual promessa estava incorreta?",
+          "options": [
+            "A de que Map pode guardar chaves.",
+            "A de que HTTP pode enviar JSON.",
+            "A de que arrays possuem tamanho.",
+            "A de deduplicação durável após reinício; operação e efeito precisam de persistência consistente para essa garantia."
+          ],
+          "answer": 3,
+          "explanation": "Uma demonstração em memória tem limite de processo. Garantia de repetição atravessando reinício exige estado durável e um limite atômico adequado.",
+          "reviewLessons": [
+            28,
+            34,
+            35
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-4"
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Portal local de inscrições em JavaScript",
+    "scenario": "Entregue uma interface web acessível e uma API local para gerenciar vagas de oficinas. Duas pessoas podem disputar a última vaga e uma requisição pode ser repetida depois de resultado incerto.",
+    "requirements": [
+      "Validar capacidade, identidade da inscrição e transições por um caso de uso compartilhado, sem misturar DOM e regra.",
+      "Implementar formulário com rótulos, foco, mensagens de status e recuperação de erro sem depender de cor ou mouse.",
+      "Aplicar método, rota, limite de corpo e validação, conferir respostas de fetch e renderizar dados com segurança.",
+      "Definir persistência e protocolo idempotente, distinguindo demonstração em memória de garantia após reinício.",
+      "Processar importação por etapas com backpressure e, se necessário, CPU em workers com encerramento controlado.",
+      "Fornecer testes node:test, cenários de interface, medições reproduzíveis e roteiro de execução/recuperação local."
+    ],
+    "deliverables": [
+      "Fontes ESM da interface e API, com regras compartilhadas.",
+      "Testes e fixtures de validação, concorrência lógica e repetição.",
+      "README com ambiente, instalação, formatos e limites.",
+      "Roteiro de uso por teclado, falha de rede e recuperação do estado."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Regras do domínio",
+        "description": "Validar capacidade, identidade da inscrição e transições por um caso de uso compartilhado, sem misturar DOM e regra.",
+        "reviewLessons": [
+          4,
+          11,
+          12,
+          17,
+          34
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Interface acessível",
+        "description": "Implementar formulário com rótulos, foco, mensagens de status e recuperação de erro sem depender de cor ou mouse.",
+        "reviewLessons": [
+          22,
+          23,
+          24
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "API e dados externos",
+        "description": "Aplicar método, rota, limite de corpo e validação, conferir respostas de fetch e renderizar dados com segurança.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Estado e repetição",
+        "description": "Definir persistência e protocolo idempotente, distinguindo demonstração em memória de garantia após reinício.",
+        "reviewLessons": [
+          28,
+          34,
+          35
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Trabalho limitado",
+        "description": "Processar importação por etapas com backpressure e, se necessário, CPU em workers com encerramento controlado.",
+        "reviewLessons": [
+          21,
+          29,
+          31,
+          33
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Validação da entrega",
+        "description": "Fornecer testes node:test, cenários de interface, medições reproduzíveis e roteiro de execução/recuperação local.",
+        "reviewLessons": [
+          18,
+          30,
+          32,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Inscrição válida",
+        "setup": "Oficina com capacidade 2 e nenhuma inscrição.",
+        "input": "Enviar nome válido e chave op-1 uma vez.",
+        "expected": "Uma inscrição, uma vaga restante e resultado apresentado por mensagem acessível.",
+        "reviewLessons": [
+          17,
+          23,
+          24,
+          26,
+          35
+        ]
+      },
+      {
+        "title": "Conteúdo não confiável",
+        "setup": "Oficina disponível e nome contendo texto parecido com uma tag HTML.",
+        "input": "Submeter e depois exibir o nome na lista.",
+        "expected": "O nome aparece como texto; nenhum HTML recebido é executado.",
+        "reviewLessons": [
+          17,
+          25,
+          27
+        ]
+      },
+      {
+        "title": "Última vaga e repetição",
+        "setup": "Uma vaga disponível; duas operações diferentes e uma repetição da vencedora.",
+        "input": "Tentar as duas inscrições e repetir a confirmação aceita.",
+        "expected": "A capacidade não fica negativa; só uma vence e a repetição não cria outra inscrição dentro da garantia documentada.",
+        "reviewLessons": [
+          18,
+          26,
+          34,
+          35
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "A tela mostrou sucesso após receber 500 com JSON válido. Qual fronteira precisa ser revisada?",
+        "options": [
+          "A interpretação conjunta de status e corpo no cliente, antes de atualizar o estado como confirmado.",
+          "A cor do ícone apenas.",
+          "A quantidade de arquivos no projeto.",
+          "O uso de const em qualquer variável."
+        ],
+        "answer": 0,
+        "explanation": "Parsing e sucesso de negócio são verificações independentes.",
+        "reviewLessons": [
+          23,
+          25,
+          26
+        ],
+        "id": "q1"
+      },
+      {
+        "prompt": "Os testes exercitam só a função pura, mas o formulário perde o foco depois de um erro. O projeto está completamente validado?",
+        "options": [
+          "Sim, teste unitário cobre qualquer navegador.",
+          "Não; a aceitação precisa verificar também o fluxo de interação e sua acessibilidade.",
+          "Sim, foco não participa do comportamento.",
+          "Não, porque funções puras não podem ser testadas."
+        ],
+        "answer": 1,
+        "explanation": "As camadas possuem contratos próprios; a interface precisa de evidências de uso.",
+        "reviewLessons": [
+          18,
+          23,
+          24,
+          36
+        ],
+        "id": "q2"
+      },
+      {
+        "prompt": "O autor promete confirmação exatamente uma vez em qualquer queda usando apenas uma Map. O que deve mudar?",
+        "options": [
+          "Basta renomear a Map como banco.",
+          "Basta colocar await antes de set.",
+          "O contrato precisa declarar o limite da memória ou implementar persistência e coordenação compatíveis com a promessa.",
+          "Basta usar um nome de chave mais longo."
+        ],
+        "answer": 2,
+        "explanation": "A garantia deve corresponder à durabilidade e à atomicidade reais.",
+        "reviewLessons": [
+          28,
+          34,
+          35,
+          36
+        ],
+        "id": "q3"
+      }
+    ]
+  }
+}

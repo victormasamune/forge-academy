@@ -1,0 +1,3503 @@
+{
+  "id": "redis",
+  "name": "Redis",
+  "title": "Redis Forge",
+  "updated": "2026-10-24",
+  "hours": 144,
+  "description": "De chaves e expiração a cache, scripts atômicos, Streams, persistência e operação. Modele estruturas de dados e trate falhas sem supor entrega ou durabilidade ilimitadas.",
+  "prerequisites": [
+    "Lógica de programação e terminal básico; a base Bancos de Dados e SQL ajuda a comparar consistência e recuperação.",
+    "Redis 7.2+ com redis-cli em um laboratório local dedicado. Os exemplos usam o núcleo, sem módulos opcionais.",
+    "Para instalar no Windows, use o ambiente Linux/WSL conforme a documentação oficial."
+  ],
+  "outcome": "Serviço de ranking e processamento de eventos com cache, consumidor idempotente, métricas e ensaio de restauração.",
+  "extension": "redis",
+  "codeLanguage": "text",
+  "setup": [
+    {
+      "title": "Servidor isolado",
+      "text": "Instale Redis e redis-cli conforme a documentação oficial. Crie uma pasta redis-forge e, nela, inicie redis-server --bind 127.0.0.1 --port 6380 --protected-mode yes --dir . --dbfilename forge.rdb. Mantenha esse terminal aberto; em outro use redis-cli -h 127.0.0.1 -p 6380 PING. Use somente essa instância de laboratório."
+    },
+    {
+      "title": "Como ler os exemplos",
+      "text": "Salve os comandos como aula.redis. Execute redis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis num terminal Linux/WSL, ou cole uma linha por vez no cliente conectado. MULTI, WATCH e EXEC precisam da mesma conexão. A saída --raw não contém a numeração do modo interativo. DEL de preparação pode devolver 0 ou 1 conforme uma execução anterior."
+    },
+    {
+      "title": "Chaves e limites",
+      "text": "Cada aula usa somente chaves forge:aNN:. Os exemplos não usam FLUSHALL nem FLUSHDB. Não misture este laboratório com aplicações reais. Aulas administrativas indicam permissões, processos e configuração adicionais. O editor da plataforma salva rascunhos e não conecta ao Redis."
+    }
+  ],
+  "references": [
+    {
+      "title": "Instalação local",
+      "description": "Plataformas e ferramentas suportadas.",
+      "url": "https://redis.io/docs/latest/operate/oss_and_stack/install/install-redis/"
+    },
+    {
+      "title": "Referência de comandos",
+      "description": "Sintaxe, complexidade e versão de cada comando.",
+      "url": "https://redis.io/docs/latest/commands/"
+    },
+    {
+      "title": "Transações",
+      "description": "MULTI, EXEC, WATCH e tratamento de erros.",
+      "url": "https://redis.io/docs/latest/develop/using-commands/transactions/"
+    },
+    {
+      "title": "Streams",
+      "description": "Grupos, pendências e reconhecimento.",
+      "url": "https://redis.io/docs/latest/develop/data-types/streams/"
+    },
+    {
+      "title": "Persistência",
+      "description": "RDB, AOF e recuperação.",
+      "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/"
+    },
+    {
+      "title": "ACL",
+      "description": "Usuários e regras por comandos e chaves.",
+      "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/"
+    },
+    {
+      "title": "Replicação",
+      "description": "Replicação assíncrona e limites de disponibilidade.",
+      "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/replication/"
+    }
+  ],
+  "levels": [
+    {
+      "id": 1,
+      "title": "Primeiros comandos",
+      "tag": "Fundamentos",
+      "hours": 12,
+      "summary": "Conecte ao servidor, modele nomes e manipule chaves de forma dirigida.",
+      "skills": [
+        "Cliente e servidor",
+        "Strings",
+        "Existência e remoção"
+      ],
+      "project": "Cadastro simples de cursos",
+      "deliverables": [
+        "Comandos de criação e consulta de três cursos.",
+        "Convenção de nomes documentada.",
+        "Roteiro de limpeza só das chaves criadas."
+      ],
+      "rubric": [
+        "Destino e versão estão registrados.",
+        "Ausência é distinguida de texto vazio.",
+        "Nenhum comando de limpeza global é necessário."
+      ],
+      "challenge": [
+        {
+          "question": "O cliente foi fechado, mas o servidor continua ativo. O que necessariamente ocorreu com a conexão?",
+          "options": [
+            "Todos os backups foram removidos.",
+            "O servidor foi reinstalado.",
+            "Ela terminou; isso não determina sozinho a perda dos dados do servidor.",
+            "Todas as chaves receberam TTL."
+          ],
+          "answer": 2,
+          "explanation": "Cliente e servidor possuem ciclos de vida distintos."
+        },
+        {
+          "question": "TYPE mostra string para o valor 42. Isso impede INCR se o texto for inteiro válido?",
+          "options": [
+            "Sim, somente um tipo integer pode ser incrementado.",
+            "Sim, números exigem uma lista.",
+            "Não, porque TYPE transforma o valor.",
+            "Não; INCR interpreta uma string inteira válida."
+          ],
+          "answer": 3,
+          "explanation": "O tipo Redis e a codificação do valor são conceitos distintos."
+        },
+        {
+          "question": "Para reiniciar um exercício, qual estratégia corresponde ao escopo mínimo necessário?",
+          "options": [
+            "Apagar somente as chaves específicas do exercício.",
+            "Executar FLUSHALL em qualquer servidor.",
+            "Remover arquivos de todas as instâncias.",
+            "Reiniciar a máquina de produção."
+          ],
+          "answer": 0,
+          "explanation": "Preparação deve atingir apenas dados do laboratório."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Tempo, contagem e cache",
+      "tag": "Fundamentos",
+      "hours": 12,
+      "summary": "Modele validade e repetição sem confundir cache com fonte de verdade.",
+      "skills": [
+        "TTL",
+        "INCR",
+        "Cache-aside"
+      ],
+      "project": "Cache de catálogo",
+      "deliverables": [
+        "Chaves com expiração e unidades documentadas.",
+        "Contador de acessos atômico.",
+        "Fluxograma de hit, miss e invalidação."
+      ],
+      "rubric": [
+        "Valores e TTL são gravados juntos quando necessário.",
+        "O contador não usa GET e SET para incrementar.",
+        "O fluxo distingue erro, ausência e dado em cache."
+      ],
+      "challenge": [
+        {
+          "question": "Um cache ficou eterno após atualizar com SET sem opções. O que revisar?",
+          "options": [
+            "O tamanho da fonte.",
+            "A perda do TTL e o uso explícito de EX/PX ou KEEPTTL conforme a regra.",
+            "A ordem alfabética das chaves.",
+            "A quantidade de bancos SQL."
+          ],
+          "answer": 1,
+          "explanation": "Atualizar o valor pode modificar também seu ciclo de vida."
+        },
+        {
+          "question": "Dois clientes executam INCR sobre contador inicial 4. Sem outras escritas, qual total final?",
+          "options": [
+            "5.",
+            "4.",
+            "6.",
+            "8 necessariamente."
+          ],
+          "answer": 2,
+          "explanation": "Cada incremento atômico acrescenta um ao estado corrente."
+        },
+        {
+          "question": "TTL de cinco minutos garante que um título alterado apareça imediatamente?",
+          "options": [
+            "Sim, TTL sincroniza com qualquer banco.",
+            "Sim, toda escrita SQL remove cache.",
+            "Não, porque TTL sempre vale zero.",
+            "Não; pode haver valor antigo até invalidação ou vencimento."
+          ],
+          "answer": 3,
+          "explanation": "Prazo máximo de validade não equivale a sincronização instantânea."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Estruturas de uso diário",
+      "tag": "Fundamentos",
+      "hours": 12,
+      "summary": "Escolha hashes, listas e sets conforme a unidade de acesso.",
+      "skills": [
+        "Hashes",
+        "Listas",
+        "Sets"
+      ],
+      "project": "Participação em cursos",
+      "deliverables": [
+        "Hash de perfil, set de participantes e fila de tarefas.",
+        "Comandos de consulta e atualização por estrutura.",
+        "Análise de falha após remoção de tarefa."
+      ],
+      "rubric": [
+        "Não depende da ordem de hashes/sets.",
+        "Cada estrutura representa um fato definido.",
+        "A fila simples não é apresentada como processamento confiável completo."
+      ],
+      "challenge": [
+        {
+          "question": "O requisito é ler nome e XP numa ordem fixa. Qual comando atende diretamente?",
+          "options": [
+            "HMGET chave nome xp.",
+            "HGETALL e supor qualquer ordem.",
+            "PING nome xp.",
+            "TTL nome xp."
+          ],
+          "answer": 0,
+          "explanation": "A ordem dos campos pedidos define a ordem dos valores de HMGET."
+        },
+        {
+          "question": "LPOP devolveu uma tarefa. Isso comprova que o efeito de negócio foi concluído?",
+          "options": [
+            "Sim, Redis executa o trabalho da aplicação.",
+            "Não; só comprova a retirada da lista.",
+            "Sim, a resposta equivale a commit em qualquer banco.",
+            "Não, porque LPOP nunca remove."
+          ],
+          "answer": 1,
+          "explanation": "Entrega de uma tarefa e conclusão do seu efeito são etapas distintas."
+        },
+        {
+          "question": "SMEMBERS mudou a ordem entre execuções. A associação necessariamente mudou?",
+          "options": [
+            "Sim, ordem faz parte da identidade do set.",
+            "Sim, um membro foi perdido.",
+            "Não; a estrutura não garante ordem de apresentação.",
+            "Não, porque todo set é ordenado por ID."
+          ],
+          "answer": 2,
+          "explanation": "Compare participação, não uma sequência não contratada."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Ranking e medidas compactas",
+      "tag": "Intermediário",
+      "hours": 12,
+      "summary": "Use ordenação e estruturas compactas com contratos de precisão claros.",
+      "skills": [
+        "Sorted sets",
+        "Bitmaps",
+        "HyperLogLog"
+      ],
+      "project": "Painel de atividade",
+      "deliverables": [
+        "Ranking com regra de desempate.",
+        "Mapa de presença por dia documentado.",
+        "Indicador aproximado comparado com um set pequeno."
+      ],
+      "rubric": [
+        "Score e identidade estão separados.",
+        "Posições do bitmap possuem significado e limite.",
+        "Aproximação não é anunciada como exatidão."
+      ],
+      "challenge": [
+        {
+          "question": "Duas pessoas têm score 200. O sorted set exige excluir uma delas?",
+          "options": [
+            "Sim, score é chave primária.",
+            "Sim, todo ranking tem pontuação única.",
+            "Não, porque cada membro pode repetir infinitamente.",
+            "Não; scores repetidos são permitidos para membros diferentes."
+          ],
+          "answer": 3,
+          "explanation": "A unicidade é do membro, não da pontuação."
+        },
+        {
+          "question": "BITCOUNT=7 em bitmap diário prova sete acessos totais?",
+          "options": [
+            "Não; prova sete posições marcadas conforme o mapeamento.",
+            "Sim, exatamente um acesso por bit é obrigatório.",
+            "Sim, BITCOUNT lê logs externos.",
+            "Não, porque bit não pode ser contado."
+          ],
+          "answer": 0,
+          "explanation": "A interpretação depende do fato codificado por cada posição."
+        },
+        {
+          "question": "Um relatório de cobrança exige total exato e auditável por cliente. HyperLogLog sozinho atende?",
+          "options": [
+            "Sim, qualquer estatística serve para cobrança exata.",
+            "Não; a aproximação não cumpre esse requisito.",
+            "Sim, o nome do comando garante auditoria.",
+            "Não, porque Redis não armazena números."
+          ],
+          "answer": 1,
+          "explanation": "Escolha a estrutura pelo contrato de precisão e rastreabilidade."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Composição de operações",
+      "tag": "Intermediário",
+      "hours": 12,
+      "summary": "Diferencie bloco atômico, disputa otimista e otimização de transporte.",
+      "skills": [
+        "MULTI/EXEC",
+        "WATCH",
+        "Pipelining"
+      ],
+      "project": "Atualização concorrente de perfil",
+      "deliverables": [
+        "Bloco de atualização com respostas verificadas.",
+        "Ensaio WATCH com dois clientes.",
+        "Plano de medição com lotes limitados."
+      ],
+      "rubric": [
+        "Não supõe rollback geral em EXEC.",
+        "WATCH conserva conexão e possui limite de retry.",
+        "Pipeline não é apresentado como isolamento."
+      ],
+      "challenge": [
+        {
+          "question": "DISCARD depois de enfileirar SET, antes de EXEC, altera o valor?",
+          "options": [
+            "Sim, SET já foi confirmado.",
+            "Sim, apaga toda a instância.",
+            "Não; cancela o bloco ainda não executado.",
+            "Não, porque DISCARD equivale a GET."
+          ],
+          "answer": 2,
+          "explanation": "Enfileirar e executar são etapas distintas."
+        },
+        {
+          "question": "WATCH e EXEC executados em conexões diferentes formam a mesma operação protegida?",
+          "options": [
+            "Sim, WATCH é global para todos os clientes.",
+            "Sim, basta o mesmo host.",
+            "Só se houver uma chave string.",
+            "Não; o estado de WATCH pertence à conexão."
+          ],
+          "answer": 3,
+          "explanation": "O cliente precisa preservar o contexto da conexão."
+        },
+        {
+          "question": "Um pipeline melhorou throughput, mas uma resposta foi erro. O que o cliente deve fazer?",
+          "options": [
+            "Associar o erro ao comando e tratar seus efeitos individualmente.",
+            "Assumir rollback global automático.",
+            "Ignorar todas as respostas.",
+            "Afirmar que todos os comandos falharam."
+          ],
+          "answer": 0,
+          "explanation": "As respostas do lote ainda precisam de verificação."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Scripts e regras atômicas",
+      "tag": "Intermediário",
+      "hours": 12,
+      "summary": "Execute decisões curtas no servidor e defina os limites da deduplicação.",
+      "skills": [
+        "Lua e EVAL",
+        "Limitação por janela",
+        "Idempotência"
+      ],
+      "project": "Reserva e pontuação sem repetição",
+      "deliverables": [
+        "Script de reserva com argumentos validados antes da escrita.",
+        "Limitador com janela e política de indisponibilidade documentadas.",
+        "Requisição idempotente com repetição compatível, conflito e retenção explícita."
+      ],
+      "rubric": [
+        "A reserva recusada não altera estoque.",
+        "As respostas do limitador correspondem à política declarada.",
+        "Não promete rollback de erro Lua nem exatamente uma vez após perda da deduplicação."
+      ],
+      "challenge": [
+        {
+          "question": "Um script consulta uma chave cujo nome veio do valor de outra chave, sem passá-la em KEYS. Qual revisão é necessária?",
+          "options": [
+            "Ocultar também as demais chaves.",
+            "Declarar todas as chaves acessadas como argumentos de chave e rever compatibilidade com Cluster.",
+            "Usar mais loops até funcionar.",
+            "Trocar EVAL por PING."
+          ],
+          "answer": 1,
+          "explanation": "As chaves precisam ser conhecidas explicitamente pelo mecanismo de execução."
+        },
+        {
+          "question": "Duas requisições próximas da fronteira de janelas podem gerar um pico maior que uma taxa uniforme. Isso contradiz a política?",
+          "options": [
+            "Sim, toda janela fixa é token bucket.",
+            "Sim, Redis não contou nenhuma requisição.",
+            "Não; janela fixa permite rajadas nas fronteiras e não equivale a uma distribuição uniforme.",
+            "Somente se o contador for uma string."
+          ],
+          "answer": 2,
+          "explanation": "A escolha do algoritmo determina o padrão de rajadas."
+        },
+        {
+          "question": "O cliente repetiu a mesma chave com outra quantidade. Qual comportamento preserva o contrato?",
+          "options": [
+            "Somar outra vez sem avisar.",
+            "Apagar o histórico antes de comparar.",
+            "Responder sempre sucesso com um resultado inventado.",
+            "Rejeitar o conflito de conteúdo, mantendo o resultado da primeira operação."
+          ],
+          "answer": 3,
+          "explanation": "Idempotência exige equivalência de conteúdo, além de identidade."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Streams e recuperação de trabalho",
+      "tag": "Intermediário",
+      "hours": 12,
+      "summary": "Use cursores, grupos e pendências sem esconder reentregas ou limites de retenção.",
+      "skills": [
+        "Streams e IDs",
+        "Consumer groups",
+        "Pending e reclaim"
+      ],
+      "project": "Consumidor de eventos de pedidos",
+      "deliverables": [
+        "Stream com contrato de campos e política de retenção.",
+        "Dois consumidores do mesmo grupo com ACK após o efeito definido.",
+        "Ensaio de falha, reclaim, duplicata e limite de tentativas."
+      ],
+      "rubric": [
+        "O cursor permite identificar eventos já lidos.",
+        "XACK é distinguido de apagar evento.",
+        "A recuperação mostra idempotência e não promete exatamente uma vez após qualquer perda de estado."
+      ],
+      "challenge": [
+        {
+          "question": "Um consumidor usa $ ao reiniciar e ignora seu último cursor salvo. Qual risco existe?",
+          "options": [
+            "Pular eventos já existentes e ainda não processados.",
+            "Ler obrigatoriamente todas as mensagens anteriores.",
+            "Criar uma réplica automaticamente.",
+            "Desfazer todo XADD anterior."
+          ],
+          "answer": 0,
+          "explanation": "$ escolhe um início no presente, não o cursor de trabalho pendente."
+        },
+        {
+          "question": "O worker confirma com XACK antes de gravar o efeito e cai. Qual é o risco?",
+          "options": [
+            "O Redis desfaz o ACK ao detectar o processo.",
+            "O grupo considera reconhecido um trabalho cujo efeito pode não existir.",
+            "O grupo sempre cria novo evento automaticamente.",
+            "Nenhum, porque ACK é um backup do efeito externo."
+          ],
+          "answer": 1,
+          "explanation": "A ordem de conclusão e reconhecimento faz parte do protocolo."
+        },
+        {
+          "question": "Um efeito externo foi concluído, mas o worker caiu antes do ACK. Qual comportamento o protocolo deve suportar?",
+          "options": [
+            "Apagar toda a instância.",
+            "Assumir que não existe reentrega.",
+            "Uma reentrega que reconhece o efeito já aplicado e não o duplica.",
+            "Cobrar o cliente novamente sempre."
+          ],
+          "answer": 2,
+          "explanation": "Há uma janela entre efeito e reconhecimento, a menos que o destino participe de uma coordenação adequada."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Mensagens e contratos de entrega",
+      "tag": "Avançado",
+      "hours": 12,
+      "summary": "Diferencie sinalização rápida de histórico recuperável e comprovação do efeito.",
+      "skills": [
+        "Pub/Sub",
+        "Keyspace notifications",
+        "Protocolos de entrega"
+      ],
+      "project": "Atualização de ranking com recuperação",
+      "deliverables": [
+        "Canal efêmero e fonte consultável do ranking claramente separados.",
+        "Ensaio de desconexão com sinal perdido e retomada por estado/cursor.",
+        "Matriz de falhas incluindo efeito externo, duplicata e evento indisponível."
+      ],
+      "rubric": [
+        "PUBLISH não é tratado como confirmação de processamento.",
+        "Expired não é apresentado como agenda exata e durável.",
+        "O contrato descreve retenção, repetição e falhas entre sistemas."
+      ],
+      "challenge": [
+        {
+          "question": "PUBLISH retornou1, mas o consumidor caiu antes de gravar o efeito. Isso comprova efeito concluído?",
+          "options": [
+            "Sim,1 significa COMMIT em outro banco.",
+            "Sim, o Redis envia e-mail de recuperação.",
+            "Somente se usar um canal curto.",
+            "Não; a contagem não é confirmação de processamento da aplicação."
+          ],
+          "answer": 3,
+          "explanation": "Entrega ao mecanismo de assinatura e conclusão do trabalho são medidas diferentes."
+        },
+        {
+          "question": "Uma rotina de pagamento depende apenas do evento expired para executar. Qual lacuna precisa ser resolvida?",
+          "options": [
+            "Recuperação de sinais perdidos e comprovação durável do trabalho devido e concluído.",
+            "A cor do nome da chave.",
+            "Um prefixo mais longo sozinho.",
+            "A troca de TTL por TYPE."
+          ],
+          "answer": 0,
+          "explanation": "Eventos efêmeros não substituem uma fila ou agenda recuperável."
+        },
+        {
+          "question": "Um consumidor suporta duplicatas, mas os eventos foram removidos antes de ele ler. A idempotência resolve a perda?",
+          "options": [
+            "Sim, o ID recria todo o conteúdo.",
+            "Não; deduplicação não recupera um evento que já não está disponível.",
+            "Sim, XACK reconstitui mensagens aparadas.",
+            "Somente se a chave tiver TTL."
+          ],
+          "answer": 1,
+          "explanation": "Retenção e idempotência tratam problemas diferentes."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Persistência e recuperação",
+      "tag": "Avançado",
+      "hours": 12,
+      "summary": "Relacione cópia, durabilidade e prova de reabertura com o RPO/RTO.",
+      "skills": [
+        "RDB",
+        "AOF",
+        "Restore isolado"
+      ],
+      "project": "Recuperação do ranking",
+      "deliverables": [
+        "Configuração e janela de perda documentadas.",
+        "Cópia e inicialização de destino independente.",
+        "Marcadores, logs e duração real do ensaio."
+      ],
+      "rubric": [
+        "Início de BGSAVE não é tratado como conclusão.",
+        "AOF é copiado conforme a unidade exigida pela versão.",
+        "O destino recuperado é aberto e consultado."
+      ],
+      "challenge": [
+        {
+          "question": "A última cópia é de antes de uma alteração importante. Qual métrica descreve a perda temporal tolerada?",
+          "options": [
+            "RTO exclusivamente.",
+            "Número de chaves.",
+            "RPO.",
+            "Quantidade de conexões abertas."
+          ],
+          "answer": 2,
+          "explanation": "RPO trata a perda de dados; RTO trata a duração da recuperação."
+        },
+        {
+          "question": "Um diretório AOF possui manifesto e várias partes. Copiar só o maior arquivo é um plano válido por definição?",
+          "options": [
+            "Sim, tamanho identifica a única parte necessária.",
+            "Sim, o manifesto é sempre dispensável.",
+            "Somente se o arquivo terminar em aof.",
+            "Não; preserve o conjunto consistente exigido pela versão e valide o destino."
+          ],
+          "answer": 3,
+          "explanation": "A recuperabilidade depende da estrutura completa, não da extensão."
+        },
+        {
+          "question": "O ensaio local passou. Isso prova retenção fora da máquina e recuperação após perda do disco?",
+          "options": [
+            "Não; esses cenários precisam de destinos e ensaios próprios.",
+            "Sim, socket Unix cria armazenamento remoto.",
+            "Sim, todo RDB vai à nuvem.",
+            "Não, porque a leitura de destino nunca é evidência."
+          ],
+          "answer": 0,
+          "explanation": "A conclusão deve corresponder ao alcance real da verificação."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Segurança e evolução",
+      "tag": "Avançado",
+      "hours": 12,
+      "summary": "Defina permissões, transporte e contratos das chaves ao longo do tempo.",
+      "skills": [
+        "ACL",
+        "Rede e TLS",
+        "Namespaces"
+      ],
+      "project": "Acesso de leitura restrito",
+      "deliverables": [
+        "Conta de ensaio e matriz de comandos permitidos/recusados.",
+        "Registro de destino e plano de verificação TLS.",
+        "Migração de chave com fallback e critério de retirada."
+      ],
+      "rubric": [
+        "Testa recusa, além do caminho permitido.",
+        "Configuração não é confundida com conexão TLS comprovada.",
+        "Versões possuem contrato e política de transição."
+      ],
+      "challenge": [
+        {
+          "question": "Uma conta consegue ler, mas também executar CONFIG e alterar qualquer chave. O teste de menor privilégio passou?",
+          "options": [
+            "Sim, só é preciso testar o caminho positivo.",
+            "Não; falta verificar e limitar operações que devem ser recusadas.",
+            "Sim, ler implica administrar.",
+            "Não, porque GET não é leitura."
+          ],
+          "answer": 1,
+          "explanation": "Autorização inclui confirmar a ausência de poderes desnecessários."
+        },
+        {
+          "question": "O cliente aceitou qualquer certificado após desativar validação. Isso prova a identidade do servidor?",
+          "options": [
+            "Sim, ausência de erro prova tudo.",
+            "Sim, PING instala uma CA.",
+            "Não; a verificação de identidade foi removida do ensaio.",
+            "Não, porque certificados não têm nomes."
+          ],
+          "answer": 2,
+          "explanation": "Conectar e verificar autenticidade são evidências diferentes."
+        },
+        {
+          "question": "O prefixo antigo não recebe escrita, mas ainda há leitores v1. Pode ser removido sem considerar esses consumidores?",
+          "options": [
+            "Sim, ausência de escrita prova ausência de uso.",
+            "Sim, UNLINK converte os leitores.",
+            "Somente se o valor for hash.",
+            "Não; a transição deve confirmar que as leituras antigas terminaram."
+          ],
+          "answer": 3,
+          "explanation": "Evolução exige observar produtores e consumidores."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Operação com evidências",
+      "tag": "Especialista",
+      "hours": 12,
+      "summary": "Observe custos e percorra dados conforme os contratos dos comandos.",
+      "skills": [
+        "INFO e SLOWLOG",
+        "SCAN",
+        "Memória e eviction"
+      ],
+      "project": "Relatório operacional do laboratório",
+      "deliverables": [
+        "Taxas com intervalos e unidades.",
+        "Iterador SCAN com término e repetição tratados.",
+        "Comparação de misses por expiração e eviction."
+      ],
+      "rubric": [
+        "Não interpreta diagnóstico vazio como ausência de problema.",
+        "COUNT não é tratado como tamanho garantido do lote.",
+        "O cliente trata erro de escrita por memória."
+      ],
+      "challenge": [
+        {
+          "question": "Um contador acumulado subiu de 1000 para 1200 em dez segundos. Qual taxa média desse intervalo?",
+          "options": [
+            "20 por segundo.",
+            "200 por segundo.",
+            "1200 por segundo.",
+            "1000 por segundo."
+          ],
+          "answer": 0,
+          "explanation": "A taxa é a variação dividida pela duração."
+        },
+        {
+          "question": "COUNT 100 significa que cada resposta terá exatamente cem chaves?",
+          "options": [
+            "Sim, inclusive se só existir uma.",
+            "Não; é uma sugestão de esforço do comando.",
+            "Sim, ele cria chaves para completar.",
+            "Somente se o cursor tiver três dígitos."
+          ],
+          "answer": 1,
+          "explanation": "Quantidade do lote não é o contrato de COUNT."
+        },
+        {
+          "question": "volatile-lru encontrou apenas chaves sem TTL. É correto supor que qualquer chave vira vítima dessa política?",
+          "options": [
+            "Sim, volatile significa todas as chaves.",
+            "Sim, a política cria TTL automaticamente.",
+            "Não; políticas volatile restringem candidatos a chaves com expiração.",
+            "Não, porque maxmemory mede disco."
+          ],
+          "answer": 2,
+          "explanation": "A elegibilidade da política afeta o comportamento sob pressão."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Topologias e projeto completo",
+      "tag": "Especialista",
+      "hours": 12,
+      "summary": "Conheça os limites de replicação e distribuição e entregue evidências do serviço.",
+      "skills": [
+        "Replicação",
+        "Sentinel e Cluster",
+        "Projeto integrado"
+      ],
+      "project": "Ranking com consumidor recuperável",
+      "deliverables": [
+        "Contrato de chaves e identidades de operação.",
+        "Cliente/consumidor com testes de duplicata, falha e retomada.",
+        "Ensaio de restauração, métricas e decisão de topologia."
+      ],
+      "rubric": [
+        "Não promete exatamente uma vez sem tratar retenção e perda de estado.",
+        "Escolha de topologia corresponde ao requisito e ao ensaio feito.",
+        "Cópia restaurada e resultados de negócio são conferidos."
+      ],
+      "challenge": [
+        {
+          "question": "ROLE mostrou master com zero réplicas. Isso demonstra redundância?",
+          "options": [
+            "Sim, master implica três cópias.",
+            "Sim, o nome prova failover.",
+            "Não, porque ROLE sempre erra.",
+            "Não; descreve um processo primário sem réplicas observadas."
+          ],
+          "answer": 3,
+          "explanation": "O diagnóstico precisa ser interpretado no alcance do que mostra."
+        },
+        {
+          "question": "Todas as chaves usam a tag {global}. Isso garante carga uniformemente espalhada no Cluster?",
+          "options": [
+            "Não; concentra essas chaves no mesmo slot.",
+            "Sim, global significa distribuição uniforme.",
+            "Sim, tags são ignoradas no cálculo.",
+            "Não, porque nomes com chaves são proibidos."
+          ],
+          "answer": 0,
+          "explanation": "A tag afeta o agrupamento de slots."
+        },
+        {
+          "question": "Um script Redis pontuou e depois a chamada HTTP externa falhou. O Redis desfaz o mundo externo automaticamente?",
+          "options": [
+            "Sim, EVAL é commit distribuído universal.",
+            "Não; o protocolo entre sistemas precisa de recuperação e idempotência próprias.",
+            "Sim, TTL cancela qualquer HTTP.",
+            "Não, porque sorted set não aceita Lua."
+          ],
+          "answer": 1,
+          "explanation": "Atomicidade local não inclui todos os sistemas participantes."
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": 1,
+      "level": 1,
+      "title": "Conexão e arquitetura",
+      "goal": "Reconhecer cliente, servidor e a unidade de comando.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Redis recebe comandos de clientes e mantém estruturas de dados associadas a chaves. O cliente redis-cli não é o servidor; encerrar o cliente não apaga automaticamente os dados do processo servidor."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "A implantação local usa uma porta própria para não se confundir com outra instância. PING confirma resposta do servidor, mas não demonstra persistência, permissões completas ou saúde de todo o serviço."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Confira destino e versão com INFO server antes de modificar dados. O material usa recursos tradicionais do núcleo; instalar módulos de busca ou JSON não é requisito desta trilha."
+        }
+      ],
+      "code": "PING\nECHO \"laboratorio forge\"\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "PONG\nlaboratorio forge",
+      "source": "https://redis.io/docs/latest/commands/ping/",
+      "quiz": {
+        "question": "PING com PONG prova que houve backup?",
+        "options": [
+          "Sim, gera um arquivo RDB.",
+          "Não; prova apenas que o servidor respondeu ao comando.",
+          "Sim, garante recuperação completa.",
+          "Não, porque PONG indica erro."
+        ],
+        "answer": 1,
+        "explanation": "Uma checagem de conexão não testa durabilidade."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confira o destino usado no terminal",
+          "prompt": "Confira o destino usado no terminal.",
+          "hint": "Observe host e porta explicitados na chamada.",
+          "solution": "Use redis-cli -h 127.0.0.1 -p 6380 PING; a porta identifica o laboratório descrito no setup.",
+          "criteria": [
+            "Registra host, porta e PONG.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Identifique a versão do servidor",
+          "prompt": "Identifique a versão do servidor.",
+          "hint": "INFO server mostra redis_version.",
+          "solution": "Execute INFO server e registre redis_version sem assumir que a versão do cliente é igual à do servidor.",
+          "criteria": [
+            "Anota a versão do servidor observada.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique o efeito de fechar só redis-cli",
+          "prompt": "Explique o efeito de fechar só redis-cli.",
+          "hint": "O servidor é outro processo.",
+          "solution": "A conexão termina; o servidor continua até ser encerrado. Persistência depende de sua configuração, não da janela do cliente.",
+          "criteria": [
+            "Distingue processo cliente de processo servidor.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 2,
+      "level": 1,
+      "title": "Chaves, valores e tipos",
+      "goal": "Criar uma string e observar sua substituição.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Uma chave identifica um valor e seu tipo. Redis string é uma sequência de bytes, podendo representar texto ou números codificados. O nome da chave não impõe sozinho um esquema."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Use prefixos consistentes como forge:a02:curso. Eles facilitam operação e ACL, mas não criam pastas reais nem isolamento de segurança por si só."
+        },
+        {
+          "title": "O que verificar",
+          "text": "SET substitui a string existente e normalmente remove um TTL anterior, salvo opções específicas. TYPE permite conferir o tipo antes de aplicar um comando incompatível."
+        }
+      ],
+      "code": "DEL forge:a02:curso\nSET forge:a02:curso Go\nGET forge:a02:curso\nTYPE forge:a02:curso\nSET forge:a02:curso SQL\nGET forge:a02:curso\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\nOK\nGo\nstring\nOK\nSQL",
+      "source": "https://redis.io/docs/latest/commands/set/",
+      "quiz": {
+        "question": "O prefixo forge: cria uma pasta protegida automaticamente?",
+        "options": [
+          "Sim, com autenticação separada automática.",
+          "Sim, cada prefixo usa um servidor.",
+          "Não; é uma convenção no nome da chave.",
+          "Não, porque dois pontos são proibidos."
+        ],
+        "answer": 2,
+        "explanation": "O isolamento exige configuração e permissões apropriadas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Troque o curso para Python",
+          "prompt": "Troque o curso para Python.",
+          "hint": "SET sobrescreve a string.",
+          "solution": "SET forge:a02:curso Python; GET retorna Python.",
+          "criteria": [
+            "A chave mantém o nome e muda o valor.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Consulte uma chave que não foi criada",
+          "prompt": "Consulte uma chave que não foi criada.",
+          "hint": "Ausência não é a string vazia.",
+          "solution": "GET forge:a02:inexistente devolve nil; em --raw costuma aparecer uma linha vazia.",
+          "criteria": [
+            "Distingue ausência de um valor armazenado.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Crie outra chave para o nível",
+          "prompt": "Crie outra chave para o nível.",
+          "hint": "Unidade de acesso pode determinar chaves separadas.",
+          "solution": "SET forge:a02:nivel 1; TYPE retorna string, mesmo que o conteúdo represente um inteiro.",
+          "criteria": [
+            "O tipo Redis observado é string.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 3,
+      "level": 1,
+      "title": "Existência e remoção dirigida",
+      "goal": "Consultar presença e excluir somente chaves conhecidas.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "EXISTS testa presença e DEL remove as chaves nomeadas. O retorno de DEL conta quantas realmente existiam; repetir a exclusão normalmente retorna zero."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Não use limpeza global para preparar uma aula. Trabalhar com nomes específicos reduz o alcance de um erro e deixa clara a posse de cada chave."
+        },
+        {
+          "title": "O que verificar",
+          "text": "UNLINK separa remoção lógica da liberação de memória em segundo plano. Ele pode ajudar com valores grandes, mas ainda exige considerar a carga e o destino correto."
+        }
+      ],
+      "code": "SET forge:a03:x 1\nEXISTS forge:a03:x\nDEL forge:a03:x\nEXISTS forge:a03:x\nDEL forge:a03:x\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "OK\n1\n1\n0\n0",
+      "source": "https://redis.io/docs/latest/commands/del/",
+      "quiz": {
+        "question": "O segundo DEL retorna zero por quê?",
+        "options": [
+          "Porque o servidor caiu necessariamente.",
+          "Porque DEL nunca retorna um.",
+          "Porque a chave virou hash.",
+          "A chave já não existe."
+        ],
+        "answer": 3,
+        "explanation": "A exclusão é observável pela quantidade de chaves removidas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Remova duas chaves explicitamente criadas",
+          "prompt": "Remova duas chaves explicitamente criadas.",
+          "hint": "DEL aceita múltiplas chaves no servidor simples.",
+          "solution": "SET forge:a03:a 1; SET forge:a03:b 2; DEL forge:a03:a forge:a03:b retorna 2.",
+          "criteria": [
+            "Apenas as duas chaves nomeadas são removidas.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare DEL e UNLINK para um valor grande",
+          "prompt": "Compare DEL e UNLINK para um valor grande.",
+          "hint": "A diferença está na liberação de memória.",
+          "solution": "Ambos removem a chave logicamente; UNLINK delega a liberação para trabalho assíncrono. Meça impacto em laboratório.",
+          "criteria": [
+            "Não afirma que UNLINK elimina todo custo.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina uma convenção de nomes por aula",
+          "prompt": "Defina uma convenção de nomes por aula.",
+          "hint": "Inclua prefixo e identificador de aula.",
+          "solution": "forge:aNN:recurso:id deixa o escopo identificável e permite enumerar alvos sem limpeza global.",
+          "criteria": [
+            "A convenção evita colisão entre aulas.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 4,
+      "level": 2,
+      "title": "Expiração e TTL",
+      "goal": "Definir validade sem separar escrita e expiração desnecessariamente.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "TTL mede segundos restantes: -1 indica chave sem expiração e -2 indica ausência. PTTL usa milissegundos. Um valor observado muda com o tempo e não deve ser tratado como saída textual fixa."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "SET com EX ou PX associa valor e validade na mesma operação. Fazer SET e depois EXPIRE em requisições separadas permite falha entre as etapas, deixando uma chave sem vencimento."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O prazo do cache é uma decisão de negócio. PERSIST remove expiração e um SET comum pode removê-la; revise operações que renovam ou substituem chaves."
+        }
+      ],
+      "code": "DEL forge:a04:cache\nSET forge:a04:cache resultado EX 60\nTTL forge:a04:cache\nPERSIST forge:a04:cache\nTTL forge:a04:cache\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\nOK\nTTL entre 0 e 60 se consultado antes de expirar\n1 se a chave ainda existe com TTL\n-1 após PERSIST; se demorou mais de 60s, a chave pode já ter expirado.",
+      "source": "https://redis.io/docs/latest/commands/ttl/",
+      "quiz": {
+        "question": "TTL=-2 significa o quê?",
+        "options": [
+          "A chave não existe.",
+          "A chave dura dois segundos.",
+          "A chave existe para sempre.",
+          "A instância possui duas réplicas."
+        ],
+        "answer": 0,
+        "explanation": "Os códigos negativos têm significados próprios."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Crie valor com prazo de dois minutos",
+          "prompt": "Crie valor com prazo de dois minutos.",
+          "hint": "SET EX usa segundos.",
+          "solution": "SET forge:a04:dois valor EX 120; TTL deve indicar no máximo 120 enquanto existir.",
+          "criteria": [
+            "A chave recebe valor e prazo na mesma operação.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare TTL e PTTL para a mesma chave",
+          "prompt": "Compare TTL e PTTL para a mesma chave.",
+          "hint": "As unidades diferem.",
+          "solution": "PTTL retorna milissegundos; TTL segundos. Não exija razão exatamente 1000 porque há tempo entre consultas.",
+          "criteria": [
+            "As unidades e a passagem do tempo são registradas.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique a falha entre SET e EXPIRE",
+          "prompt": "Explique a falha entre SET e EXPIRE.",
+          "hint": "Considere cliente que desconecta após a primeira escrita.",
+          "solution": "O valor pode ficar sem prazo; SET ... EX ... reduz essa janela ao associar os dois na mesma operação.",
+          "criteria": [
+            "Apresenta a sequência de falha e sua alternativa.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 5,
+      "level": 2,
+      "title": "Contadores atômicos",
+      "goal": "Incrementar sem ler e regravar o valor no cliente.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "INCR e INCRBY alteram uma string inteira no servidor em uma operação. Duas requisições não precisam calcular localmente o próximo valor para cada uma."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Um GET seguido de SET permite atualização perdida se dois clientes leem o mesmo número. Atomicidade de um comando não significa que uma sequência arbitrária de comandos seja indivisível."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Um contador ausente começa em zero para INCR. Conteúdo não inteiro causa erro. Para contadores com janela, a associação entre incremento e expiração precisa de um desenho atômico próprio."
+        }
+      ],
+      "code": "DEL forge:a05:visitas\nINCR forge:a05:visitas\nINCRBY forge:a05:visitas 4\nDECR forge:a05:visitas\nGET forge:a05:visitas\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\n1\n5\n4\n4",
+      "source": "https://redis.io/docs/latest/commands/incr/",
+      "quiz": {
+        "question": "Qual operação evita GET→cálculo→SET para adicionar uma visita?",
+        "options": [
+          "GET apenas.",
+          "INCR na chave do contador.",
+          "TYPE seguido de PING.",
+          "DEL seguido de EXISTS."
+        ],
+        "answer": 1,
+        "explanation": "O incremento é realizado pelo servidor."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Adicione mais sete visitas",
+          "prompt": "Adicione mais sete visitas.",
+          "hint": "INCRBY recebe incremento inteiro.",
+          "solution": "INCRBY forge:a05:visitas 7 retorna 11 após o exemplo.",
+          "criteria": [
+            "O total final é 11.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Teste INCR em uma string abc",
+          "prompt": "Teste INCR em uma string abc.",
+          "hint": "Use uma chave separada.",
+          "solution": "SET forge:a05:erro abc; INCR forge:a05:erro falha com valor não inteiro e conserva abc.",
+          "criteria": [
+            "O erro não é tratado como contador zero.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Desenhe atualização perdida com dois clientes",
+          "prompt": "Desenhe atualização perdida com dois clientes.",
+          "hint": "Ambos leem 4 antes de escrever.",
+          "solution": "A e B leem 4 e ambos gravam 5; uma visita se perde. Dois INCR levam o resultado a 6.",
+          "criteria": [
+            "A intercalação e os totais 5/6 são explicados.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 6,
+      "level": 2,
+      "title": "Cache e invalidação",
+      "goal": "Definir fonte de verdade, miss e política de atualização.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "No padrão cache-aside a aplicação consulta o cache, busca a fonte em caso de miss e preenche o cache. Ausência no cache não prova ausência no banco de origem."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "TTL limita tempo de vida, mas não garante atualização instantânea. Escritas na fonte exigem política de invalidação ou atualização; defina a tolerância a dados antigos."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Quando muitos clientes recebem miss ao mesmo tempo, podem sobrecarregar a origem. Prazo com variação, coordenação e limites de concorrência ajudam, mas devem preservar falhas e recuperação."
+        }
+      ],
+      "code": "DEL forge:a06:livro:1\nGET forge:a06:livro:1\nSET forge:a06:livro:1 \"titulo=SQL;versao=1\" EX 120\nGET forge:a06:livro:1\nDEL forge:a06:livro:1\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\nGET ausente: nil (linha vazia em --raw)\nOK\ntitulo=SQL;versao=1\n1",
+      "source": "https://redis.io/docs/latest/commands/get/",
+      "quiz": {
+        "question": "Um GET ausente no cache prova que o livro não existe na origem?",
+        "options": [
+          "Sim, cache contém toda informação para sempre.",
+          "Sim, TTL impede misses.",
+          "Não; é preciso consultar a fonte segundo a política.",
+          "Não, porque GET sempre cria valor."
+        ],
+        "answer": 2,
+        "explanation": "Miss e inexistência no domínio são estados diferentes."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Descreva fluxo de leitura cache-aside",
+          "prompt": "Descreva fluxo de leitura cache-aside.",
+          "hint": "Inclua hit e miss.",
+          "solution": "Hit retorna valor válido; miss consulta a origem, distingue não encontrado de falha e preenche o cache com prazo apropriado.",
+          "criteria": [
+            "Distingue miss, não encontrado e erro da origem.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Defina invalidação após alterar o título na origem",
+          "prompt": "Defina invalidação após alterar o título na origem.",
+          "hint": "A fonte de verdade confirma antes de invalidar.",
+          "solution": "Após commit na origem, invalide a chave e trate a janela de concorrência/repetição; documente o atraso aceitável.",
+          "criteria": [
+            "Inclui confirmação e limite de dados antigos.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique uma avalanche de misses",
+          "prompt": "Explique uma avalanche de misses.",
+          "hint": "Imagine mil leitores no mesmo vencimento.",
+          "solution": "Todos consultam a origem simultaneamente; espalhar vencimentos e limitar recomputação reduz pico, sem garantir por si só consistência forte.",
+          "criteria": [
+            "Relaciona prazo simultâneo ao pico na origem.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 7,
+      "level": 3,
+      "title": "Hashes e entidades pequenas",
+      "goal": "Agrupar campos que pertencem a uma mesma entidade.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Um hash associa campos a valores dentro de uma chave. HSET altera campos sem substituir obrigatoriamente toda a entidade; HGET lê um campo e HMGET lê vários."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Escolha hash quando o padrão de acesso exige campos de uma entidade. Um hash enorme com todas as pessoas mistura unidades de expiração e operação."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Não dependa da ordem de HGETALL. Para uma saída ordenada explicitamente, peça campos em uma ordem fixa com HMGET. Regras de campo obrigatório precisam de validação da aplicação ou lógica própria."
+        }
+      ],
+      "code": "DEL forge:a07:aluno:1\nHSET forge:a07:aluno:1 nome Ana xp 100\nHINCRBY forge:a07:aluno:1 xp 50\nHMGET forge:a07:aluno:1 nome xp\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\n2\n150\nAna\n150",
+      "source": "https://redis.io/docs/latest/commands/hset/",
+      "quiz": {
+        "question": "HSET de um campo obriga reenviar todos os outros campos?",
+        "options": [
+          "Sim, sempre remove os demais.",
+          "Sim, hashes são listas imutáveis.",
+          "Não, porque HSET não escreve.",
+          "Não; ele pode alterar somente os campos nomeados."
+        ],
+        "answer": 3,
+        "explanation": "Hash permite acesso e atualização por campo."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Acrescente campo curso com valor SQL",
+          "prompt": "Acrescente campo curso com valor SQL.",
+          "hint": "HSET pode criar outro campo.",
+          "solution": "HSET forge:a07:aluno:1 curso SQL; HGET ... curso retorna SQL.",
+          "criteria": [
+            "Os campos nome e xp permanecem.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare apagar um campo e apagar a entidade",
+          "prompt": "Compare apagar um campo e apagar a entidade.",
+          "hint": "HDEL e DEL têm escopos distintos.",
+          "solution": "HDEL chave curso remove apenas o campo; DEL chave remove o hash inteiro.",
+          "criteria": [
+            "A diferença de escopo é demonstrada.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique por que um hash de todos os usuários dificulta TTL por usuário",
+          "prompt": "Explique por que um hash de todos os usuários dificulta TTL por usuário.",
+          "hint": "A chave seria compartilhada.",
+          "solution": "A expiração da chave afeta o conjunto inteiro; uma chave por entidade facilita um ciclo de vida independente. Recursos novos por campo exigem versão e desenho explícitos.",
+          "criteria": [
+            "Relaciona a unidade de chave ao ciclo de vida.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 8,
+      "level": 3,
+      "title": "Listas e filas simples",
+      "goal": "Manter uma sequência e distinguir remoção de confirmação de trabalho.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Listas preservam ordem e permitem inserir ou retirar pelas extremidades. RPUSH seguido de LPOP produz uma fila FIFO simples."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Se um consumidor remove a tarefa e cai antes de processá-la, a tarefa pode se perder nesse desenho. Uma fila confiável exige estado de processamento e recuperação, ou um modelo como Streams com grupos."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Comandos bloqueantes aguardam chegada de dados e precisam de timeout na arquitetura. Não use uma leitura infinita para esconder ausência de política de encerramento."
+        }
+      ],
+      "code": "DEL forge:a08:fila\nRPUSH forge:a08:fila tarefa1 tarefa2\nLPOP forge:a08:fila\nLRANGE forge:a08:fila 0 -1\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\n2\ntarefa1\ntarefa2",
+      "source": "https://redis.io/docs/latest/commands/rpush/",
+      "quiz": {
+        "question": "RPUSH com LPOP implementa qual ordem?",
+        "options": [
+          "FIFO: a primeira tarefa inserida sai primeiro.",
+          "LIFO obrigatoriamente.",
+          "Ordem alfabética.",
+          "Ordem aleatória garantida."
+        ],
+        "answer": 0,
+        "explanation": "Entrada à direita e saída à esquerda preservam a ordem de chegada."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Insira tarefa3 e consuma a próxima",
+          "prompt": "Insira tarefa3 e consuma a próxima.",
+          "hint": "tarefa2 já está esperando.",
+          "solution": "RPUSH forge:a08:fila tarefa3; LPOP retorna tarefa2.",
+          "criteria": [
+            "A tarefa mais antiga sai primeiro.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique falha após LPOP e antes do processamento",
+          "prompt": "Explique falha após LPOP e antes do processamento.",
+          "hint": "A remoção já ocorreu no servidor.",
+          "solution": "A tarefa não está mais na fila e pode não ter produzido efeito; é preciso desenho de recuperação.",
+          "criteria": [
+            "Não confunde remover com concluir o trabalho.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Proponha encerrar consumidor bloqueado com prazo",
+          "prompt": "Proponha encerrar consumidor bloqueado com prazo.",
+          "hint": "BLPOP recebe timeout em segundos.",
+          "solution": "Use timeout finito e cheque sinal de encerramento entre esperas; trate retorno nulo como ausência, não tarefa vazia.",
+          "criteria": [
+            "Há limite de espera e estado de encerramento.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 9,
+      "level": 3,
+      "title": "Sets e participação única",
+      "goal": "Representar membros sem duplicação e consultar interseção.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Sets guardam membros únicos e não oferecem ordem de apresentação. SADD informa quantos membros novos entraram; repetir o mesmo membro não cria outra ocorrência."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Uma associação como participantes de um curso pode ser um set por curso. Interseção encontra alunos presentes nos dois grupos sem exigir contagem manual."
+        },
+        {
+          "title": "O que verificar",
+          "text": "SISMEMBER testa participação; SCARD conta membros. A unicidade é pela representação do membro, portanto normalize IDs de forma consistente na aplicação."
+        }
+      ],
+      "code": "DEL forge:a09:sql forge:a09:go\nSADD forge:a09:sql ana bia ana\nSADD forge:a09:go ana caio\nSCARD forge:a09:sql\nSINTER forge:a09:sql forge:a09:go\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 a 2\n2\n2\n2\nana",
+      "source": "https://redis.io/docs/latest/commands/sadd/",
+      "quiz": {
+        "question": "Adicionar ana duas vezes ao mesmo set gera quantos membros ana?",
+        "options": [
+          "Dois.",
+          "Um.",
+          "Zero sempre.",
+          "Um por conexão."
+        ],
+        "answer": 1,
+        "explanation": "Set controla unicidade por membro."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste se bia está no grupo SQL",
+          "prompt": "Teste se bia está no grupo SQL.",
+          "hint": "SISMEMBER retorna 1 ou 0.",
+          "solution": "SISMEMBER forge:a09:sql bia retorna 1.",
+          "criteria": [
+            "A resposta é 1.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Encontre o total da união SQL e Go",
+          "prompt": "Encontre o total da união SQL e Go.",
+          "hint": "Há ana em ambos, que conta uma vez.",
+          "solution": "SUNION produz ana,bia,caio em ordem não garantida; são três membros distintos.",
+          "criteria": [
+            "Conta três sem supor ordem textual.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique por que set não serve para registrar duas presenças da mesma pessoa em dias difer",
+          "prompt": "Explique por que set não serve para registrar duas presenças da mesma pessoa em dias diferentes sem mudar o modelo.",
+          "hint": "Membros repetidos colapsam.",
+          "solution": "Inclua a data na identidade ou use outra estrutura/histórico; set de alunos sozinho só representa participação única.",
+          "criteria": [
+            "A identidade do fato inclui a data quando necessário.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 10,
+      "level": 4,
+      "title": "Sorted sets e ranking",
+      "goal": "Ordenar membros por pontuação e tratar empates.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Sorted sets associam um score numérico a cada membro único. ZADD atualiza ou adiciona; ZINCRBY altera o score. O membro identifica a entidade e o score representa uma medida."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Em empates, a ordem lexicográfica do membro participa da ordenação; não é automaticamente a ordem de chegada. Defina se esse desempate atende ao produto."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Scores usam números de ponto flutuante. Para inteiros muito grandes ou precisão monetária, considere os limites de representação e escolha outro desenho quando necessário."
+        }
+      ],
+      "code": "DEL forge:a10:ranking\nZADD forge:a10:ranking 100 ana 200 bia 150 caio\nZINCRBY forge:a10:ranking 80 ana\nZRANGE forge:a10:ranking 0 -1 REV WITHSCORES\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\n3\n180\nbia\n200\nana\n180\ncaio\n150",
+      "source": "https://redis.io/docs/latest/commands/zrange/",
+      "quiz": {
+        "question": "Após ZINCRBY 80, qual é o score de ana?",
+        "options": [
+          "80.",
+          "100.",
+          "180.",
+          "280."
+        ],
+        "answer": 2,
+        "explanation": "O incremento soma ao score existente."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Peça somente os dois primeiros do ranking",
+          "prompt": "Peça somente os dois primeiros do ranking.",
+          "hint": "Os índices de ZRANGE são inclusivos.",
+          "solution": "ZRANGE forge:a10:ranking 0 1 REV WITHSCORES retorna bia e ana com 200 e 180.",
+          "criteria": [
+            "Retorna exatamente dois membros.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Crie empate entre ana e caio e observe",
+          "prompt": "Crie empate entre ana e caio e observe.",
+          "hint": "ZADD substitui o score de um membro.",
+          "solution": "ZADD forge:a10:ranking 180 caio; compare o desempate lexicográfico em REV, sem supor ordem de chegada.",
+          "criteria": [
+            "O empate é documentado conforme a regra do comando.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique por que usar score como identificador é incorreto",
+          "prompt": "Explique por que usar score como identificador é incorreto.",
+          "hint": "Vários membros podem ter o mesmo score.",
+          "solution": "O membro é único e o score pode repetir; guarde o ID no membro e a pontuação no score.",
+          "criteria": [
+            "Distingue unicidade de classificação.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 11,
+      "level": 4,
+      "title": "Bitmaps e presença compacta",
+      "goal": "Codificar estados booleanos em posições com significado definido.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Bitmaps são operações sobre strings tratadas como bits. SETBIT altera uma posição; GETBIT lê o estado. A posição é um índice, não um identificador arbitrário de tamanho ilimitado."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Uma presença por dia pode mapear dia 0,1,2 para posições consecutivas. IDs esparsos muito grandes podem alocar memória excessiva; a codificação precisa ser documentada."
+        },
+        {
+          "title": "O que verificar",
+          "text": "BITCOUNT conta bits 1, sem conhecer o domínio. Um bit por dia informa presença, mas não quantas visitas ocorreram nesse dia."
+        }
+      ],
+      "code": "DEL forge:a11:presenca\nSETBIT forge:a11:presenca 0 1\nSETBIT forge:a11:presenca 2 1\nGETBIT forge:a11:presenca 1\nBITCOUNT forge:a11:presenca\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\n0\n0\n0\n2",
+      "source": "https://redis.io/docs/latest/commands/setbit/",
+      "quiz": {
+        "question": "Dois acessos no mesmo dia incrementam BITCOUNT duas vezes se o bit já é 1?",
+        "options": [
+          "Sim, SETBIT é contador de visitas.",
+          "Sim, cada conexão cria um bitmap.",
+          "Não, porque BITCOUNT só aceita listas.",
+          "Não; o estado da posição continua 1."
+        ],
+        "answer": 3,
+        "explanation": "O bitmap representa presença booleana por posição."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Marque presença no dia 1",
+          "prompt": "Marque presença no dia 1.",
+          "hint": "As posições começam em zero.",
+          "solution": "SETBIT forge:a11:presenca 1 1; BITCOUNT passa a 3.",
+          "criteria": [
+            "A contagem final é 3.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desmarque o dia 2",
+          "prompt": "Desmarque o dia 2.",
+          "hint": "SETBIT também grava zero.",
+          "solution": "SETBIT forge:a11:presenca 2 0; GETBIT na posição 2 retorna 0.",
+          "criteria": [
+            "A posição volta a zero.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Avalie usar CPF numérico diretamente como posição",
+          "prompt": "Avalie usar CPF numérico diretamente como posição.",
+          "hint": "O maior offset determina a extensão potencial.",
+          "solution": "IDs enormes e esparsos podem gastar muita memória; crie mapeamento compacto ou outra estrutura.",
+          "criteria": [
+            "Relaciona tamanho do offset à memória.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 12,
+      "level": 4,
+      "title": "HyperLogLog e contagem aproximada",
+      "goal": "Distinguir cardinalidade estimada de coleção de membros.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "HyperLogLog estima cardinalidade com espaço limitado. PFADD adiciona observações à estrutura e PFCOUNT estima a quantidade de elementos distintos; não mantém uma lista recuperável de todos eles."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "É adequado quando tolerar erro estatístico atende ao indicador. Cobrança por usuário exato ou autorização por membro geralmente exige outra estrutura."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Contagens pequenas podem coincidir com o valor exato, mas isso não muda o contrato aproximado. Não transforme um exemplo com três membros numa garantia geral de precisão perfeita."
+        }
+      ],
+      "code": "DEL forge:a12:unicos\nPFADD forge:a12:unicos ana bia ana caio\nPFCOUNT forge:a12:unicos\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\nPFADD: 1 nesta estrutura recém-criada\nPFCOUNT: tipicamente 3 neste exemplo pequeno; o contrato geral é uma estimativa.",
+      "source": "https://redis.io/docs/latest/commands/pfcount/",
+      "quiz": {
+        "question": "HyperLogLog permite recuperar a lista completa de visitantes?",
+        "options": [
+          "Não; mantém uma representação para estimar cardinalidade.",
+          "Sim, com PFGETALL.",
+          "Sim, PFCOUNT imprime nomes.",
+          "Somente após PING."
+        ],
+        "answer": 0,
+        "explanation": "Estimativa de quantidade não é armazenamento recuperável dos membros."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Acrescente ana novamente e compare a estimativa",
+          "prompt": "Acrescente ana novamente e compare a estimativa.",
+          "hint": "A pergunta é sobre distintos.",
+          "solution": "PFADD forge:a12:unicos ana não representa uma nova pessoa distinta; compare PFCOUNT sem exigir mudança.",
+          "criteria": [
+            "Distingue repetição de novo elemento.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Escolha estrutura para testar participação exata de um usuário",
+          "prompt": "Escolha estrutura para testar participação exata de um usuário.",
+          "hint": "SISMEMBER exige set.",
+          "solution": "Use um set se o requisito é verificar presença exata; HyperLogLog não responde essa pergunta.",
+          "criteria": [
+            "A decisão corresponde à consulta necessária.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique por que o exemplo pequeno não prova erro zero em grande escala",
+          "prompt": "Explique por que o exemplo pequeno não prova erro zero em grande escala.",
+          "hint": "O contrato do algoritmo é probabilístico.",
+          "solution": "Coincidência com três IDs é um caso observado; a estimativa geral possui erro e precisa ser aceita pelo indicador.",
+          "criteria": [
+            "Mantém a distinção entre observação e garantia.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 13,
+      "level": 5,
+      "title": "MULTI e EXEC",
+      "goal": "Agrupar comandos sem supor rollback de erros em tempo de execução.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "MULTI inicia o enfileiramento e EXEC executa os comandos sem intercalação de comandos de outros clientes durante esse bloco. As respostas intermediárias são QUEUED."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Redis não oferece rollback geral dos comandos que já executaram se um comando do EXEC falhar em tempo de execução. Erro de tipo é diferente de erro detectado durante o enfileiramento."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Valide os tipos e projete o bloco para não depender de desfazer automaticamente. Não trate a palavra transação como semântica idêntica à de um banco SQL."
+        }
+      ],
+      "code": "DEL forge:a13:n\nMULTI\nSET forge:a13:n 10\nINCR forge:a13:n\nEXEC\nGET forge:a13:n\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 ou 1\nOK\nQUEUED\nQUEUED\nEXEC: OK e 11\nGET: 11",
+      "source": "https://redis.io/docs/latest/develop/using-commands/transactions/",
+      "quiz": {
+        "question": "Um erro de tipo em um comando durante EXEC desfaz automaticamente todos os comandos anteriores?",
+        "options": [
+          "Sim, é obrigatório em todo banco.",
+          "Não; Redis não fornece rollback geral dessa sequência.",
+          "Sim, EXEC sempre desfaz.",
+          "Somente se o nome da chave tiver dois pontos."
+        ],
+        "answer": 1,
+        "explanation": "É preciso conhecer o contrato específico de erro."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Inclua outro INCR antes de EXEC",
+          "prompt": "Inclua outro INCR antes de EXEC.",
+          "hint": "O comando também entra na fila.",
+          "solution": "O bloco passa a terminar em 12 e EXEC devolve mais uma resposta.",
+          "criteria": [
+            "O GET final retorna 12.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Use DISCARD em vez de EXEC num segundo bloco",
+          "prompt": "Use DISCARD em vez de EXEC num segundo bloco.",
+          "hint": "DISCARD cancela comandos ainda enfileirados.",
+          "solution": "MULTI; SET forge:a13:n 99; DISCARD; GET conserva o valor anterior.",
+          "criteria": [
+            "A escrita não foi aplicada.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique por que comparar MULTI com rollback SQL é enganoso",
+          "prompt": "Explique por que comparar MULTI com rollback SQL é enganoso.",
+          "hint": "Falhas de execução têm contrato diferente.",
+          "solution": "O bloco Redis evita intercalação, mas não desfaz comandos já aplicados por erro de outro comando; documente esse limite.",
+          "criteria": [
+            "Distingue isolamento do bloco e desfazer.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 14,
+      "level": 5,
+      "title": "WATCH e concorrência otimista",
+      "goal": "Detectar mudança concorrente e tratar abortos com limite de repetição.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "WATCH monitora chaves na conexão. EXEC aborta se uma chave observada mudou antes da execução do bloco; o cliente pode ler o estado novo e decidir repetir."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "A sequência precisa usar a mesma conexão. Pooling sem reservar a conexão quebra essa expectativa. Toda repetição deve ter limite e tratamento de conflito de negócio."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O exemplo modifica a chave observada na própria conexão antes de MULTI para tornar o aborto observável sem um segundo terminal. Depois repita com dois clientes para entender a disputa real."
+        }
+      ],
+      "code": "SET forge:a14:n 1\nWATCH forge:a14:n\nSET forge:a14:n 2\nMULTI\nSET forge:a14:n 3\nEXEC\nGET forge:a14:n\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "OK\nOK\nOK\nOK\nQUEUED\nEXEC abortado: nil (linha vazia em --raw)\nGET: 2",
+      "source": "https://redis.io/docs/latest/commands/watch/",
+      "quiz": {
+        "question": "O EXEC abortado aplica SET para 3?",
+        "options": [
+          "Sim, fica 3.",
+          "Sim, fica 1.",
+          "Não; o valor permanece 2.",
+          "Apaga a chave obrigatoriamente."
+        ],
+        "answer": 2,
+        "explanation": "A modificação observada invalida a tentativa antes de aplicar o bloco."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Repita sem o SET intermediário para 2",
+          "prompt": "Repita sem o SET intermediário para 2.",
+          "hint": "Não há mudança entre WATCH e EXEC.",
+          "solution": "WATCH ...; MULTI; SET ... 3; EXEC confirma e GET retorna 3.",
+          "criteria": [
+            "O caminho sem conflito é demonstrado.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Reproduza com dois terminais",
+          "prompt": "Reproduza com dois terminais.",
+          "hint": "A observa; B modifica; A tenta EXEC.",
+          "solution": "No terminal A use WATCH e leia; no B use SET; no A faça MULTI/EXEC. O resultado deve ser aborto, não uma escrita baseada no estado antigo.",
+          "criteria": [
+            "O segundo cliente é identificado na sequência.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina uma política de retry",
+          "prompt": "Defina uma política de retry.",
+          "hint": "Conflitos podem persistir sob carga.",
+          "solution": "Refaça leitura e decisão em no máximo algumas tentativas com atraso variável; comunique conflito se esgotar e não repita uma regra já recusada.",
+          "criteria": [
+            "Há limite, releitura e saída de erro.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 15,
+      "level": 5,
+      "title": "Pipelining e latência de rede",
+      "goal": "Reduzir viagens de rede sem atribuir atomicidade a um lote.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Pipelining envia vários comandos antes de esperar todas as respostas. Ele reduz viagens de rede, mas não transforma automaticamente a sequência em transação atômica."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "O cliente deve associar respostas aos comandos e limitar lotes para não acumular memória e espera excessivas. Compare com e sem pipeline usando a mesma carga."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Aqui MSET e MGET mostram um lote no próprio comando. Para pipeline real, o exercício usa modo --pipe com protocolo RESP; não confunda um comando multi-chave com a otimização de transporte do cliente."
+        }
+      ],
+      "code": "MSET forge:a15:a 1 forge:a15:b 2\nMGET forge:a15:a forge:a15:b\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "OK\n1\n2",
+      "source": "https://redis.io/docs/latest/develop/using-commands/pipelining/",
+      "quiz": {
+        "question": "Enviar dois comandos em pipeline garante ausência de comandos intercalados de outros clientes?",
+        "options": [
+          "Sim, pipeline é sinônimo de MULTI.",
+          "Sim, a rede bloqueia outros usuários.",
+          "Não, porque pipeline não envia comandos.",
+          "Não; pipeline por si só não é transação."
+        ],
+        "answer": 3,
+        "explanation": "Agrupamento de transporte e atomicidade são conceitos separados."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compare uma chamada por chave com MGET",
+          "prompt": "Compare uma chamada por chave com MGET.",
+          "hint": "Conte idas e voltas necessárias.",
+          "solution": "Dois GET sequenciais exigem duas esperas; MGET pede os dois valores numa operação no servidor simples.",
+          "criteria": [
+            "A comparação distingue número de viagens e comandos.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Projete um lote de pipeline de tamanho limitado",
+          "prompt": "Projete um lote de pipeline de tamanho limitado.",
+          "hint": "Não envie uma carga ilimitada antes de ler respostas.",
+          "solution": "Separe em lotes, por exemplo 100 comandos, leia e associe todas as respostas e registre erros individualmente.",
+          "criteria": [
+            "Define limite e tratamento de respostas.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique como medir sem mudar a carga",
+          "prompt": "Explique como medir sem mudar a carga.",
+          "hint": "Use as mesmas chaves, operações e quantidade.",
+          "solution": "Fixe dados, número de operações e conexão; compare latência/throughput com lote versus sequência, registrando ambiente e erros.",
+          "criteria": [
+            "O experimento não altera o trabalho solicitado.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 16,
+      "level": 6,
+      "title": "Lua e operações condicionais atômicas",
+      "goal": "Executar uma decisão curta no servidor sem supor rollback automático.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "EVAL executa Lua no servidor sem intercalação de outros comandos durante o script. Isso permite ler uma condição e escrever conforme ela sem uma viagem de rede entre as etapas. Scripts longos também bloqueiam o atendimento e prejudicam latência."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Passe nomes de chave em KEYS e valores em ARGV; não construa nomes de chaves ocultos dentro do script. Valide argumentos e tipos antes da primeira escrita. Um erro de execução depois de escrever não desfaz automaticamente o que já foi aplicado."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O exemplo reserva duas unidades e recusa um pedido maior que o saldo. O retorno -1 representa recusa definida pelo nosso contrato, não um erro padrão do Redis. Atomicidade no servidor não implica durabilidade nem uma transação com um banco externo."
+        }
+      ],
+      "code": "SET forge:a16:estoque 5\nEVAL \"local n=tonumber(ARGV[1]);if not n or n<1 or n%1~=0 then return redis.error_reply('QUANTIDADE_INVALIDA') end;local s=tonumber(redis.call('GET',KEYS[1]));if not s then return redis.error_reply('ESTOQUE_INVALIDO') end;if s<n then return -1 end;return redis.call('DECRBY',KEYS[1],n)\" 1 forge:a16:estoque 2\nEVAL \"local n=tonumber(ARGV[1]);if not n or n<1 or n%1~=0 then return redis.error_reply('QUANTIDADE_INVALIDA') end;local s=tonumber(redis.call('GET',KEYS[1]));if not s then return redis.error_reply('ESTOQUE_INVALIDO') end;if s<n then return -1 end;return redis.call('DECRBY',KEYS[1],n)\" 1 forge:a16:estoque 9\nGET forge:a16:estoque\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "OK\n3\n-1\n3",
+      "source": "https://redis.io/docs/latest/develop/programmability/eval-intro/",
+      "quiz": {
+        "question": "Atomicidade de EVAL garante rollback de uma escrita anterior se uma chamada seguinte falhar?",
+        "options": [
+          "Não; erros em tempo de execução não fornecem rollback geral do script.",
+          "Sim, toda escrita anterior é desfeita.",
+          "Sim, Lua sempre persiste uma cópia anterior.",
+          "Somente se o nome usar dois pontos."
+        ],
+        "answer": 0,
+        "explanation": "Valide antes de escrever e conheça o contrato de falha."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Tente reservar zero unidades",
+          "prompt": "Tente reservar zero unidades.",
+          "hint": "O argumento é validado antes da primeira escrita.",
+          "solution": "Execute o mesmo EVAL com argumento 0; retorna QUANTIDADE_INVALIDA e GET conserva 3.",
+          "criteria": [
+            "O estado não muda na entrada rejeitada.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Demonstre o limite de rollback em chave separada",
+          "prompt": "Demonstre o limite de rollback em chave separada.",
+          "hint": "Uma operação pode escrever antes de outra produzir WRONGTYPE.",
+          "solution": "EVAL \"redis.call('SET',KEYS[1],'gravado');return redis.call('LPUSH',KEYS[1],'x')\" 1 forge:a16:erro; gera erro de tipo; GET forge:a16:erro continua gravado.",
+          "criteria": [
+            "Registra o erro e o valor que permaneceu.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique o custo de um loop Lua demorado",
+          "prompt": "Explique o custo de um loop Lua demorado.",
+          "hint": "A execução ocupa o servidor durante o script.",
+          "solution": "Um loop longo aumenta a espera de outros clientes; mantenha trabalho curto e limitado e faça processamento extenso fora do servidor.",
+          "criteria": [
+            "Relaciona tempo do script à latência de outros clientes.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 17,
+      "level": 6,
+      "title": "Limitador de requisições por janela",
+      "goal": "Vincular contador e vencimento em uma operação com contrato explícito.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Um limitador de janela fixa pode incrementar um contador e associar validade na primeira ocorrência. Separar INCR e EXPIRE em chamadas independentes cria uma janela de falha; o script reúne as etapas no servidor."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Aqui a janela começa na primeira requisição da chave, aceita duas e conta também tentativas recusadas. Isso não é janela deslizante nem token bucket. Chaves por cliente, capacidade de memória e comportamento quando Redis falha fazem parte da política."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Os três EVAL devem ocorrer em menos de 60 segundos para observar 1,1,0 como permissões. PTTL varia. Um limite local ao Redis não garante limites globais perfeitos durante failover, perda de estado ou aplicações que ignoram a resposta."
+        }
+      ],
+      "code": "DEL forge:a17:limite\nEVAL \"local lim=tonumber(ARGV[1]);local ms=tonumber(ARGV[2]);if not lim or not ms or lim<1 or ms<1 or lim%1~=0 or ms%1~=0 then return redis.error_reply('ARGUMENTO_INVALIDO') end;local n=redis.call('INCR',KEYS[1]);if n==1 then redis.call('PEXPIRE',KEYS[1],ms) end;local ok=0;if n<=lim then ok=1 end;return {n,ok,redis.call('PTTL',KEYS[1])}\" 1 forge:a17:limite 2 60000\nEVAL \"local lim=tonumber(ARGV[1]);local ms=tonumber(ARGV[2]);if not lim or not ms or lim<1 or ms<1 or lim%1~=0 or ms%1~=0 then return redis.error_reply('ARGUMENTO_INVALIDO') end;local n=redis.call('INCR',KEYS[1]);if n==1 then redis.call('PEXPIRE',KEYS[1],ms) end;local ok=0;if n<=lim then ok=1 end;return {n,ok,redis.call('PTTL',KEYS[1])}\" 1 forge:a17:limite 2 60000\nEVAL \"local lim=tonumber(ARGV[1]);local ms=tonumber(ARGV[2]);if not lim or not ms or lim<1 or ms<1 or lim%1~=0 or ms%1~=0 then return redis.error_reply('ARGUMENTO_INVALIDO') end;local n=redis.call('INCR',KEYS[1]);if n==1 then redis.call('PEXPIRE',KEYS[1],ms) end;local ok=0;if n<=lim then ok=1 end;return {n,ok,redis.call('PTTL',KEYS[1])}\" 1 forge:a17:limite 2 60000\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL retorna 0 ou 1. Dentro da mesma janela, os retornos são [1,1,PTTL], [2,1,PTTL] e [3,0,PTTL], com PTTL positivo até 60000ms. Se a janela vencer entre chamadas, o contador recomeça.",
+      "source": "https://redis.io/docs/latest/commands/pexpire/",
+      "quiz": {
+        "question": "O limitador desta aula usa qual política?",
+        "options": [
+          "Token bucket exato com reposição contínua.",
+          "Janela iniciada na primeira ocorrência, com limite fixo e tentativas recusadas também contadas.",
+          "Fila que executa todo pedido depois.",
+          "Limite eterno sem expiração."
+        ],
+        "answer": 1,
+        "explanation": "A política precisa ser declarada para interpretar o resultado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Mude o limite para três",
+          "prompt": "Mude o limite para três.",
+          "hint": "Use a mesma chave nova e lim=3.",
+          "solution": "Apague só forge:a17:limite e execute quatro chamadas com limite 3; as permissões devem ser 1,1,1,0 enquanto a janela não vencer.",
+          "criteria": [
+            "Demonstra três permissões e uma recusa na mesma janela.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Teste uma janela curta e seu vencimento",
+          "prompt": "Teste uma janela curta e seu vencimento.",
+          "hint": "Use chave própria com prazo de 1000ms.",
+          "solution": "Após a primeira chamada, aguarde além do prazo no terminal e consulte PTTL; a chave ausente retorna -2. Nova chamada começa contador 1.",
+          "criteria": [
+            "Distingue vencimento observado de valor de tempo fixo.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina o comportamento em indisponibilidade",
+          "prompt": "Defina o comportamento em indisponibilidade.",
+          "hint": "Liberar e bloquear têm consequências distintas.",
+          "solution": "Documente se a aplicação bloqueia ou permite temporariamente e quais limites adicionais existem; não transforme falha de conexão em uma resposta normal de permissão sem registro.",
+          "criteria": [
+            "A política de falha é explícita e observável.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 18,
+      "level": 6,
+      "title": "Idempotência e scripts reaproveitáveis",
+      "goal": "Evitar uma atualização duplicada durante uma janela de deduplicação definida.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Uma chave de requisição identifica a operação lógica. O script guarda quantidade e resultado para responder a uma repetição compatível sem incrementar novamente. Reutilizar a mesma chave com outro conteúdo é conflito, não uma nova operação silenciosa."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "A deduplicação expira após o prazo escolhido e pode desaparecer por perda de dados ou eviction. Assim, ela não prova exatamente uma vez para sempre nem inclui efeitos externos. Todos os campos relevantes do conteúdo precisam participar do contrato de equivalência."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Os exemplos usam duas chaves declaradas em KEYS e a mesma hash tag {aluno1}, antecipando o requisito de slot do Cluster. EVALSHA pode falhar com NOSCRIPT após perda da cache de scripts; a aplicação deve recarregar o código conhecido ou usar um mecanismo de funções versionadas adequado."
+        }
+      ],
+      "code": "DEL forge:a18:{aluno1}:req001 forge:a18:{aluno1}:xp\nEVAL \"local d=tonumber(ARGV[1]);local ttl=tonumber(ARGV[2]);if not d or d<1 or d>1000000 or d%1~=0 or not ttl or ttl<1 or ttl%1~=0 then return redis.error_reply('ARGUMENTO_INVALIDO') end;local old=redis.call('GET',KEYS[1]);if old then local amount,res=string.match(old,'^(%d+):(%d+)$');if amount~=ARGV[1] then return redis.error_reply('CONFLITO') end;return tonumber(res) end;local v=redis.call('GET',KEYS[2]);local n=0;if v then n=tonumber(v);if not n or n<0 or n%1~=0 or n>1000000000 then return redis.error_reply('XP_INVALIDO') end end;local result=n+d;redis.call('SET',KEYS[2],result);redis.call('SET',KEYS[1],ARGV[1]..':'..result,'EX',ttl);return result\" 2 forge:a18:{aluno1}:req001 forge:a18:{aluno1}:xp 50 120\nEVAL \"local d=tonumber(ARGV[1]);local ttl=tonumber(ARGV[2]);if not d or d<1 or d>1000000 or d%1~=0 or not ttl or ttl<1 or ttl%1~=0 then return redis.error_reply('ARGUMENTO_INVALIDO') end;local old=redis.call('GET',KEYS[1]);if old then local amount,res=string.match(old,'^(%d+):(%d+)$');if amount~=ARGV[1] then return redis.error_reply('CONFLITO') end;return tonumber(res) end;local v=redis.call('GET',KEYS[2]);local n=0;if v then n=tonumber(v);if not n or n<0 or n%1~=0 or n>1000000000 then return redis.error_reply('XP_INVALIDO') end end;local result=n+d;redis.call('SET',KEYS[2],result);redis.call('SET',KEYS[1],ARGV[1]..':'..result,'EX',ttl);return result\" 2 forge:a18:{aluno1}:req001 forge:a18:{aluno1}:xp 50 120\nGET forge:a18:{aluno1}:xp\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 a 2\n50\n50\n50. A segunda chamada devolve o resultado salvo e não acrescenta mais 50 durante a retenção da chave.",
+      "source": "https://redis.io/docs/latest/commands/evalsha/",
+      "quiz": {
+        "question": "A chave de deduplicação tem TTL de120s. Ela garante impedir a repetição para sempre?",
+        "options": [
+          "Sim, o ID fica gravado fora do Redis automaticamente.",
+          "Sim, TTL nunca remove chaves de requisição.",
+          "Não; após expiração ou perda do estado a operação pode ser aplicada outra vez.",
+          "Somente se usar duas conexões."
+        ],
+        "answer": 2,
+        "explanation": "A janela de retenção e a durabilidade limitam a garantia."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste conteúdo conflitante",
+          "prompt": "Teste conteúdo conflitante.",
+          "hint": "Mantenha req001 e altere apenas o incremento para60 antes do TTL vencer.",
+          "solution": "O script retorna CONFLITO e a chave de XP permanece50; o conteúdo da requisição não é substituído silenciosamente.",
+          "criteria": [
+            "Rejeita conflito sem incrementar.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique a resposta NOSCRIPT",
+          "prompt": "Explique a resposta NOSCRIPT.",
+          "hint": "A cache de EVAL não é um registro persistente da aplicação.",
+          "solution": "Se EVALSHA retorna NOSCRIPT, recarregue o script versionado conhecido com SCRIPT LOAD e tente conforme a política; não interprete como operação de negócio concluída.",
+          "criteria": [
+            "Inclui recarga e tratamento da resposta.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Inclua uma notificação externa no desenho",
+          "prompt": "Inclua uma notificação externa no desenho.",
+          "hint": "A atomicidade não alcança HTTP ou e-mail.",
+          "solution": "Use uma estratégia de evento de saída/consumidor idempotente com fonte durável apropriada; uma escrita Redis não reverte um envio externo nem cria uma transação distribuída.",
+          "criteria": [
+            "Delimita o efeito coberto pela deduplicação.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 19,
+      "level": 7,
+      "title": "Streams, IDs e leitura por cursor",
+      "goal": "Registrar eventos ordenados e retomar uma leitura com posição conhecida.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Um Stream associa um ID crescente a uma lista de campos por entrada. XADD acrescenta eventos e XRANGE consulta uma faixa. Em aplicações, o ID automático * evita que o produtor invente uma sequência sem coordenar; o laboratório usa IDs explícitos para saída reproduzível."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "XREAD lê eventos posteriores ao ID informado. Manter o cursor permite retomar do ponto conhecido; usar $ significa começar pelos eventos futuros a partir daquela chamada, não recuperar todo o histórico. Campos de Stream não impõem schema de domínio por si só."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Persistência e retenção limitam o que pode ser relido. Um Stream em memória sem estratégia de armazenamento não é uma promessa de durabilidade ilimitada. Defina tamanho, tempo de retenção e como lidar com consumidores atrasados antes de remover entradas."
+        }
+      ],
+      "code": "DEL forge:a19:eventos\nXADD forge:a19:eventos 1-0 tipo inscricao aluno ana\nXADD forge:a19:eventos 2-0 tipo conclusao aluno ana\nXLEN forge:a19:eventos\nXRANGE forge:a19:eventos - +\nXREAD COUNT 1 STREAMS forge:a19:eventos 1-0\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL:0 ou1; XADD retorna1-0 e2-0; XLEN=2. XRANGE mostra as duas entradas com campos; XREAD após1-0 retorna somente2-0, tipo=conclusao e aluno=ana. Em --raw, arrays aparecem achatados em linhas.",
+      "source": "https://redis.io/docs/latest/commands/xread/",
+      "quiz": {
+        "question": "XREAD com cursor1-0 seleciona qual entrada do exemplo?",
+        "options": [
+          "1-0 novamente obrigatoriamente.",
+          "As duas entradas, sempre.",
+          "Nenhuma entrada porque cursor não é permitido.",
+          "2-0, pois retorna IDs posteriores ao cursor."
+        ],
+        "answer": 3,
+        "explanation": "O cursor define a posição já conhecida."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Leia desde o início",
+          "prompt": "Leia desde o início.",
+          "hint": "Use cursor0-0.",
+          "solution": "XREAD STREAMS forge:a19:eventos 0-0 retorna as duas entradas existentes; registre seus IDs e campos.",
+          "criteria": [
+            "Obtém1-0 e2-0 em ordem crescente.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Teste um ID não crescente",
+          "prompt": "Teste um ID não crescente.",
+          "hint": "O último ID já é2-0.",
+          "solution": "XADD forge:a19:eventos 1-1 tipo teste é rejeitado por não superar o maior ID atual; XLEN permanece2.",
+          "criteria": [
+            "O erro não adiciona uma terceira entrada.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Planeje retenção",
+          "prompt": "Planeje retenção.",
+          "hint": "Consumidores podem ficar atrasados.",
+          "solution": "Defina limite e monitoramento de atraso antes de XTRIM; se um cursor aponta para dados removidos, deve haver política de lacuna/reprocessamento, não sucesso silencioso.",
+          "criteria": [
+            "Relaciona remoção a leitores atrasados.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 20,
+      "level": 7,
+      "title": "Grupos de consumidores e XACK",
+      "goal": "Distribuir trabalho e reconhecer uma entrada somente após o efeito necessário.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Um grupo de consumidores acompanha entrega e pendências. XREADGROUP com > obtém entradas ainda não entregues ao grupo; consumidores do mesmo grupo compartilham esse trabalho. Grupos diferentes podem percorrer o mesmo Stream de forma independente."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "A PEL registra entradas entregues e ainda não reconhecidas. XACK remove a pendência do grupo, mas não apaga automaticamente o evento do Stream. Reconhecer antes de concluir o efeito pode perder trabalho lógico se o processo falhar em seguida."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Uma falha depois do efeito e antes do ACK permite reentrega. O consumidor deve tratar repetição e a retenção/persistência deve sustentar o contrato. XACK não cria exatamente uma vez nem confirma atomicamente uma mudança em outro banco."
+        }
+      ],
+      "code": "DEL forge:a20:eventos\nXADD forge:a20:eventos 1-0 tarefa email pedido p1\nXGROUP CREATE forge:a20:eventos processamento 0\nXREADGROUP GROUP processamento worker1 COUNT 1 STREAMS forge:a20:eventos >\nXPENDING forge:a20:eventos processamento\nXACK forge:a20:eventos processamento 1-0\nXLEN forge:a20:eventos\nXPENDING forge:a20:eventos processamento\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "XADD=1-0; criação do grupo=OK; worker1 recebe1-0. XPENDING inicialmente indica1 pendência; XACK=1; XLEN continua1; XPENDING final indica0 pendências. A forma resumida de XPENDING inclui campos auxiliares.",
+      "source": "https://redis.io/docs/latest/commands/xack/",
+      "quiz": {
+        "question": "XACK remove automaticamente a entrada do Stream?",
+        "options": [
+          "Não; reconhece a pendência daquele grupo.",
+          "Sim, sempre equivale a DEL da chave.",
+          "Sim, limpa todos os grupos.",
+          "Não; ele só publica uma mensagem Pub/Sub."
+        ],
+        "answer": 0,
+        "explanation": "Reconhecimento e retenção do evento são operações diferentes."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Adicione um segundo worker",
+          "prompt": "Adicione um segundo worker.",
+          "hint": "Use o mesmo grupo e uma entrada nova.",
+          "solution": "XADD com ID2-0 e depois XREADGROUP GROUP processamento worker2 ... > entrega2-0 ao worker2; o grupo compartilha novas entregas.",
+          "criteria": [
+            "Identifica consumidor e grupo corretos.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Crie um grupo independente",
+          "prompt": "Crie um grupo independente.",
+          "hint": "Cada grupo tem sua própria posição.",
+          "solution": "XGROUP CREATE forge:a20:eventos auditoria 0; XREADGROUP GROUP auditoria auditor1 ... > pode ler1-0 mesmo reconhecida em processamento.",
+          "criteria": [
+            "Distingue estado por grupo.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Simule falha antes do ACK",
+          "prompt": "Simule falha antes do ACK.",
+          "hint": "Entregue e não execute XACK inicialmente.",
+          "solution": "Leia uma entrada, registre XPENDING e encerre o consumidor. A pendência permanece para recuperação; um worker deve reivindicá-la antes de concluir o reconhecimento.",
+          "criteria": [
+            "Mostra pendência sem chamar o trabalho de concluído.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 21,
+      "level": 7,
+      "title": "Pendências, reclaim e consumidores idempotentes",
+      "goal": "Recuperar trabalho abandonado e limitar tentativas de processamento.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "XPENDING permite observar entregas ainda sem ACK. XAUTOCLAIM transfere pendências ociosas para outro consumidor conforme o limiar indicado. O tempo mínimo deve ser maior que uma duração de processamento considerada normal, para evitar disputa desnecessária."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Reivindicar não prova que o consumidor anterior parou de agir. Dois processos podem produzir efeitos se não houver idempotência ou coordenação no destino. ACK deve ocorrer após um efeito durável conforme o contrato da aplicação, incluindo o tratamento de duplicatas."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O laboratório usa min-idle-time0 para demonstrar a transferência imediatamente. Isso não é recomendação para produção. Defina limite de tentativas, diagnóstico e destino de falhas permanentes; remover ou aparar eventos pode deixar referências pendentes cujo conteúdo já não está disponível."
+        }
+      ],
+      "code": "DEL forge:a21:eventos\nXADD forge:a21:eventos 1-0 pedido p1 total 25\nXGROUP CREATE forge:a21:eventos processamento 0\nXREADGROUP GROUP processamento worker1 COUNT 1 STREAMS forge:a21:eventos >\nXAUTOCLAIM forge:a21:eventos processamento worker2 0 0-0 COUNT 1\nXPENDING forge:a21:eventos processamento - + 10\nXACK forge:a21:eventos processamento 1-0\nXPENDING forge:a21:eventos processamento\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "A entrada1-0 é entregue ao worker1 e reivindicada pelo worker2. XAUTOCLAIM retorna próximo cursor, entrada e lista de IDs removidos conforme a versão; XPENDING detalhado mostra worker2 como dono, tempo variável e contagem de entrega. XACK=1; pendências finais=0.",
+      "source": "https://redis.io/docs/latest/commands/xautoclaim/",
+      "quiz": {
+        "question": "XAUTOCLAIM garante que o worker anterior não realizará mais nenhum efeito?",
+        "options": [
+          "Sim, mata o processo remoto.",
+          "Não; a posse da pendência não interrompe automaticamente o outro processo.",
+          "Sim, cancela qualquer HTTP já enviado.",
+          "Somente se min-idle-time for zero."
+        ],
+        "answer": 1,
+        "explanation": "A aplicação precisa tratar concorrência e repetição do efeito."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Observe a mudança de dono",
+          "prompt": "Observe a mudança de dono.",
+          "hint": "Use XPENDING com faixa e quantidade.",
+          "solution": "Antes do reclaim,1-0 pertence a worker1; depois, a worker2. Registre os nomes e não exija um tempo ocioso fixo.",
+          "criteria": [
+            "Demonstra a transferência de posse.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Defina o tempo de reclaim",
+          "prompt": "Defina o tempo de reclaim.",
+          "hint": "Compare duração normal e atraso de falha.",
+          "solution": "Escolha limiar baseado em distribuição de tempo de processamento e monitore tentativas; tempo0 é só uma demonstração e pode reivindicar trabalho ainda ativo.",
+          "criteria": [
+            "Justifica o limiar com medições e risco de duplicação.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Trate falha permanente",
+          "prompt": "Trate falha permanente.",
+          "hint": "Um payload inválido pode falhar sempre.",
+          "solution": "Após número limitado de tentativas, registre diagnóstico e mova/copie para um fluxo de falhas com rastreabilidade, reconhecendo a origem segundo o protocolo; valide idempotência da movimentação também.",
+          "criteria": [
+            "Inclui limite e trilha do evento problemático.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 22,
+      "level": 8,
+      "title": "Pub/Sub e mensagens em tempo real",
+      "goal": "Publicar sinais efêmeros e observar o papel dos assinantes ativos.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "PUBLISH envia a mensagem aos clientes inscritos no canal naquele momento. Pub/Sub tem contrato at-most-once: uma desconexão ou incapacidade de consumo pode perder a mensagem, sem histórico de replay mantido pelo canal."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "É útil para sinais efêmeros quando a aplicação pode reconstruir o estado de outra fonte. Um contador retornado por PUBLISH indica assinantes considerados na publicação, não confirma que cada aplicação concluiu seu processamento."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O comando do exemplo publica sem bloquear. Para observar uma mensagem, abra outra conexão e use SUBSCRIBE forge:a22:avisos antes de publicar. No redis-cli interativo inscrito, Ctrl+C encerra a observação; não espere continuar o arquivo de comandos como uma sessão normal."
+        }
+      ],
+      "code": "PUBLISH forge:a22:avisos \"ranking_atualizado\"\nPUBSUB NUMSUB forge:a22:avisos\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "PUBLISH retorna o número de assinantes alcançados,0 se nenhum estiver inscrito. NUMSUB mostra o canal e a contagem atual. Com um segundo cliente inscrito antes, ele recebe message,forge:a22:avisos,ranking_atualizado; não há replay para quem chegar depois.",
+      "source": "https://redis.io/docs/latest/develop/pubsub/",
+      "quiz": {
+        "question": "Um assinante se conecta depois de PUBLISH. O canal entrega automaticamente o histórico anterior?",
+        "options": [
+          "Sim, toda mensagem fica salva para sempre.",
+          "Sim, GET canal recupera o evento.",
+          "Não; Pub/Sub não conserva esse histórico para replay.",
+          "Somente se a mensagem for JSON."
+        ],
+        "answer": 2,
+        "explanation": "O contrato é efêmero e depende de assinantes ativos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Observe dois clientes",
+          "prompt": "Observe dois clientes.",
+          "hint": "Inscreva antes de publicar.",
+          "solution": "No terminalA use redis-cli -p 6380 SUBSCRIBE forge:a22:avisos; noB publique. Registre a mensagem recebida porA e a contagem devolvida aB.",
+          "criteria": [
+            "A ordem inscrição→publicação está documentada.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Publique sem assinante",
+          "prompt": "Publique sem assinante.",
+          "hint": "Encerre o cliente inscrito e aguarde a desconexão ser reconhecida.",
+          "solution": "Uma nova publicação retorna0 se não restarem assinantes; conectar depois não recupera essa publicação.",
+          "criteria": [
+            "Demonstra a ausência de replay.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Escolha um uso adequado",
+          "prompt": "Escolha um uso adequado.",
+          "hint": "O estado precisa poder ser reconsultado.",
+          "solution": "Um aviso para atualizar a visualização do ranking pode usar Pub/Sub se a tela também busca o ranking atual; uma ordem de cobrança que não pode sumir exige um protocolo persistente distinto.",
+          "criteria": [
+            "Justifica dois requisitos de entrega diferentes.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 23,
+      "level": 8,
+      "title": "Notificações de keyspace e expiração",
+      "goal": "Observar eventos de chaves sem usá-los como agenda confiável.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Keyspace notifications publicam eventos sobre mudanças de chaves quando a configuração habilita as categorias adequadas. Elas usam Pub/Sub, portanto não são um histórico durável e podem ser perdidas quando o observador não está conectado."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "O evento expired ocorre quando o servidor efetivamente detecta e remove a chave vencida, não como um relógio exato do instante nominal do TTL. Uma tarefa crítica agendada não deve depender somente desse sinal."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O código consulta a configuração e cria uma chave temporária, sem alterar parâmetros globais. Para observar, o exercício habilita Ex apenas numa instância dedicada e pede restaurar a configuração anterior. O arquivo normal não demonstra que algum assinante recebeu um evento."
+        }
+      ],
+      "code": "CONFIG GET notify-keyspace-events\nSET forge:a23:temporaria valor EX 2\nTTL forge:a23:temporaria\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "CONFIG GET mostra a configuração real; ela pode estar vazia. SET=OK; TTL entre0 e2 se a chave ainda existir. Isso não comprova recebimento de uma notificação.",
+      "source": "https://redis.io/docs/latest/develop/pubsub/keyspace-notifications/",
+      "quiz": {
+        "question": "Uma notificação expired é um disparo garantido exatamente no milissegundo do TTL?",
+        "options": [
+          "Sim, é uma agenda durável exata.",
+          "Sim, o cliente recebe mesmo desconectado.",
+          "Somente se o valor for uma lista.",
+          "Não; depende da detecção de expiração e da entrega efêmera ao assinante."
+        ],
+        "answer": 3,
+        "explanation": "Expiração e observação do evento têm contratos próprios."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Observe uma expiração local",
+          "prompt": "Observe uma expiração local.",
+          "hint": "Guarde a configuração original antes de mudá-la.",
+          "solution": "Na instância dedicada, registre CONFIG GET notify-keyspace-events; use CONFIG SET notify-keyspace-events Ex. Em outro cliente, SUBSCRIBE __keyevent@0__:expired; crie forge:a23:temporaria EX 2 e observe seu nome no evento. Depois restaure exatamente o valor anterior.",
+          "criteria": [
+            "Registra evento e restauração da configuração.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desconecte o observador",
+          "prompt": "Desconecte o observador.",
+          "hint": "Pub/Sub não conserva mensagens para ele.",
+          "solution": "Encerre a inscrição antes do vencimento; reconecte depois e registre que não existe replay automático da expiração perdida.",
+          "criteria": [
+            "Não declara recebimento de evento perdido.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Desenhe a recuperação de uma tarefa vencida quando um consumidor cai",
+          "prompt": "Desenhe a recuperação de uma tarefa vencida quando um consumidor cai.",
+          "hint": "Uma lista persistida de prazos pode ser consultada novamente.",
+          "solution": "Use fonte de tarefas e estado durável com busca de vencidas e consumidor idempotente; notificações podem ser só um sinal para antecipar a busca.",
+          "criteria": [
+            "Inclui varredura recuperável e limite de atraso.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 24,
+      "level": 8,
+      "title": "Entrega, repetição e efeitos externos",
+      "goal": "Escolher entre sinal efêmero, evento retido e efeito idempotente.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Contrato de entrega descreve quando um evento pode faltar ou repetir. Pub/Sub é at-most-once; um protocolo de Streams com grupos e recuperação pode buscar processamento ao menos uma vez, desde que retenção, persistência e operação preservem os dados necessários."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Ao menos uma vez implica tolerar duplicatas. O destino pode manter uma chave única da operação e registrar o efeito na mesma transação local quando houver um banco apropriado. Redis e um serviço HTTP externo não formam uma transação conjunta automaticamente."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O exemplo guarda uma ocorrência de evento e um sinal separado. Ele não publica atomicamente com um banco SQL nem demonstra um worker real. O projeto pede documentar falhas entre criação do evento, execução do efeito e reconhecimento, incluindo o caminho de recuperação."
+        }
+      ],
+      "code": "DEL forge:a24:eventos\nXADD forge:a24:eventos 1-0 operacao req-001 acao recalcular\nXRANGE forge:a24:eventos - +\nPUBLISH forge:a24:sinal req-001\nXLEN forge:a24:eventos\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "O Stream contém1-0 com operacao=req-001 e acao=recalcular. PUBLISH devolve uma contagem variável de assinantes. XLEN continua1, independentemente de algum assinante ter visto o sinal.",
+      "source": "https://redis.io/docs/latest/commands/xadd/",
+      "quiz": {
+        "question": "Qual medida ajuda um destino transacional a não repetir um efeito de uma mesma operação?",
+        "options": [
+          "Chave única da operação e efeito registrados na mesma transação local do destino, conforme o domínio.",
+          "Somente confiar no nome do worker.",
+          "Executar ACK antes do efeito sempre.",
+          "Apagar o ID da operação antes de processar."
+        ],
+        "answer": 0,
+        "explanation": "A idempotência precisa existir onde o efeito é decidido."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Monte uma matriz de falhas",
+          "prompt": "Monte uma matriz de falhas.",
+          "hint": "Considere antes do efeito, depois do efeito e antes do ACK.",
+          "solution": "Antes do efeito, reentrega refaz o trabalho; depois do efeito sem ACK, a reentrega precisa reconhecer a operação já aplicada; após ACK, a conclusão deve estar comprovada pelo destino.",
+          "criteria": [
+            "Cobre os três pontos e suas recuperações.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique outbox",
+          "prompt": "Explique outbox.",
+          "hint": "Evento e mudança de negócio podem nascer no mesmo banco transacional.",
+          "solution": "Uma outbox registra o evento na mesma transação SQL da mudança; um publicador pode reenviar após falha, portanto o consumidor continua idempotente. Isso não torna Redis e SQL um único commit distribuído.",
+          "criteria": [
+            "Distingue atomicidade local e publicação repetível.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Compare os dois caminhos",
+          "prompt": "Compare os dois caminhos.",
+          "hint": "O sinal serve para velocidade; o registro serve para retomada.",
+          "solution": "Um consumidor pode usar o sinal como dica e buscar o Stream pelo cursor salvo; se perder o sinal, uma busca periódica ainda encontra eventos retidos, sujeita à política de dados.",
+          "criteria": [
+            "A retomada não depende apenas do Pub/Sub.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 25,
+      "level": 9,
+      "title": "Snapshots RDB",
+      "goal": "Solicitar uma cópia de estado e verificar conclusão sem confundir início e sucesso.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "RDB guarda um retrato do conjunto num arquivo. BGSAVE solicita trabalho em segundo plano; sua resposta inicial não comprova que o arquivo foi concluído nem que poderá ser restaurado."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "INFO persistence informa andamento e resultado do último salvamento. LASTSAVE é um horário do servidor e pode não mudar na resolução de um segundo; não use seu valor como única prova do ensaio."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Snapshots periódicos permitem perder alterações posteriores ao ponto copiado. Escolha frequência e retenção a partir do RPO e teste o destino com restauração real."
+        }
+      ],
+      "code": "SET forge:a25:marco antes\nBGSAVE\nINFO persistence\nLASTSAVE\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "SET=OK. BGSAVE normalmente informa início do salvamento; pode recusar se já houver trabalho incompatível. INFO pode mostrar rdb_bgsave_in_progress=1 e depois 0, com rdb_last_bgsave_status=ok após conclusão. LASTSAVE é um timestamp variável. Nenhuma dessas respostas sozinha prova restauração.",
+      "source": "https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/",
+      "quiz": {
+        "question": "BGSAVE respondeu que começou. O backup já pode ser declarado restaurável?",
+        "options": [
+          "Sim, a resposta inicial prova recuperação.",
+          "Não; é preciso conferir conclusão e testar a cópia.",
+          "Sim, BGSAVE cria réplica remota.",
+          "Não, porque RDB só guarda comentários."
+        ],
+        "answer": 1,
+        "explanation": "Início, conclusão e recuperabilidade são evidências diferentes."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Acompanhe o fim da gravação",
+          "prompt": "Acompanhe o fim da gravação.",
+          "hint": "Observe INFO persistence em momentos diferentes.",
+          "solution": "Confira rdb_bgsave_in_progress e rdb_last_bgsave_status; se houver erro, registre a causa e não marque a cópia como concluída.",
+          "criteria": [
+            "Registra conclusão real e status do trabalho.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Defina a perda possível entre snapshots",
+          "prompt": "Defina a perda possível entre snapshots.",
+          "hint": "Uma escrita posterior pode não estar no arquivo.",
+          "solution": "Se o último snapshot foi às 10h e a falha ocorreu às 10h05, alterações posteriores ao snapshot podem se perder, dependendo dos demais mecanismos.",
+          "criteria": [
+            "Distingue horário do snapshot e últimas escritas.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Localize o arquivo no laboratório",
+          "prompt": "Localize o arquivo no laboratório.",
+          "hint": "CONFIG GET dir e CONFIG GET dbfilename descrevem o destino.",
+          "solution": "Registre os dois valores e confira o arquivo local após concluir; não publique um dump com dados reais.",
+          "criteria": [
+            "O destino é identificado sem inferir só pelo nome.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 26,
+      "level": 9,
+      "title": "AOF e política de durabilidade",
+      "goal": "Relacionar registro de operações, fsync e recuperação.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "AOF registra operações para reconstruir o estado. A política appendfsync influencia a janela de perda e o custo de I/O. always, everysec e no possuem compromissos distintos; nenhum nome elimina falhas de armazenamento ou operação."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Redis moderno pode usar AOF com múltiplas partes e manifesto. Copiar apenas um arquivo escolhido pelo nome sem seguir o procedimento pode deixar uma cópia incompleta."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O código inspeciona a configuração e não a altera. Habilitar AOF ou disparar rewrite exige planejamento de espaço e recursos; mudar um parâmetro não comprova uma recuperação bem-sucedida."
+        }
+      ],
+      "code": "CONFIG GET appendonly\nCONFIG GET appendfsync\nINFO persistence\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "CONFIG GET mostra a configuração real, por exemplo appendonly=no no setup inicial. appendfsync e campos aof_* dependem da instância. Inspeção não habilita AOF nem executa restore.",
+      "source": "https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/",
+      "quiz": {
+        "question": "AOF everysec promete perda zero em qualquer falha?",
+        "options": [
+          "Sim, everysec equivale a réplica síncrona ilimitada.",
+          "Sim, qualquer AOF é invulnerável.",
+          "Não; existe uma janela de durabilidade e dependência do sistema de armazenamento.",
+          "Não, porque AOF não registra operações."
+        ],
+        "answer": 2,
+        "explanation": "A política é um compromisso operacional, não garantia absoluta."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compare always e everysec conceitualmente",
+          "prompt": "Compare always e everysec conceitualmente.",
+          "hint": "Relacione sincronização e latência.",
+          "solution": "always solicita sincronização a cada escrita; everysec normalmente a agrupa por segundo, reduzindo custo com outra janela de perda. Meça no ambiente.",
+          "criteria": [
+            "Aponta custo e janela sem prometer desempenho fixo.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Liste o que conferir antes de rewrite",
+          "prompt": "Liste o que conferir antes de rewrite.",
+          "hint": "Espaço e carga importam.",
+          "solution": "Confira espaço livre, uso de memória, estado da persistência e logs; registre resultado do rewrite em vez de assumir sucesso pelo comando inicial.",
+          "criteria": [
+            "Inclui pré-condição e verificação final.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Planeje cópia de AOF com manifesto",
+          "prompt": "Planeje cópia de AOF com manifesto.",
+          "hint": "A unidade válida pode envolver múltiplas partes.",
+          "solution": "Siga o procedimento oficial da versão para uma cópia consistente de todas as partes necessárias e teste a inicialização numa instância isolada.",
+          "criteria": [
+            "Não trata um arquivo avulso como cópia completa.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 27,
+      "level": 9,
+      "title": "Restauração RDB isolada",
+      "goal": "Criar e reabrir uma cópia com processos exclusivos do ensaio.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Este script é Bash, não um arquivo de comandos Redis. Ele cria duas instâncias próprias com sockets Unix em uma pasta temporária, sem reutilizar a instância das aulas na porta 6380."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "SAVE é síncrono e bloqueia esta instância minúscula do ensaio enquanto grava o RDB. A origem é encerrada, a cópia é aberta num processo diferente e GET verifica o marcador no destino."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O trap encerra apenas os processos criados pelo script e remove sua pasta temporária. O ensaio demonstra esta cópia local; retenção externa e desastre completo continuam sendo requisitos do projeto."
+        }
+      ],
+      "code": "#!/usr/bin/env bash\nset -euo pipefail\nlab_dir=$(mktemp -d)\norigem_pid=''\ndestino_pid=''\ncleanup() {\n  for pid in \"$origem_pid\" \"$destino_pid\"; do\n    if [ -n \"$pid\" ]; then kill \"$pid\" 2>/dev/null || true; wait \"$pid\" 2>/dev/null || true; fi\n  done\n  rm -rf -- \"$lab_dir\"\n}\ntrap cleanup EXIT\naguardar() {\n  local socket=$1\n  for tentativa in {1..50}; do\n    if redis-cli -s \"$socket\" PING >/dev/null 2>&1; then return 0; fi\n    sleep 0.05\n  done\n  return 1\n}\nredis-server --port 0 --unixsocket \"$lab_dir/origem.sock\" --unixsocketperm 700 --dir \"$lab_dir\" --dbfilename origem.rdb --save '' --appendonly no >\"$lab_dir/origem.log\" 2>&1 &\norigem_pid=$!\naguardar \"$lab_dir/origem.sock\"\nredis-cli -s \"$lab_dir/origem.sock\" SET forge:a27:marco antes_da_copia >/dev/null\nredis-cli -s \"$lab_dir/origem.sock\" SAVE >/dev/null\nredis-cli -s \"$lab_dir/origem.sock\" SHUTDOWN NOSAVE\nwait \"$origem_pid\"\norigem_pid=''\ncp -- \"$lab_dir/origem.rdb\" \"$lab_dir/destino.rdb\"\nredis-server --port 0 --unixsocket \"$lab_dir/destino.sock\" --unixsocketperm 700 --dir \"$lab_dir\" --dbfilename destino.rdb --save '' --appendonly no >\"$lab_dir/destino.log\" 2>&1 &\ndestino_pid=$!\naguardar \"$lab_dir/destino.sock\"\nvalor=$(redis-cli --raw -s \"$lab_dir/destino.sock\" GET forge:a27:marco)\ntest \"$valor\" = antes_da_copia\nprintf 'restaurado=%s\\n' \"$valor\"\n",
+      "filename": "aula_27.sh",
+      "language": "bash",
+      "run": "Salve como aula_27.sh. Em Linux/WSL, com redis-server e redis-cli no PATH, execute bash aula_27.sh. O script usa sockets Unix em pasta temporária e não usa a instância da porta 6380.",
+      "expected": "Quando executado em Linux/WSL com redis-server e redis-cli disponíveis: restaurado=antes_da_copia. O script falha se o destino não reabrir ou se o marcador divergir. A pasta temporária e seus processos são limpos ao final.",
+      "source": "https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/",
+      "quiz": {
+        "question": "Que evidência diferencia este ensaio de apenas salvar um arquivo?",
+        "options": [
+          "O arquivo possui letras no nome.",
+          "Um PING foi feito antes de copiar.",
+          "O código contém a palavra backup.",
+          "Outro processo abre a cópia e devolve o marcador esperado."
+        ],
+        "answer": 3,
+        "explanation": "A verificação consulta o estado recuperado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Identifique origem e destino",
+          "prompt": "Identifique origem e destino.",
+          "hint": "Há sockets e nomes de arquivo distintos.",
+          "solution": "origem.sock usa origem.rdb; destino.sock carrega destino.rdb. Nenhuma chamada aponta para 6380.",
+          "criteria": [
+            "Os dois processos e arquivos estão mapeados.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique por que SAVE não é recomendação automática para bases grandes",
+          "prompt": "Explique por que SAVE não é recomendação automática para bases grandes.",
+          "hint": "É síncrono e bloqueia a instância durante a gravação.",
+          "solution": "Aqui a base é mínima e dedicada; em carga real avalie BGSAVE, AOF e impacto de I/O conforme o procedimento, sem extrapolar este tempo.",
+          "criteria": [
+            "Relaciona bloqueio à escala do ensaio.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Prepare evidências persistentes do projeto",
+          "prompt": "Prepare evidências persistentes do projeto.",
+          "hint": "O exemplo limpa sua pasta ao terminar.",
+          "solution": "Num roteiro próprio, preserve cópia em destino controlado, logs, horários e resultados antes da limpeza; defina retenção e RPO/RTO medidos.",
+          "criteria": [
+            "Distingue ensaio temporário de política de backup.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Roteiro de terminal Bash com processos próprios. Não o cole no redis-cli. SAVE é bloqueante nesta instância minúscula e dedicada; não transfira o comando para um servidor compartilhado.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 28,
+      "level": 10,
+      "title": "ACL e privilégios por comando",
+      "goal": "Criar uma identidade de teste sem ampliar a conta da aplicação.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "ACL controla comandos, padrões de chaves e canais por usuário. Prefixos só viram regra de acesso quando uma ACL apropriada é aplicada; convenção de nomes sozinha não autentica ninguém."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "A identidade do exemplo fica off: a configuração é inspecionada sem permitir login. reset limpa regras anteriores desse nome de teste. Use somente um nome reservado e inexistente no laboratório."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Para um teste positivo de autenticação, crie credencial local própria e limitada e confira também operações recusadas. Não reutilize a conta administrativa como identidade de aplicação."
+        }
+      ],
+      "code": "ACL SETUSER forge_a28 reset off ~forge:a28:* +get\nACL GETUSER forge_a28\nACL DELUSER forge_a28\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "SETUSER=OK; GETUSER mostra flags com off, comandos limitados a GET e padrão forge:a28:*. Formatação varia. DELUSER=1. O exemplo não habilita login nem verifica um cliente autenticado.",
+      "source": "https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/",
+      "quiz": {
+        "question": "Nomear uma chave como privado: garante que outro usuário não possa lê-la?",
+        "options": [
+          "Não; é preciso uma política de autorização aplicada ao usuário.",
+          "Sim, dois pontos criam senha.",
+          "Sim, o prefixo bloqueia qualquer administrador.",
+          "Não, porque chaves não aceitam texto."
+        ],
+        "answer": 0,
+        "explanation": "Nome e autorização são mecanismos distintos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confira o estado off antes da limpeza",
+          "prompt": "Confira o estado off antes da limpeza.",
+          "hint": "Pause antes de DELUSER.",
+          "solution": "ACL GETUSER forge_a28 mostra a identidade desabilitada; nenhuma senha real precisa ser gravada no arquivo da aula.",
+          "criteria": [
+            "A inspeção registra off e o padrão permitido.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Planeje teste positivo e negativo com uma credencial local",
+          "prompt": "Planeje teste positivo e negativo com uma credencial local.",
+          "hint": "A conta deve ser habilitada pelo operador só no ensaio.",
+          "solution": "Depois de criar uma conta com senha exclusiva e GET no prefixo, conecte com --user e --askpass; GET permitido deve funcionar, SET e leitura fora do prefixo devem falhar. Preserve a credencial fora dos arquivos e remova a conta ao concluir.",
+          "criteria": [
+            "Há teste de permissão e de recusa.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique por que +@all é amplo demais para um leitor",
+          "prompt": "Explique por que +@all é amplo demais para um leitor.",
+          "hint": "A aplicação não precisa administrar o servidor.",
+          "solution": "Conceda apenas os comandos e chaves necessários; categorias amplas podem incluir operações fora do papel esperado.",
+          "criteria": [
+            "A concessão corresponde às consultas do cliente.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 29,
+      "level": 10,
+      "title": "Rede, TLS e autenticação",
+      "goal": "Distinguir escuta local, identidade e proteção do transporte.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "bind e protected-mode participam da exposição de rede; autenticação verifica identidade e TLS protege o transporte conforme os certificados configurados. Um desses mecanismos não substitui todos os demais."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "O laboratório inicial escuta no endereço local. A consulta de configuração não prova que uma conexão remota está cifrada; um ensaio TLS requer servidor, certificados e cliente apropriados."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Para cliente TLS configure autoridade confiável e o nome esperado. Desativar verificação para eliminar erro não demonstra autenticidade do servidor; investigue nome, cadeia e validade dos certificados."
+        }
+      ],
+      "code": "CONFIG GET bind\nCONFIG GET protected-mode\nCONFIG GET port\nACL WHOAMI\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "Mostra configuração real de escuta, modo protegido, porta e usuário da conexão. No setup simples a porta é 6380 e a identidade padrão pode ser default. Isso não configura nem comprova TLS.",
+      "source": "https://redis.io/docs/latest/operate/oss_and_stack/management/security/encryption/",
+      "quiz": {
+        "question": "Autenticação por senha implica que a rede já usa TLS?",
+        "options": [
+          "Sim, toda senha cifra qualquer conexão.",
+          "Não; identidade e proteção do transporte precisam ser verificadas separadamente.",
+          "Sim, ACL cria certificado automaticamente.",
+          "Não, porque TLS não aceita autenticação."
+        ],
+        "answer": 1,
+        "explanation": "Cada mecanismo cobre uma parte do caminho."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Registre a exposição atual",
+          "prompt": "Registre a exposição atual.",
+          "hint": "Confira bind, porta e contexto da máquina.",
+          "solution": "No laboratório descrito, confirme 127.0.0.1 e 6380; não interprete uma configuração local como teste de acesso a partir de outra rede.",
+          "criteria": [
+            "A evidência identifica o alcance da observação.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Descreva um cliente TLS com senha em prompt",
+          "prompt": "Descreva um cliente TLS com senha em prompt.",
+          "hint": "Use certificados fornecidos pelo operador do ensaio.",
+          "solution": "Com servidor TLS preparado: redis-cli --tls --cacert CA.pem -h NOME_DO_CERTIFICADO -p PORTA_TLS --user USUARIO --askpass PING. Substitua os campos e não coloque a senha na linha de comando.",
+          "criteria": [
+            "Inclui CA, nome esperado e prompt de senha.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Trate certificado com nome divergente",
+          "prompt": "Trate certificado com nome divergente.",
+          "hint": "Verifique o destino antes de contornar a validação.",
+          "solution": "Corrija o nome usado ou o certificado conforme o serviço; registre a falha e confirme a cadeia. Não declare conexão autenticada apenas porque aceitou qualquer certificado.",
+          "criteria": [
+            "A solução conserva verificação de identidade.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 30,
+      "level": 10,
+      "title": "Namespaces e evolução de dados",
+      "goal": "Versionar representações e planejar transição de chaves.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Prefixos por aplicação, ambiente e versão tornam a posse e o formato dos dados explícitos. Eles ajudam a migrar leituras sem reinterpretar silenciosamente valores antigos como um novo esquema."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Uma troca de versão pode ler o formato novo, consultar o antigo em fallback e converter de modo controlado. Defina validade, métricas e momento de retirar o caminho antigo."
+        },
+        {
+          "title": "O que verificar",
+          "text": "UNLINK remove chaves conhecidas; não percorre automaticamente toda uma hierarquia. Para limpeza por prefixo use iteração cuidadosa, sem presumir ordem, snapshot ou padrão que alcance outro ambiente."
+        }
+      ],
+      "code": "SET forge:a30:v1:perfil:1 \"Ana|100\"\nSET forge:a30:v2:perfil:1 \"nome=Ana;xp=100\" EX 300\nGET forge:a30:v2:perfil:1\nUNLINK forge:a30:v1:perfil:1\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "OK\nOK\nnome=Ana;xp=100\n1",
+      "source": "https://redis.io/docs/latest/commands/unlink/",
+      "quiz": {
+        "question": "Uma chave v1 pode ser lida como v2 apenas porque o ID é igual?",
+        "options": [
+          "Sim, o Redis converte qualquer formato.",
+          "Sim, o prefixo é decorativo sem significado.",
+          "Não; o contrato de representação pode ter mudado.",
+          "Somente quando TTL é -1."
+        ],
+        "answer": 2,
+        "explanation": "Versão identifica um contrato, não só um nome."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Proponha leitura durante migração",
+          "prompt": "Proponha leitura durante migração.",
+          "hint": "Leia novo antes do fallback antigo.",
+          "solution": "Tente v2; se ausente, busque v1, valide e converta com prazo. Registre fallback para saber quando o caminho antigo pode sair.",
+          "criteria": [
+            "Inclui validação, prazo e métrica de transição.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Diferencie ambientes nos nomes",
+          "prompt": "Diferencie ambientes nos nomes.",
+          "hint": "Não compartilhe o mesmo conjunto de chaves por acidente.",
+          "solution": "Adote prefixos como forge:dev:... e forge:test:... e complemente com isolamento e ACL conforme o ambiente.",
+          "criteria": [
+            "Não apresenta o prefixo sozinho como isolamento de segurança.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Planeje limpeza de v1",
+          "prompt": "Planeje limpeza de v1.",
+          "hint": "Consumidores antigos precisam ter saído primeiro.",
+          "solution": "Confirme versão dos consumidores e queda de fallback, use lista dirigida ou SCAN com deduplicação e remova só alvos antigos previstos.",
+          "criteria": [
+            "A limpeza depende de evidência de migração.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 31,
+      "level": 11,
+      "title": "Métricas, logs e latência",
+      "goal": "Investigar sinais sem usar uma amostra como história completa.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "INFO reúne contadores e estados com unidades próprias. Alguns valores acumulam desde a inicialização, outros são instantâneos. Uma taxa precisa de intervalo e comparação, não de leitura isolada de um contador."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "SLOWLOG mede tempo de execução do comando no servidor, excluindo boa parte do tempo de comunicação e espera do cliente. Ausência de entradas não prova que a aplicação nunca teve lentidão."
+        },
+        {
+          "title": "O que verificar",
+          "text": "LATENCY LATEST depende da configuração de monitoramento e dos eventos observados. Colete também latência de ponta a ponta e erros do cliente, com dados fictícios e acesso restrito aos textos de comandos."
+        }
+      ],
+      "code": "INFO stats\nSLOWLOG GET 5\nLATENCY LATEST\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "Contadores e tempos variam. SLOWLOG e LATENCY podem estar vazios se limiares/configuração não produziram eventos. A saída é diagnóstico real da instância, não um resultado fixo de desempenho.",
+      "source": "https://redis.io/docs/latest/commands/slowlog/",
+      "quiz": {
+        "question": "SLOWLOG vazio comprova que a aplicação teve latência zero?",
+        "options": [
+          "Sim, vazio significa rede instantânea.",
+          "Sim, ele mede todo navegador.",
+          "Não, porque SLOWLOG só contém erros de sintaxe.",
+          "Não; há limiar, configuração e componentes de latência fora da execução medida."
+        ],
+        "answer": 3,
+        "explanation": "Cada instrumento observa uma parte do caminho."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Calcule taxa a partir de duas leituras",
+          "prompt": "Calcule taxa a partir de duas leituras.",
+          "hint": "Use diferença do contador e tempo decorrido.",
+          "solution": "Registre total_commands_processed em dois instantes e divida a diferença pelos segundos, anotando reinício ou reset se houver.",
+          "criteria": [
+            "A taxa possui intervalo e unidade.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare latência do cliente e tempo do comando",
+          "prompt": "Compare latência do cliente e tempo do comando.",
+          "hint": "Rede e filas podem aumentar o primeiro sem o segundo.",
+          "solution": "Meça o tempo da requisição no cliente e compare com execução no servidor; investigue rede, filas e conexões sem atribuir tudo ao comando.",
+          "criteria": [
+            "Distingue os componentes medidos.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina alerta útil",
+          "prompt": "Defina alerta útil.",
+          "hint": "Um número precisa de limiar e ação.",
+          "solution": "Use taxa de erros, uso de memória e distribuição de latência com janela; registre destino de investigação e como evitar alertas ruidosos.",
+          "criteria": [
+            "O alerta tem janela e ação concreta.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 32,
+      "level": 11,
+      "title": "SCAN e manutenção incremental",
+      "goal": "Percorrer chaves com cursor e aceitar resultados não uniformes.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "SCAN devolve um cursor e um lote. A iteração termina quando o cursor volta a zero. COUNT é uma sugestão de esforço, não garantia de quantidade de chaves retornadas."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Uma chamada pode devolver zero chaves com cursor ainda não zero. Duplicatas também são possíveis durante uma iteração; consumidores de manutenção devem ser idempotentes ou deduplicar conforme o objetivo."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Não há snapshot estático de uma base mutável. Defina o que fazer se uma chave muda entre inspeção e exclusão. KEYS percorre o conjunto de forma bloqueante e não é substituto automático para manutenção em carga."
+        }
+      ],
+      "code": "MSET forge:a32:a 1 forge:a32:b 2 forge:a32:c 3\nSCAN 0 MATCH forge:a32:* COUNT 2\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "MSET=OK. SCAN retorna cursor e zero ou mais chaves, em ordem variável; COUNT 2 não promete duas chaves. Continue usando o cursor retornado até zero para concluir a iteração.",
+      "source": "https://redis.io/docs/latest/commands/scan/",
+      "quiz": {
+        "question": "SCAN retornou lote vazio e cursor não zero. A iteração terminou?",
+        "options": [
+          "Não; continue com o cursor devolvido até ele chegar a zero.",
+          "Sim, lote vazio sempre encerra.",
+          "Sim, COUNT conta todas as chaves existentes.",
+          "Não, porque é preciso usar KEYS primeiro."
+        ],
+        "answer": 0,
+        "explanation": "O cursor define o término."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Complete a iteração manualmente",
+          "prompt": "Complete a iteração manualmente.",
+          "hint": "Use exatamente o cursor da resposta anterior.",
+          "solution": "Repita SCAN cursor MATCH forge:a32:* COUNT 2 e registre membros únicos até cursor zero.",
+          "criteria": [
+            "A iteração termina por cursor, não pelo tamanho do lote.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Trate uma chave repetida",
+          "prompt": "Trate uma chave repetida.",
+          "hint": "Manutenção deve suportar reprocessamento.",
+          "solution": "Deduplicate IDs para contagem exata observada, ou use operação idempotente quando a tarefa permitir; não some duas vezes sem critério.",
+          "criteria": [
+            "O protocolo descreve repetição.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique inspeção seguida de remoção",
+          "prompt": "Explique inspeção seguida de remoção.",
+          "hint": "O valor pode mudar entre os comandos.",
+          "solution": "Se só remover versões antigas, confira a versão de forma atômica antes de excluir; SCAN sozinho não trava o estado inspecionado.",
+          "criteria": [
+            "Relaciona a condição de exclusão ao estado atual.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 33,
+      "level": 11,
+      "title": "Memória, eviction e expiração",
+      "goal": "Separar falta de memória, remoção por política e prazo de validade.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "maxmemory e maxmemory-policy definem o comportamento sob pressão de memória para dados sujeitos à política. Expiração remove por prazo; eviction pode remover antes do prazo para atender à política configurada."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "noeviction pode recusar escritas que precisem de memória em vez de escolher vítimas. Políticas volatile dependem de chaves com expiração; a distribuição de TTL importa."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O exemplo só observa a configuração e o custo de uma chave. Um ensaio de eviction requer instância própria com limite medido; não diminua maxmemory de outro serviço para produzir um erro."
+        }
+      ],
+      "code": "CONFIG GET maxmemory\nCONFIG GET maxmemory-policy\nSET forge:a33:cache valor EX 300\nMEMORY USAGE forge:a33:cache\nINFO memory\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "Configuração e memória refletem a instância. SET=OK se houver capacidade. MEMORY USAGE retorna um custo em bytes variável com versão e representação. Isso não demonstra eviction por si só.",
+      "source": "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/",
+      "quiz": {
+        "question": "Um cache com TTL de cinco minutos pode ser removido antes disso por eviction?",
+        "options": [
+          "Não, TTL garante residência mínima.",
+          "Sim, conforme pressão e política de memória.",
+          "Não, eviction só remove chaves expiradas.",
+          "Sim, mas todo GET remove a chave."
+        ],
+        "answer": 1,
+        "explanation": "TTL limita validade, não promete permanência."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confira a política atual",
+          "prompt": "Confira a política atual.",
+          "hint": "CONFIG GET mostra o valor real.",
+          "solution": "Registre maxmemory e maxmemory-policy antes de um ensaio; se criar instância dedicada, documente o limite usado e não altere a instância compartilhada.",
+          "criteria": [
+            "A política e o escopo estão documentados.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique erro de escrita com noeviction",
+          "prompt": "Explique erro de escrita com noeviction.",
+          "hint": "Capacidade e efeito precisam ser tratados pelo cliente.",
+          "solution": "A aplicação pode receber erro ao exceder o limite; não deve anunciar escrita aplicada sem conferir resposta, e precisa de estratégia de falha.",
+          "criteria": [
+            "O erro não vira sucesso silencioso.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Diferencie métricas de expired e evicted",
+          "prompt": "Diferencie métricas de expired e evicted.",
+          "hint": "Um evento é por tempo, outro por pressão.",
+          "solution": "Observe expired_keys e evicted_keys em INFO stats e compare diferenças no intervalo; ambos podem causar miss, mas têm causas distintas.",
+          "criteria": [
+            "Causa e unidade de observação são registradas.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 34,
+      "level": 12,
+      "title": "Replicação e consistência observada",
+      "goal": "Inspecionar papéis e planejar um ensaio real com duas instâncias.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Replicação Redis é normalmente assíncrona. O primário confirma conforme o protocolo e as réplicas acompanham o fluxo; pode haver atraso e perda de escritas em cenários de falha."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "ROLE e INFO replication observam o processo conectado. Um primário sem réplicas não constitui alta disponibilidade. Uma réplica também pode receber uma exclusão acidental feita no primário, portanto não substitui retenção de backup."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O exercício usa processos locais próprios em portas separadas e compara dados e estado do link. Ensaios locais estudam o protocolo, mas não toleram a perda da máquina inteira."
+        }
+      ],
+      "code": "ROLE\nINFO replication\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "No setup simples, ROLE deve indicar master/primário e zero réplicas conectadas. Campos como offsets e estado variam. O código não cria replicação nem testa failover.",
+      "source": "https://redis.io/docs/latest/operate/oss_and_stack/management/replication/",
+      "quiz": {
+        "question": "Uma réplica assíncrona pode estar atrasada em relação ao primário?",
+        "options": [
+          "Não, qualquer réplica tem confirmação síncrona ilimitada.",
+          "Não, INFO elimina atraso.",
+          "Sim; leitura na réplica pode observar estado anterior.",
+          "Somente se as chaves forem strings."
+        ],
+        "answer": 2,
+        "explanation": "Atraso faz parte dos cenários a monitorar."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Prepare duas instâncias locais exclusivas",
+          "prompt": "Prepare duas instâncias locais exclusivas.",
+          "hint": "Use diretórios e portas que você criou para o ensaio.",
+          "solution": "Inicie primário 6383 e réplica 6384 com configurações locais próprias; na réplica use REPLICAOF 127.0.0.1 6383. Confira role e master_link_status antes de testar dados. Encerre só esses processos ao concluir.",
+          "criteria": [
+            "Há destinos distintos e confirmação do link.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Observe uma escrita replicada",
+          "prompt": "Observe uma escrita replicada.",
+          "hint": "Escreva no primário e consulte a réplica até um prazo limitado.",
+          "solution": "SET forge:a34:marco replicado no primário; GET na réplica deve convergir conforme o link. Registre tempo e offsets, sem supor leitura imediata.",
+          "criteria": [
+            "O teste possui prazo e evidência de convergência.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique exclusão replicada",
+          "prompt": "Explique exclusão replicada.",
+          "hint": "A réplica segue operações, não mantém necessariamente todas as versões.",
+          "solution": "DEL no primário pode remover a chave na réplica também; recuperação histórica exige cópias/pontos apropriados.",
+          "criteria": [
+            "Não usa réplica como proteção absoluta contra erro lógico.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 35,
+      "level": 12,
+      "title": "Sentinel, Cluster e distribuição por slots",
+      "goal": "Distinguir monitoramento de failover e particionamento.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Sentinel monitora uma topologia de primário/réplicas e participa de descoberta e failover conforme quorum e maioria exigidos. Não divide automaticamente o conjunto de chaves em shards."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "Redis Cluster distribui chaves por hash slots. Operações multi-chave e scripts precisam atender às regras de slot; hash tags com a mesma parte entre chaves permitem colocá-las no mesmo slot, mas concentram esse grupo."
+        },
+        {
+          "title": "O que verificar",
+          "text": "O exemplo roda no servidor simples e só ilustra nomes compatíveis com uma hash tag. Ele não cria Cluster ou Sentinel. Um ensaio real exige topologia, clientes compatíveis, falhas e reconexão observadas."
+        }
+      ],
+      "code": "INFO cluster\nMSET forge:a35:{aluno1}:nome Ana forge:a35:{aluno1}:xp 100\nMGET forge:a35:{aluno1}:nome forge:a35:{aluno1}:xp\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "No setup simples, cluster_enabled=0; MSET=OK e MGET devolve Ana e 100. A igualdade da hash tag é uma convenção para futuro ensaio em Cluster, não prova de que o servidor simples está particionado.",
+      "source": "https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/",
+      "quiz": {
+        "question": "Sentinel e Redis Cluster resolvem exatamente a mesma função de distribuição de chaves?",
+        "options": [
+          "Sim, os nomes são sinônimos.",
+          "Sim, Sentinel exige uma chave por máquina sempre.",
+          "Não, porque Cluster só muda TTL.",
+          "Não; Sentinel monitora/faz failover da topologia, enquanto Cluster também particiona por slots."
+        ],
+        "answer": 3,
+        "explanation": "Disponibilidade e particionamento têm mecanismos distintos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confira a regra das hash tags em Cluster real",
+          "prompt": "Confira a regra das hash tags em Cluster real.",
+          "hint": "Use CLUSTER KEYSLOT apenas numa instância apropriada.",
+          "solution": "Compare KEYSLOT das duas chaves com {aluno1}; devem indicar o mesmo slot. Depois compare outro grupo e registre o resultado, sem supor slots diferentes em todo par possível.",
+          "criteria": [
+            "A conclusão decorre da resposta do cluster real.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Planeje teste Sentinel",
+          "prompt": "Planeje teste Sentinel.",
+          "hint": "Clientes precisam descobrir e reconectar ao novo primário.",
+          "solution": "Prepare topologia local conforme guia oficial, observe quorum/maioria, interrompa o primário de ensaio e registre promoção e reconexão do cliente. Não declare sucesso só por iniciar sentinels.",
+          "criteria": [
+            "Inclui falha, promoção e comportamento do cliente.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Avalie colocar todas as chaves na mesma hash tag",
+          "prompt": "Avalie colocar todas as chaves na mesma hash tag.",
+          "hint": "Distribuição e operações locais têm compromisso.",
+          "solution": "Isso pode facilitar scripts multi-chave, mas concentra todo o trabalho num slot e limita a distribuição; agrupe pela unidade que precisa de atomicidade.",
+          "criteria": [
+            "Explicita concentração e unidade de operação.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    },
+    {
+      "id": 36,
+      "level": 12,
+      "title": "Projeto final: ranking e efeito repetível",
+      "goal": "Integrar estrutura, idempotência e evidências operacionais.",
+      "theory": [
+        {
+          "title": "Como funciona",
+          "text": "Um ranking usa sorted set e uma identidade de operação para reduzir efeitos duplicados. O script verifica a chave da operação antes de incrementar e mantém as duas chaves no mesmo grupo para um eventual Cluster."
+        },
+        {
+          "title": "Decisão de modelagem",
+          "text": "A deduplicação tem prazo de uma hora neste exemplo. Após expirar, a operação poderá voltar a ser aplicada. Isso não é garantia de exatamente uma vez para sempre, nem coordenação automática com um efeito externo."
+        },
+        {
+          "title": "O que verificar",
+          "text": "Complete o serviço com validação, cliente, consumidor e recuperação. Confira tipos e falhas possíveis antes de escrever, pois scripts Lua não oferecem rollback geral após um erro de execução."
+        }
+      ],
+      "code": "DEL forge:a36:{ranking}:pontos forge:a36:{ranking}:op:req1\nEVAL \"if redis.call('EXISTS',KEYS[2]) == 1 then return 0 end local p=tonumber(ARGV[2]); if not p then return redis.error_reply('pontos invalidos') end redis.call('ZINCRBY',KEYS[1],p,ARGV[1]); redis.call('SET',KEYS[2],'aplicada','EX',3600); return 1\" 2 forge:a36:{ranking}:pontos forge:a36:{ranking}:op:req1 ana 10\nEVAL \"if redis.call('EXISTS',KEYS[2]) == 1 then return 0 end local p=tonumber(ARGV[2]); if not p then return redis.error_reply('pontos invalidos') end redis.call('ZINCRBY',KEYS[1],p,ARGV[1]); redis.call('SET',KEYS[2],'aplicada','EX',3600); return 1\" 2 forge:a36:{ranking}:pontos forge:a36:{ranking}:op:req1 ana 10\nZRANGE forge:a36:{ranking}:pontos 0 -1 WITHSCORES\n",
+      "filename": "aula.redis",
+      "language": "text",
+      "run": "Conecte à instância local dedicada na porta 6380. Salve como aula.redis e rode:\nredis-cli --raw -h 127.0.0.1 -p 6380 < aula.redis\nOu cole os comandos em sequência na mesma sessão do redis-cli.",
+      "expected": "DEL: 0 a 2\nPrimeiro EVAL: 1\nSegundo EVAL: 0\nRanking: ana e 10. Repita os dois EVAL sem DEL para verificar deduplicação; repetir todo o arquivo reinicia o laboratório.",
+      "source": "https://redis.io/docs/latest/develop/programmability/eval-intro/",
+      "quiz": {
+        "question": "O segundo EVAL com a mesma operação acrescenta outros dez pontos?",
+        "options": [
+          "Não enquanto a chave de deduplicação existir; retorna zero.",
+          "Sim, toda chamada duplica.",
+          "Sim, EVAL nunca lê chaves.",
+          "Não, porque o primeiro EVAL não escreve."
+        ],
+        "answer": 0,
+        "explanation": "O protocolo verifica a identidade antes de aplicar o efeito."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Aplique uma operação diferente",
+          "prompt": "Aplique uma operação diferente.",
+          "hint": "Mude req1 para req2 nas duas referências da chave de operação.",
+          "solution": "Com nova identidade e dez pontos, o total de ana passa a 20; repetir req2 sem DEL não deve acrescentar novamente.",
+          "criteria": [
+            "Distingue operação nova de repetida.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique o limite do TTL de deduplicação",
+          "prompt": "Explique o limite do TTL de deduplicação.",
+          "hint": "Uma hora é uma janela, não memória eterna.",
+          "solution": "Após expirar a chave de req1, o mesmo ID pode voltar a pontuar; alinhe retenção ao prazo de retries e ao domínio.",
+          "criteria": [
+            "Documenta a janela e o risco após expiração.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Entregue o roteiro operacional do projeto",
+          "prompt": "Entregue o roteiro operacional do projeto.",
+          "hint": "Inclua dados, efeito, falha e destino recuperado.",
+          "solution": "Documente contratos, teste duplicata e erro de tipo, simule queda antes do ACK, recupere pendência, restaure cópia e confira ranking; registre métricas e limites reais.",
+          "criteria": [
+            "Há evidência de efeitos e recuperação, além dos comandos escritos.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "caution": "Somente na instância local de laboratório. Saídas de tempo, ordem de conjuntos e diagnóstico podem variar como indicado. Nenhum comando é executado pelo editor da plataforma.",
+      "hours": 4,
+      "minutes": 45,
+      "local": true
+    }
+  ]
+}

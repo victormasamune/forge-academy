@@ -1,0 +1,455 @@
+{
+  "courseId": "oracle",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Reserva com regras e relatórios",
+      "scenario": "Um schema Oracle 26ai Free guarda recursos e reservas. O cadastro deve diferenciar ausência, rejeitar estados inválidos e produzir um relatório que inclua recursos sem reservas.",
+      "requiredLessons": [
+        2,
+        3,
+        5,
+        8,
+        9
+      ],
+      "skills": [
+        "NULL e domínio",
+        "Efeito de UPDATE",
+        "Junção e medida"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "O nome do recurso é obrigatório e uma entrada vazia é enviada como string vazia no Oracle. Qual regra precisa ser considerada?",
+          "options": [
+            "Que string vazia sempre é um nome válido e distinto de NULL nesse contrato.",
+            "Que CHECK de quantidade valida automaticamente o nome.",
+            "O comportamento de string vazia como NULL e uma restrição NOT NULL para o nome, além das demais regras do domínio.",
+            "Que um alias nome_obrigatorio torna a coluna obrigatória."
+          ],
+          "answer": 2,
+          "explanation": "A representação de ausência no Oracle afeta a validação. Obrigatoriedade precisa existir no esquema; não basta um rótulo na consulta.",
+          "reviewLessons": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "UPDATE reduz vagas somente quando há quantidade suficiente e usa SQL%ROWCOUNT/RETURNING. Nenhuma linha foi alterada. Qual comportamento é correto?",
+          "options": [
+            "Assumir sucesso e inventar uma linha retornada.",
+            "Desligar CHECK para que qualquer saldo seja permitido.",
+            "Usar o maior ID global como prova de que a baixa ocorreu.",
+            "Tratar recurso ausente ou condição não atendida; não anunciar reserva confirmada apenas porque o bloco executou."
+          ],
+          "answer": 3,
+          "explanation": "A constraint protege estados válidos e a contagem de efeitos confirma se a condição da escrita foi satisfeita. Execução sem erro não equivale a efeito esperado.",
+          "reviewLessons": [
+            3,
+            5
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Um LEFT JOIN mantém recurso sem reservas, mas COUNT(*) mostra 1. Como obter zero reservas e não multiplicar uma medida do recurso?",
+          "options": [
+            "Contar a chave não nula da reserva e definir a granularidade antes de agregar.",
+            "Trocar para INNER JOIN para manter os ausentes.",
+            "Somar a capacidade do recurso uma vez por reserva sem examinar a relação.",
+            "Aplicar DISTINCT ao nome e chamar qualquer soma de capacidade."
+          ],
+          "answer": 0,
+          "explanation": "A linha preservada não é uma reserva real. Medidas do pai e do filho precisam ser calculadas no nível correspondente.",
+          "reviewLessons": [
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "API PL/SQL e auditoria",
+      "scenario": "O banco expõe uma package de reservas, processa conjuntos e registra mudanças por trigger. Os erros devem preservar o limite de trabalho previsto.",
+      "requiredLessons": [
+        11,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "skills": [
+        "Janela e processamento",
+        "Contrato de package",
+        "Exceção e auditoria"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Um relatório mantém cada movimento e calcula saldo acumulado; um cursor percorre esse resultado. O que define uma sequência reproduzível?",
+          "options": [
+            "Apenas a ordem em que o cursor foi declarado.",
+            "Ordem/frame da função analítica e ordenação final com desempate no resultado percorrido.",
+            "GROUP BY sem as linhas de detalhe, afirmando que nada foi reduzido.",
+            "Supor que qualquer plano físico preserva a mesma ordem sem ORDER BY."
+          ],
+          "answer": 1,
+          "explanation": "A função analítica calcula sobre uma janela e o cursor consome linhas. Cálculo e apresentação precisam de ordem coerente; não dependa de ordem física.",
+          "reviewLessons": [
+            11,
+            15
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Uma procedure pública mudou seus parâmetros, mas somente o body da package foi ajustado. Qual contrato precisa ser revisto?",
+          "options": [
+            "Apenas o nome do arquivo .sql.",
+            "Uma trigger para converter automaticamente qualquer chamada antiga.",
+            "A especificação pública, sua implementação e os consumidores que chamam a assinatura alterada.",
+            "Remover a especificação porque packages não têm interface."
+          ],
+          "answer": 2,
+          "explanation": "A package separa interface e implementação. Uma assinatura pública envolve os chamadores e deve evoluir com compatibilidade ou adaptação explícita.",
+          "reviewLessons": [
+            16,
+            17
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Uma etapa após SAVEPOINT altera reserva e o trigger grava auditoria. Um erro leva a ROLLBACK TO dessa etapa. O que esperar da auditoria comum dessa mesma transação?",
+          "options": [
+            "A auditoria sempre confirma automaticamente em transação independente.",
+            "O trigger fica desativado para sempre.",
+            "ROLLBACK TO altera somente a variável do bloco, nunca dados.",
+            "As mudanças da etapa e sua auditoria posterior ao savepoint são desfeitas juntas."
+          ],
+          "answer": 3,
+          "explanation": "Savepoint delimita mudanças na unidade. Um trigger transacional comum participa do mesmo limite; auditoria autônoma seria outro contrato.",
+          "reviewLessons": [
+            14,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Plano e reserva concorrente",
+      "scenario": "O serviço consulta por intervalo de data e disputa vagas. O operador precisa compreender o efeito de DDL, snapshots de leitura e leituras bloqueantes em duas sessões.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "skills": [
+        "Acesso e estatísticas",
+        "Commit e visibilidade",
+        "FOR UPDATE e NOWAIT"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Há índice sobre instante, mas o filtro aplica função à coluna e o plano não usa o acesso esperado. Qual investigação é adequada?",
+          "options": [
+            "Revisar um predicado por faixa equivalente quando aplicável, estatísticas e plano, preservando o mesmo resultado antes de medir.",
+            "Obrigar qualquer índice sem conferir a semântica da data.",
+            "Assumir que EXPLAIN PLAN mede a latência real por definição.",
+            "Adicionar índices em todas as colunas e dispensar medição."
+          ],
+          "answer": 0,
+          "explanation": "Predicado pesquisável, estatísticas e estrutura de acesso influenciam o plano. A reescrita precisa preservar limites temporais e o resultado funcional.",
+          "reviewLessons": [
+            19,
+            20,
+            21
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "A altera um valor sem commit e B usa READ COMMITTED, lendo o valor confirmado anterior. A executa DDL comum bem-sucedido, que confirma trabalho pendente. O que B pode observar em uma nova consulta?",
+          "options": [
+            "Obrigatoriamente o valor antigo para sempre.",
+            "O valor de A agora confirmado, pois a nova instrução tem outra visão de leitura.",
+            "Dados não confirmados de qualquer sessão, mesmo antes do DDL.",
+            "Uma cópia remota criada pelo ALTER."
+          ],
+          "answer": 1,
+          "explanation": "Consistência de leitura e limites de commit são distintos. DDL Oracle comum pode confirmar a transação; uma nova instrução em READ COMMITTED observa o estado confirmado apropriado.",
+          "reviewLessons": [
+            22,
+            23
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "A mantém FOR UPDATE na linha. B faz SELECT comum e depois tenta FOR UPDATE NOWAIT. Qual diferença deve ser prevista?",
+          "options": [
+            "Ambos sempre recebem o lock sem disputa.",
+            "SELECT comum necessariamente confirma a transação de A.",
+            "A leitura comum pode ver estado confirmado via MVCC, enquanto a tentativa bloqueante pode falhar imediatamente por recurso ocupado.",
+            "NOWAIT significa aguardar indefinidamente até A terminar."
+          ],
+          "answer": 2,
+          "explanation": "Leitura consistente e aquisição de lock são operações diferentes. NOWAIT evita esperar, não ignora o bloqueio existente.",
+          "reviewLessons": [
+            23,
+            24
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Contrato público e recuperação com alvo",
+      "scenario": "A API possui usuário limitado e bind variables. Uma migration modifica o esquema, enquanto exportações lógicas e backups físicos precisam ter seu alcance documentado.",
+      "requiredLessons": [
+        25,
+        26,
+        30,
+        31,
+        32,
+        33
+      ],
+      "skills": [
+        "Privilégios e binds",
+        "Migração e cópia lógica",
+        "RMAN e PITR"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "A procedure usa binds, mas seu usuário pode alterar objetos de qualquer aplicação. Qual parte da entrega ainda falha?",
+          "options": [
+            "Somente a formatação da SQL.",
+            "Nenhuma, porque binds substituem qualquer controle de acesso.",
+            "A escolha do tablespace apenas.",
+            "A definição e o teste de privilégios mínimos; binding não limita a identidade por si só."
+          ],
+          "answer": 3,
+          "explanation": "Valores ligados evitam misturar entrada e sintaxe, enquanto grants determinam capacidades. Ambos precisam corresponder ao papel da API.",
+          "reviewLessons": [
+            25,
+            26
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Um Data Pump foi exportado antes da migration v2 e importado em schema separado. O destino ainda está no contrato v1. Como conferir corretamente?",
+          "options": [
+            "Comparar com o ponto exportado e aplicar a migration explicitamente no destino se o objetivo do ensaio incluir chegar à v2.",
+            "Assumir que impdp executa automaticamente qualquer migration futura da aplicação.",
+            "Mudar só o número da versão para fingir o novo esquema.",
+            "Comparar cegamente com a origem já alterada e declarar corrupção por qualquer diferença prevista."
+          ],
+          "answer": 0,
+          "explanation": "Uma cópia corresponde a um ponto e contrato de origem. Evolução posterior não aparece no dump por previsão; o ensaio precisa declarar qual estado busca recuperar.",
+          "reviewLessons": [
+            30,
+            31
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "RMAN RESTORE DATABASE VALIDATE terminou, mas o requisito é abrir uma cópia até um SCN conhecido. O que ainda falta?",
+          "options": [
+            "Afirmar que VALIDATE já reescreveu datafiles e abriu a cópia.",
+            "Executar a recuperação apropriada em alvo descartável com backups/logs necessários e conferir os marcadores do SCN escolhido.",
+            "Renomear o arquivo de backup para o número do SCN.",
+            "Usar apenas SELECT da origem como prova da recuperação."
+          ],
+          "answer": 1,
+          "explanation": "VALIDATE verifica insumos, não realiza toda a restauração e abertura. PITR exige alvo, cadeia e evidência do ponto efetivamente recuperado.",
+          "reviewLessons": [
+            32,
+            33
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "API de reservas com package e recuperação Oracle",
+    "scenario": "Implemente um schema de reservas de recursos em Oracle AI Database 26ai Free. A interface PL/SQL deve ter contrato público, regras verificáveis e ensaios locais que distingam leitura, escrita e recuperação.",
+    "requirements": [
+      "Modelo de reservas: constraints, referências, identidades e regras de ausência/valores cobrem entradas inválidas e histórico.",
+      "API PL/SQL: package com especificação clara, parâmetros validados e tratamento de exceção sem ocultar falhas obrigatórias.",
+      "Atomicidade e disputa: reserva e baixa de vagas pertencem à mesma unidade; duas sessões demonstram bloqueio e recusa sem saldo negativo.",
+      "Leituras e desempenho: relatórios preservam granularidade, analíticas têm ordem/frame e um índice é investigado com predicado e estatísticas coerentes.",
+      "Acesso e evolução: usuário da API recebe privilégios mínimos, SQL dinâmico vincula valores e migrations respeitam commits implícitos do DDL.",
+      "Recuperação demonstrada: exportação/importação lógica validada e roteiro físico/PITR com privilégios, caminhos, SCN e estado de ensaio explicitados."
+    ],
+    "deliverables": [
+      "DDL, fixture fictícia, dicionário e migrations com seus limites de confirmação.",
+      "Especificação/body da package, cliente e contrato de erros.",
+      "Ensaios de duas sessões, relatórios e investigação de plano com resultados.",
+      "Runbook Data Pump/RMAN/PITR que separa preparação, validação e recuperação executada."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Modelo de reservas",
+        "description": "Modelo de reservas: constraints, referências, identidades e regras de ausência/valores cobrem entradas inválidas e histórico.",
+        "reviewLessons": [
+          2,
+          3,
+          4,
+          6
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "API PL/SQL",
+        "description": "API PL/SQL: package com especificação clara, parâmetros validados e tratamento de exceção sem ocultar falhas obrigatórias.",
+        "reviewLessons": [
+          14,
+          16,
+          17,
+          18
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Atomicidade e disputa",
+        "description": "Atomicidade e disputa: reserva e baixa de vagas pertencem à mesma unidade; duas sessões demonstram bloqueio e recusa sem saldo negativo.",
+        "reviewLessons": [
+          22,
+          23,
+          24,
+          36
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Leituras e desempenho",
+        "description": "Leituras e desempenho: relatórios preservam granularidade, analíticas têm ordem/frame e um índice é investigado com predicado e estatísticas coerentes.",
+        "reviewLessons": [
+          8,
+          9,
+          11,
+          19,
+          20,
+          21
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Acesso e evolução",
+        "description": "Acesso e evolução: usuário da API recebe privilégios mínimos, SQL dinâmico vincula valores e migrations respeitam commits implícitos do DDL.",
+        "reviewLessons": [
+          25,
+          26,
+          30
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Recuperação demonstrada",
+        "description": "Recuperação demonstrada: exportação/importação lógica validada e roteiro físico/PITR com privilégios, caminhos, SCN e estado de ensaio explicitados.",
+        "reviewLessons": [
+          31,
+          32,
+          33,
+          34
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Falha na reserva",
+        "setup": "Recurso com duas vagas e nenhuma requisição de teste.",
+        "input": "Executar reserva válida e provocar falha controlada em etapa obrigatória de outra operação.",
+        "expected": "Somente a unidade válida confirma; a falha não conserva baixa parcial nem auditoria transacional indevida.",
+        "reviewLessons": [
+          14,
+          18,
+          22,
+          36
+        ]
+      },
+      {
+        "title": "Bloqueio em duas sessões",
+        "setup": "Tabela persistente do laboratório e A com FOR UPDATE sobre o recurso.",
+        "input": "B tenta FOR UPDATE NOWAIT; após A encerrar, B refaz a leitura e a decisão.",
+        "expected": "B identifica recurso ocupado antes da liberação e revalida o estado depois, sem assumir vagas antigas.",
+        "reviewLessons": [
+          23,
+          24,
+          36
+        ]
+      },
+      {
+        "title": "Cópia e ponto recuperado",
+        "setup": "Fixture com marcadores e destino lógico/instância de teste preparados por operador autorizado.",
+        "input": "Importar a cópia lógica e conferir seus dados; se houver ensaio PITR, recuperar o SCN registrado e abrir o destino.",
+        "expected": "O destino lógico corresponde ao ponto exportado; PITR só passa com os marcadores esperados no alvo real, não apenas VALIDATE.",
+        "reviewLessons": [
+          31,
+          32,
+          33
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "prompt": "A package trata qualquer exceção e imprime sucesso, mas uma baixa parcial persiste. Qual correção é necessária?",
+        "options": [
+          "Apenas trocar o texto para concluído.",
+          "Retirar constraints para reduzir exceções.",
+          "Restabelecer o contrato de erro e o limite transacional, verificando rollback/efeitos com casos de falha.",
+          "Marcar a API como autônoma para esconder a causa."
+        ],
+        "answer": 2,
+        "explanation": "Tratamento de exceção não pode transformar falha de negócio em sucesso aparente. O estado final precisa preservar a unidade.",
+        "reviewLessons": [
+          14,
+          16,
+          22,
+          36
+        ]
+      },
+      {
+        "id": "q2",
+        "prompt": "A migration pressupõe que todo DDL Oracle será desfeito pelo rollback externo. Como a revisão deve responder?",
+        "options": [
+          "Aceitar porque qualquer BEGIN altera a regra de DDL.",
+          "Desligar logs para não notar commits.",
+          "Mover o script para SQLcl e presumir outra semântica do motor.",
+          "Exigir etapas e recuperação compatíveis com os commits implícitos dos comandos usados e conferir os dados anteriores."
+        ],
+        "answer": 3,
+        "explanation": "Cliente não muda a semântica transacional do DDL. Evolução exige planejamento específico do Oracle e evidência de compatibilidade.",
+        "reviewLessons": [
+          22,
+          30,
+          31
+        ]
+      },
+      {
+        "id": "q3",
+        "prompt": "Há uma exportação lógica válida e um relatório de RMAN VALIDATE. O requisito inclui voltar ao SCN anterior a uma operação. O projeto já provou esse requisito?",
+        "options": [
+          "Não; precisa do ensaio de recuperação por ponto com cadeia e destino apropriados, seguido de consultas de conferência.",
+          "Sim, qualquer dump inclui todos os futuros SCNs.",
+          "Sim, VALIDATE abre o banco recuperado automaticamente.",
+          "Não, porque Oracle não permite recuperar um ponto."
+        ],
+        "answer": 0,
+        "explanation": "Exportação, validação de backup e PITR são etapas/capacidades distintas. O alvo precisa ser demonstrado no estado recuperado.",
+        "reviewLessons": [
+          31,
+          32,
+          33
+        ]
+      }
+    ]
+  }
+}

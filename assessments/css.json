@@ -1,0 +1,487 @@
+{
+  "courseId": "css",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Cartão legível sem largura surpresa",
+      "scenario": "Um cartão de catálogo tem título longo, botão e rótulo de disponibilidade. Ele deve caber no espaço previsto e continuar compreensível sem depender apenas de cor.",
+      "requiredLessons": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        8
+      ],
+      "skills": [
+        "Cascata",
+        "Box model",
+        "Overflow e informação"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "284px; para um total de 240px incluindo borda e padding, use border-box e verifique o conteúdo.",
+            "240px, pois padding e borda não ocupam espaço.",
+            "264px, pois só uma lateral entra no cálculo.",
+            "280px, pois bordas nunca entram no tamanho."
+          ],
+          "answer": 0,
+          "prompt": "O cartão usa width:240px, padding:20px e border:2px em cada lado, com box-sizing:content-box. Qual largura externa horizontal deve ser prevista antes das margens?",
+          "explanation": "Em content-box a largura declarada é do conteúdo. Some as duas laterais de padding e borda; overflow depende do espaço que o cartão realmente ocupa.",
+          "reviewLessons": [
+            4,
+            6
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "A primeira regra sempre vence porque foi carregada antes.",
+            "A declaração posterior da mesma propriedade vence, e o texto ainda comunica o estado sem depender só da cor.",
+            "A cor torna o texto desnecessário para qualquer pessoa.",
+            "Adicionar um nome de classe novo sempre apaga a herança inteira."
+          ],
+          "answer": 1,
+          "prompt": "Duas regras normais para .status estão na mesma origem e camada, com a mesma especificidade. A segunda muda a cor, mas o rótulo textual permanece. Qual resultado combina cascata e informação acessível?",
+          "explanation": "A ordem resolve esse empate da cascata. A apresentação visual de estado deve ter uma alternativa textual ou outro sinal que preserve o significado.",
+          "reviewLessons": [
+            1,
+            2,
+            3,
+            8
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Aplicar display:none ao código e ao estado para eliminar o problema.",
+            "Aumentar a largura fixa até funcionar só no monitor atual.",
+            "Investigar o mínimo e o contexto do item e permitir quebra apropriada do texto, preservando o conteúdo e o rótulo de estado.",
+            "Usar apenas vermelho para que o usuário adivinhe a parte oculta."
+          ],
+          "answer": 2,
+          "prompt": "Um código de livro longo força o cartão para fora da tela. Qual estratégia atende conteúdo e leitura, em vez de esconder a informação?",
+          "explanation": "Conteúdo extremo precisa de regra de adaptação. Corrija os limites de tamanho e a quebra conforme o domínio, sem remover uma informação necessária apenas para a tela caber.",
+          "reviewLessons": [
+            4,
+            6,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Layout de página e componente reutilizável",
+      "scenario": "Um painel tem área principal em Grid e barra de ações em Flexbox. O mesmo cartão será usado na página inteira e numa lateral estreita.",
+      "requiredLessons": [
+        10,
+        11,
+        13,
+        15,
+        16,
+        18
+      ],
+      "skills": [
+        "Flexbox e mínimos",
+        "Grid fluido",
+        "Container queries"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "flex-shrink garante ignorar qualquer mínimo de conteúdo.",
+            "Trocar o texto por um espaço vazio é a única solução.",
+            "Grid no ancestral elimina todos os mínimos de qualquer descendente.",
+            "O mínimo automático do item pode impedir a redução; avaliar min-width:0 ou o mínimo lógico adequado e o tratamento do conteúdo."
+          ],
+          "answer": 3,
+          "prompt": "Um item flex contém texto longo e não encolhe como esperado apesar de flex-shrink. Qual hipótese e ajuste devem ser testados?",
+          "explanation": "O algoritmo flex respeita limites mínimos. O ajuste precisa permitir o tamanho pretendido e ainda definir como o texto será mostrado.",
+          "reviewLessons": [
+            10,
+            11,
+            16
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Limitar o mínimo ao espaço disponível, por exemplo minmax(min(100%,15rem),1fr), e testar a grade no container estreito.",
+            "Assumir que 1fr sempre reduz qualquer mínimo fixo.",
+            "Acrescentar mais colunas fixas de 15rem.",
+            "Usar overflow:hidden na página e ignorar os itens cortados."
+          ],
+          "answer": 0,
+          "prompt": "A grade usa repeat(auto-fit,minmax(15rem,1fr)), mas o container fica menor que 15rem. Como tornar o mínimo compatível com esse caso?",
+          "explanation": "A trilha tem um mínimo; fr distribui o restante sem apagar esse limite. Um mínimo que considera a largura disponível melhora a resiliência do componente.",
+          "reviewLessons": [
+            13,
+            15,
+            16
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Somente uma media query de viewport grande, pois ela conhece a lateral.",
+            "Uma container query sobre um ancestral de consulta adequado, mantendo uma base utilizável sem a melhoria.",
+            "Uma largura fixa igual à largura do monitor do autor.",
+            "A ordem física do arquivo CSS como substituto de uma condição de tamanho."
+          ],
+          "answer": 1,
+          "prompt": "O cartão precisa mudar sua disposição quando estiver numa lateral estreita, mesmo com viewport grande. Qual condição corresponde ao requisito?",
+          "explanation": "O tamanho do componente pode variar independentemente do viewport. Declare o contexto de consulta e verifique a composição nos dois lugares.",
+          "reviewLessons": [
+            13,
+            16,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Estados, teclado e camadas visuais",
+      "scenario": "Um formulário tem validação, cabeçalho sticky e diálogo visual. A interface deve funcionar por teclado e respeitar preferência de movimento reduzido.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        23,
+        24,
+        26
+      ],
+      "skills": [
+        "Foco e estados",
+        "Sticky e stacking context",
+        "Movimento reduzido"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Remover todo outline e declarar o problema resolvido.",
+            "Mudar apenas a cor do botão sem conferir sua posição.",
+            "Verificar a região de rolagem, a posição do foco e medidas como scroll-margin para manter o controle focalizado visível.",
+            "Impedir uso de Tab em toda a página."
+          ],
+          "answer": 2,
+          "prompt": "O botão recebe foco, mas o cabeçalho sticky cobre o controle. Qual revisão combina navegação e rolagem?",
+          "explanation": "Foco precisa ser perceptível e o alvo não deve ficar encoberto. Sticky atua no contexto de rolagem; teste a sequência real de teclado.",
+          "reviewLessons": [
+            19,
+            21,
+            23
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Usar um número maior garante atravessar todos os contextos.",
+            "Remover os rótulos do formulário para reduzir a pilha.",
+            "Adicionar uma transição para que o z-index deixe de importar.",
+            "Inspecionar os contextos dos ancestrais e ajustar a estrutura/camada correta, em vez de apenas aumentar o número no descendente."
+          ],
+          "answer": 3,
+          "prompt": "Um painel com z-index:9999 continua atrás de outro porque pertence a um stacking context inferior. Qual investigação é apropriada?",
+          "explanation": "z-index é comparado dentro de hierarquias de empilhamento. Identifique quem cria o contexto e qual relação de camadas o produto precisa.",
+          "reviewLessons": [
+            20,
+            23,
+            24
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Manter mensagem/rótulo e foco visíveis, e reduzir ou remover a animação não essencial quando a preferência pedir.",
+            "Retirar a mensagem para usuários com movimento reduzido.",
+            "Usar apenas animação como indicação de erro.",
+            "Desativar o formulário inteiro sempre que houver erro."
+          ],
+          "answer": 0,
+          "prompt": "A validação muda cor e executa uma animação longa. Qual comportamento preserva informação e respeita prefers-reduced-motion?",
+          "explanation": "O estado não pode depender apenas de cor ou movimento. A adaptação reduz o efeito, sem suprimir a informação necessária à tarefa.",
+          "reviewLessons": [
+            19,
+            20,
+            21,
+            26
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Tema, arquitetura e saída compartilhável",
+      "scenario": "O painel recebe temas claro/escuro, conteúdo em outra direção de escrita e uma versão impressa. As regras precisam continuar previsíveis sem crescer em especificidade.",
+      "requiredLessons": [
+        25,
+        28,
+        29,
+        31,
+        34,
+        35
+      ],
+      "skills": [
+        "Tokens e layers",
+        "Direção de escrita",
+        "Impressão e resiliência"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Afirmar que layers sempre vencem qualquer regra sem camada.",
+            "A ordem das camadas e a presença de regras fora delas, antes de aumentar a especificidade dos componentes.",
+            "Adicionar !important a todas as declarações como arquitetura padrão.",
+            "Remover todos os tokens de tema, mesmo os que não participam do conflito."
+          ],
+          "answer": 1,
+          "prompt": "Uma regra normal sem layer vence o estilo normal colocado numa layer, apesar da intenção de centralizar os componentes. O que revisar primeiro?",
+          "explanation": "A cascata considera camadas antes de comparar especificidade nesse cenário. Organize o sistema de regras; não trate cada conflito apenas com um seletor mais forte.",
+          "reviewLessons": [
+            25,
+            28,
+            29
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Fixar margin-left em todos os componentes e assumir que início sempre é esquerda.",
+            "Duplicar todo o conteúdo em HTML para cada idioma.",
+            "Usar propriedades lógicas como margin-inline-start/end conforme o lado pretendido e testar as duas direções.",
+            "Usar a cor do tema para determinar o espaçamento."
+          ],
+          "answer": 2,
+          "prompt": "O espaçamento do ícone deve ficar no início da linha em LTR e RTL. Qual escolha expressa a intenção e reduz duplicação?",
+          "explanation": "Propriedades lógicas descrevem relações de escrita, não só lados físicos. Teste direção, conteúdo e o espaço disponível.",
+          "reviewLessons": [
+            25,
+            31,
+            35
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Ocultar toda seção que tenha rolagem, incluindo os dados.",
+            "Assumir que a tela e a impressão têm exatamente os mesmos limites.",
+            "Forçar tema escuro e chamar isso de versão impressa testada.",
+            "Criar regras de impressão que exponham o conteúdo necessário, ajustem overflow/tamanho e sejam verificadas na prévia de impressão."
+          ],
+          "answer": 3,
+          "prompt": "Na impressão, botões podem sumir, mas dados importantes do relatório não podem ser cortados por um container rolável. Qual revisão atende ao objetivo?",
+          "explanation": "Impressão é outro contexto de apresentação. Preservar informação exige conferir as quebras, a extensão do conteúdo e os elementos realmente dispensáveis.",
+          "reviewLessons": [
+            31,
+            34,
+            35
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Painel de biblioteca responsivo e acessível",
+    "scenario": "Entregue uma interface de catálogo, empréstimos e relatório de uma biblioteca fictícia usando HTML semântico e CSS. O projeto deve resistir a conteúdo longo, teclado, zoom, temas e impressão; a avaliação visual exige observação real no navegador.",
+    "requirements": [
+      "Criar páginas ou estados de catálogo, formulário de empréstimo e relatório com estrutura HTML e rótulos claros.",
+      "Organizar tokens, camadas e componentes para que a aparência possa variar sem especificidade descontrolada.",
+      "Combinar Flexbox e Grid com mínimos e comportamento fluidos em espaços de 320px até desktop.",
+      "Garantir foco perceptível, mensagens de estado compreensíveis e reflow com conteúdo longo e zoom.",
+      "Oferecer temas e adaptação de movimento e direção sem eliminar informação ou dependência exclusiva de cor.",
+      "Preparar saída de impressão do relatório e registrar uma revisão manual com limites e falhas encontradas."
+    ],
+    "deliverables": [
+      "Arquivos HTML/CSS e assets locais necessários, com conteúdo fictício e estados de teste.",
+      "README com estrutura dos estilos, instruções para abrir e matriz de cenários.",
+      "Registro de revisão de largura, zoom, teclado, temas, direção e movimento, com observações reais.",
+      "Relatório impresso/PDF de teste e lista de ajustes ou limitações ainda observados."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Estrutura e significado",
+        "description": "Os controles têm rótulos e o conteúdo mantém uma hierarquia compreensível.",
+        "reviewLessons": [
+          1,
+          7,
+          8,
+          19,
+          20
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Arquitetura de estilos",
+        "description": "Tokens, escopo e camadas explicam os conflitos sem elevar seletor a cada alteração.",
+        "reviewLessons": [
+          3,
+          25,
+          28,
+          29,
+          30
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Layout adaptável",
+        "description": "Flex/Grid e mínimos suportam conteúdo e containers variados sem esconder erros de tamanho.",
+        "reviewLessons": [
+          4,
+          6,
+          10,
+          11,
+          13,
+          15,
+          16,
+          18
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Interação acessível",
+        "description": "Foco, estados e ordem do documento são conferidos por teclado e sob reflow.",
+        "reviewLessons": [
+          14,
+          19,
+          20,
+          21,
+          23,
+          24
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Preferências e direção",
+        "description": "Temas e movimento respeitam preferência; propriedades lógicas atendem LTR/RTL.",
+        "reviewLessons": [
+          25,
+          26,
+          27,
+          31,
+          35
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Saída e diagnóstico",
+        "description": "Impressão e DevTools geram evidências reais; não se anuncia correção visual automática.",
+        "reviewLessons": [
+          32,
+          33,
+          34,
+          35,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Conteúdo extremo e reflow",
+        "setup": "Use título de 150 caracteres, URL longa, lista vazia e vinte registros fictícios.",
+        "input": "Abra em 320px e desktop e aplique zoom de 200%, observando rolagem e conteúdo.",
+        "expected": "Controles e informação continuam acessíveis; rolagem localizada justificada é distinta de conteúdo essencial cortado. Registre qualquer exceção.",
+        "reviewLessons": [
+          4,
+          6,
+          15,
+          16,
+          21,
+          35
+        ]
+      },
+      {
+        "title": "Teclado e preferências",
+        "setup": "Prepare formulário com erro e painel com cabeçalho sticky.",
+        "input": "Percorra por Tab/Shift+Tab, ative controles e teste movimento reduzido, temas e direção RTL.",
+        "expected": "Foco permanece perceptível e não encoberto; mensagens não dependem só de cor; a redução de movimento não remove a função.",
+        "reviewLessons": [
+          19,
+          20,
+          23,
+          24,
+          26,
+          31
+        ]
+      },
+      {
+        "title": "Impressão do relatório",
+        "setup": "Preencha relatório com dados suficientes para mais de uma página.",
+        "input": "Abra a prévia de impressão e revise todas as páginas ou exporte um PDF de conferência.",
+        "expected": "Dados e cabeçalhos necessários aparecem sem recorte por overflow; controles dispensáveis são removidos conscientemente. A inspeção é manual.",
+        "reviewLessons": [
+          21,
+          33,
+          34,
+          35
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "options": [
+          "Não; a informação cortada precisa de um desenho de layout ou rolagem apropriado, não só ocultação do sintoma.",
+          "Sim, ausência de barra horizontal prova que nenhum conteúdo foi perdido.",
+          "Sim, qualquer elemento fora da tela é opcional.",
+          "Não, porque media queries não podem ser usadas."
+        ],
+        "answer": 0,
+        "prompt": "O projeto escondeu o overflow do body e a barra lateral sumiu em 320px. Isso comprova adaptação responsiva?",
+        "explanation": "Reflow precisa preservar uso e conteúdo. Investigue o elemento que ultrapassa os limites e as restrições de layout antes de esconder a página.",
+        "reviewLessons": [
+          6,
+          11,
+          16,
+          21,
+          35
+        ]
+      },
+      {
+        "id": "q2",
+        "options": [
+          "A criação obrigatória de um servidor backend.",
+          "Informação de estado redundante e compreensível, além da apresentação por cor.",
+          "A remoção de todos os tokens de tema.",
+          "Nenhum requisito, pois trocar cor basta para todos."
+        ],
+        "answer": 1,
+        "prompt": "O tema escuro ficou legível, mas o estado de erro só muda de verde para vermelho e não tem mensagem. Qual requisito permanece ausente?",
+        "explanation": "Contraste e cor fazem parte da apresentação; o significado de erro também precisa de texto/estrutura ou outra indicação adequada.",
+        "reviewLessons": [
+          8,
+          19,
+          20,
+          25
+        ]
+      },
+      {
+        "id": "q3",
+        "options": [
+          "Sim, um quiz executa qualquer navegador automaticamente.",
+          "Sim, responder sobre Grid substitui abrir o layout.",
+          "Não; os cenários reais de largura, foco, conteúdo e impressão ainda precisam ser observados.",
+          "Não, porque conceitos nunca ajudam a diagnosticar."
+        ],
+        "answer": 2,
+        "prompt": "As três perguntas conceituais foram respondidas corretamente. Isso prova que todo o CSS do projeto não tem falhas visuais?",
+        "explanation": "Correção conceitual e inspeção do artefato são evidências complementares. Use os roteiros de aceitação para registrar o comportamento real.",
+        "reviewLessons": [
+          18,
+          19,
+          33,
+          34,
+          35
+        ]
+      }
+    ]
+  }
+}

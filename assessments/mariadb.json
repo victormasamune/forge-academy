@@ -1,0 +1,451 @@
+{
+  "courseId": "mariadb",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Estoque com retorno de escrita",
+      "scenario": "Um cadastro em MariaDB 11.4 LTS recebe produtos, quantidades e categorias. A API precisa de valores exatos, domínio válido e retorno ligado à linha inserida.",
+      "requiredLessons": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "skills": [
+        "Tipos e domínio",
+        "NULL e referências",
+        "INSERT RETURNING"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "O preço usa DECIMAL, mas o contrato também exige presença e valor não negativo. Qual desenho aplica as três intenções?",
+          "options": [
+            "DECIMAL com NOT NULL e CHECK apropriado ao preço.",
+            "Apenas DECIMAL, porque ele conhece a regra de negócio.",
+            "FLOAT sem constraint e correção somente no relatório.",
+            "Nomear a coluna como preco_valido sem restrições."
+          ],
+          "answer": 0,
+          "explanation": "Representação exata, obrigatoriedade e intervalo são responsabilidades diferentes. O tipo sozinho não torna todo valor aceitável.",
+          "reviewLessons": [
+            2,
+            6
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Categoria ausente significa item ainda não classificado; categoria informada precisa existir. Como distinguir as duas situações?",
+          "options": [
+            "Usar 0 como categoria inexistente e remover a FK.",
+            "Permitir NULL se a regra aceitar ausência e usar FK para os valores efetivamente informados, consultando ausência com IS NULL.",
+            "Guardar a string NULL e presumir que ela satisfaz qualquer referência.",
+            "Usar =NULL para localizar a ausência e aceitar qualquer ID."
+          ],
+          "answer": 1,
+          "explanation": "Ausência é uma decisão de nulabilidade; referência válida é uma regra relacional. O predicado de consulta deve respeitar a lógica de NULL.",
+          "reviewLessons": [
+            3,
+            5
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "O INSERT precisa devolver a identidade da linha recém-criada sem buscar MAX(id) compartilhado. Qual recurso do dialeto serve ao contrato?",
+          "options": [
+            "SELECT MAX(id) antes de inserir, mesmo sob concorrência.",
+            "Remover a chave para permitir qualquer retorno.",
+            "INSERT ... RETURNING com uma chave primária que identifique a linha.",
+            "Copiar a sintaxe de qualquer versão MySQL supondo compatibilidade total."
+          ],
+          "answer": 2,
+          "explanation": "O retorno deve estar associado à escrita e à identidade do registro. MariaDB e MySQL não são dialetos intercambiáveis em todos os recursos.",
+          "reviewLessons": [
+            4,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Relatório e programação no banco",
+      "scenario": "Uma rotina registra itens e uma trigger gera histórico por linha. O relatório precisa contar clientes sem pedidos e classificar seus totais sem multiplicar medidas.",
+      "requiredLessons": [
+        10,
+        11,
+        12,
+        13,
+        17,
+        18
+      ],
+      "skills": [
+        "Cardinalidade e agregação",
+        "CTE e janela",
+        "Rotina e trigger"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Um LEFT JOIN produz uma linha para cliente sem pedidos e COUNT(*) mostra 1. Como calcular número de pedidos e receita sem excluir esse cliente?",
+          "options": [
+            "Trocar por INNER JOIN e declarar que os ausentes foram preservados.",
+            "Somar o ID do cliente e chamar o resultado de receita.",
+            "Aplicar DISTINCT ao nome sem examinar as linhas da relação.",
+            "Contar a chave do pedido, definir a granularidade da soma e tratar ausência na medida de apresentação."
+          ],
+          "answer": 3,
+          "explanation": "A linha externa preservada não é um pedido real. Contagem e receita precisam corresponder ao fato que cada medida descreve.",
+          "reviewLessons": [
+            10,
+            11
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Uma CTE calcula total por cliente e a consulta externa usa RANK sobre esses totais. Por que agrupar antes pode ser necessário?",
+          "options": [
+            "Para que a janela classifique clientes e não cada linha de item, mantendo a granularidade pretendida.",
+            "Porque toda CTE materializa uma tabela permanente.",
+            "Porque RANK elimina automaticamente qualquer multiplicação de JOIN.",
+            "Porque agrupar sempre torna a consulta mais rápida em qualquer volume."
+          ],
+          "answer": 0,
+          "explanation": "A CTE organiza a etapa de agregação; a janela opera sobre as linhas resultantes. O desenho depende da unidade que deve receber a classificação.",
+          "reviewLessons": [
+            12,
+            13
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Uma procedure executa um INSERT com três linhas e há trigger AFTER INSERT FOR EACH ROW. Quantas execuções de trigger são esperadas, e o que conferir?",
+          "options": [
+            "Uma execução porque a procedure foi chamada uma vez.",
+            "Três execuções, conferindo as linhas de histórico e o contrato de cada inserção.",
+            "Zero, pois procedures desativam triggers.",
+            "Três commits independentes obrigatórios, um por trigger."
+          ],
+          "answer": 1,
+          "explanation": "O evento por linha não muda por estar dentro de uma procedure. Chamada de rotina e quantidade de linhas afetadas possuem granularidades diferentes.",
+          "reviewLessons": [
+            17,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Documentos, histórico e acesso medido",
+      "scenario": "O sistema recebe JSON, transforma arrays em linhas e guarda histórico temporal de preços. Outra rotina atualiza estoque sob disputa; a equipe investiga consultas.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        22,
+        24,
+        27
+      ],
+      "skills": [
+        "JSON e relações",
+        "Histórico versus coordenação",
+        "Índices e medição"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "JSON_TABLE expande três itens de um documento em três linhas. Qual cuidado evita somar três vezes um total que pertence ao documento inteiro?",
+          "options": [
+            "Somar o total do documento em cada linha e corrigir com arredondamento.",
+            "Afirmar que JSON_TABLE nunca aumenta a quantidade de linhas.",
+            "Separar medida do documento e medida do item, agregando na granularidade correta após a expansão.",
+            "Converter todo JSON em número sem especificar caminho."
+          ],
+          "answer": 2,
+          "explanation": "A representação JSON e sua projeção relacional não removem o problema de cardinalidade. O total do pai se repete quando os filhos são expandidos.",
+          "reviewLessons": [
+            19,
+            20
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "A tabela de preço possui versionamento de sistema. Isso impede por si só que duas reservas concorrentes reduzam o mesmo estoque com decisão obsoleta?",
+          "options": [
+            "Sim, guardar histórico serializa automaticamente qualquer operação do banco.",
+            "Sim, FOR SYSTEM_TIME ALL reserva a última unidade.",
+            "Não, porque tabelas versionadas não armazenam linhas atuais.",
+            "Não; histórico registra versões, enquanto a reserva exige escrita/locks e tratamento de conflito apropriados."
+          ],
+          "answer": 3,
+          "explanation": "Rastreabilidade temporal não substitui o protocolo que protege a invariante concorrente. São propriedades complementares.",
+          "reviewLessons": [
+            21,
+            27
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Um índice foi criado sobre coluna gerada usada no filtro. ANALYZE FORMAT=JSON apresentou medições. Qual conclusão é justificável?",
+          "options": [
+            "Avaliar o acesso e o trabalho medido com dados/resultados comparáveis, lembrando que ANALYZE executa a consulta.",
+            "Afirmar tempo universal a partir de uma amostra pequena.",
+            "Tratar o nome do índice como prova de menor custo em qualquer escrita.",
+            "Supor que ANALYZE apenas formata texto e nunca executa o trabalho."
+          ],
+          "answer": 0,
+          "explanation": "Coluna/índice precisam corresponder à consulta e as medições ao ambiente. A leitura do plano não substitui validar resultado e carga.",
+          "reviewLessons": [
+            22,
+            24
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Evolução, acesso limitado e cópias",
+      "scenario": "A equipe altera o esquema e prepara uma cópia lógica com posição de replicação. O cliente possui uma conta limitada e valores fornecidos por usuários.",
+      "requiredLessons": [
+        25,
+        28,
+        29,
+        31,
+        33,
+        35
+      ],
+      "skills": [
+        "DDL e migração",
+        "Roles e binding",
+        "Dump e GTID"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Uma migration executa ALTER TABLE comum em InnoDB e pretende usar ROLLBACK para desfazer qualquer etapa. O que o plano precisa corrigir?",
+          "options": [
+            "Supor que START TRANSACTION torna todo DDL reversível como DML.",
+            "Reconhecer limites de commit implícito do DDL e projetar etapas compatíveis e recuperação própria da migration.",
+            "Usar COMMIT depois do erro e chamar isso de rollback.",
+            "Copiar o comportamento transacional de outro SGBD sem conferir."
+          ],
+          "answer": 1,
+          "explanation": "DDL e DML não compartilham automaticamente o mesmo limite de desfazer. A migration precisa conhecer o contrato MariaDB do comando usado.",
+          "reviewLessons": [
+            25,
+            35
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "A conta tem SELECT apenas na tabela de relatório, mas o cliente concatena o filtro recebido. Qual melhoria ainda é necessária?",
+          "options": [
+            "Aumentar privilégios para resolver qualquer erro.",
+            "Usar placeholders para substituir livremente nomes de tabela.",
+            "Vincular valores com PREPARE/API apropriada e manter testes de operações permitidas e recusadas.",
+            "Afirmar que uma role limitada torna toda concatenação correta."
+          ],
+          "answer": 2,
+          "explanation": "Menor privilégio limita o alcance, mas não valida a estrutura do SQL. Marcadores representam valores e não toda a sintaxe.",
+          "reviewLessons": [
+            28,
+            29
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "O dump lógico foi criado e existe uma posição GTID MariaDB. Isso prova que há réplica funcional e recuperação histórica testada?",
+          "options": [
+            "Sim, imprimir GTID realiza o restore.",
+            "Sim, qualquer GTID MySQL pode ser usado como equivalente sem adaptação.",
+            "Não, porque dumps nunca podem ser restaurados.",
+            "Não; restore e replicação precisam de seus próprios ensaios, preservando os artefatos e posições corretos para MariaDB."
+          ],
+          "answer": 3,
+          "explanation": "Posição e arquivo são insumos de procedimentos distintos. GTID MariaDB não é identidade intercambiável com o protocolo MySQL.",
+          "reviewLessons": [
+            31,
+            33
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Pedidos e histórico operável em MariaDB",
+    "scenario": "Construa um banco MariaDB 11.4 LTS para uma loja fictícia com pedidos, itens, estoque e evolução de preços. O projeto deve usar recursos do dialeto conscientemente e registrar os limites de cada ensaio.",
+    "requirements": [
+      "Modelo válido: chaves, FKs, nulabilidade, valores exatos e regras de quantidade/status rejeitam estados inválidos.",
+      "Escrita rastreável: retorno de inserção, rotinas e triggers têm contrato definido; UPDATE sem mudança não gera histórico indevido quando a regra exigir.",
+      "Consulta coerente: relatórios não multiplicam fatos; JSON/JSON_TABLE e versões temporais têm semântica de leitura documentada.",
+      "Concorrência protegida: estoque e pedido pertencem à mesma unidade; locks, timeout e deadlock possuem tratamento e retry limitado.",
+      "Acesso e evolução: conta restrita, parâmetros ligados, migration compatível e diferenças MariaDB/MySQL identificadas.",
+      "Recuperação e disponibilidade: dump restaurado, procedimento físico distinguido de prepare e desenho GTID/Galera com ensaios executados ou pendentes explicitados."
+    ],
+    "deliverables": [
+      "DDL, migrations, fixtures e matriz das diferenças de dialeto relevantes.",
+      "Rotinas e cliente parametrizado com contrato de erros e efeitos.",
+      "Testes de relatórios, concorrência e histórico com saídas esperadas.",
+      "Runbook de dump/restore e disponibilidade, com provas e pendências por cenário."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Modelo válido",
+        "description": "Modelo válido: chaves, FKs, nulabilidade, valores exatos e regras de quantidade/status rejeitam estados inválidos.",
+        "reviewLessons": [
+          2,
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Escrita rastreável",
+        "description": "Escrita rastreável: retorno de inserção, rotinas e triggers têm contrato definido; UPDATE sem mudança não gera histórico indevido quando a regra exigir.",
+        "reviewLessons": [
+          7,
+          17,
+          18
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Consulta coerente",
+        "description": "Consulta coerente: relatórios não multiplicam fatos; JSON/JSON_TABLE e versões temporais têm semântica de leitura documentada.",
+        "reviewLessons": [
+          10,
+          11,
+          19,
+          20,
+          21
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Concorrência protegida",
+        "description": "Concorrência protegida: estoque e pedido pertencem à mesma unidade; locks, timeout e deadlock possuem tratamento e retry limitado.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Acesso e evolução",
+        "description": "Acesso e evolução: conta restrita, parâmetros ligados, migration compatível e diferenças MariaDB/MySQL identificadas.",
+        "reviewLessons": [
+          28,
+          29,
+          35
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Recuperação e disponibilidade",
+        "description": "Recuperação e disponibilidade: dump restaurado, procedimento físico distinguido de prepare e desenho GTID/Galera com ensaios executados ou pendentes explicitados.",
+        "reviewLessons": [
+          31,
+          32,
+          33,
+          34,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Regra e histórico",
+        "setup": "Produto existente e rotina de alteração com trigger preparado.",
+        "input": "Alterar um valor e executar também atualização que não muda o valor, conforme contrato documentado.",
+        "expected": "Dados atuais e auditoria correspondem às mudanças efetivas; o resultado não é inferido apenas da presença do trigger.",
+        "reviewLessons": [
+          8,
+          17,
+          18
+        ]
+      },
+      {
+        "title": "Último item disputado",
+        "setup": "Estoque 1 e duas sessões em tabelas persistentes do laboratório.",
+        "input": "Tentar confirmar dois pedidos que exigem a última unidade.",
+        "expected": "Somente um confirma; a recusa é tratada, não há saldo negativo nem pedido incompleto.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "title": "Dump e restauração",
+        "setup": "Fixture conhecida e banco de restore exclusivo previamente criado.",
+        "input": "Criar dump, importar no destino e conferir contagens, valores e regras.",
+        "expected": "Destino contém o ponto copiado e atende às verificações; backup físico/replicação não são declarados ensaiados por esse teste lógico.",
+        "reviewLessons": [
+          31,
+          32,
+          33
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "prompt": "O código usa uma função JSON de MySQL e falha em MariaDB. Qual correção atende ao projeto?",
+        "options": [
+          "Conferir a versão e o contrato MariaDB, adaptar a consulta e testar os mesmos dados/resultado esperado.",
+          "Trocar somente o nome do arquivo para mysql.sql.",
+          "Supor que ambos compartilham todas as funções e representação JSON.",
+          "Remover a validação e declarar equivalência."
+        ],
+        "answer": 0,
+        "explanation": "Compatibilidade precisa ser verificada por recurso e versão. A representação JSON do MariaDB também merece consideração explícita.",
+        "reviewLessons": [
+          19,
+          20,
+          35
+        ]
+      },
+      {
+        "id": "q2",
+        "prompt": "mariadb-backup --backup e --prepare passaram. Isso basta para afirmar recuperação de uma nova instância?",
+        "options": [
+          "Sim, prepare já inicia e consulta o destino automaticamente.",
+          "Não; falta restaurar num alvo apropriado, iniciá-lo e conferir dados e regras.",
+          "Sim, diretório não vazio prova qualquer RTO.",
+          "Não, porque backup físico não existe no MariaDB."
+        ],
+        "answer": 1,
+        "explanation": "Cópia preparada é um estágio do procedimento. Recuperabilidade exige um destino realmente aberto e validado.",
+        "reviewLessons": [
+          31,
+          32,
+          36
+        ]
+      },
+      {
+        "id": "q3",
+        "prompt": "O relatório é correto, mas a conta do cliente pode administrar roles e a rotina repete efeitos após deadlock. Quais pontos revisar?",
+        "options": [
+          "Somente o título do relatório.",
+          "Apenas a numeração dos IDs retornados.",
+          "Menor privilégio e protocolo de retry/idempotência da unidade, com testes de recusa e repetição.",
+          "Remover logs para não observar os erros."
+        ],
+        "answer": 2,
+        "explanation": "Integridade de leitura não substitui acesso limitado nem estabilidade dos efeitos sob falha.",
+        "reviewLessons": [
+          27,
+          28,
+          29
+        ]
+      }
+    ]
+  }
+}

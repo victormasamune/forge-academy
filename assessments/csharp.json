@@ -1,0 +1,465 @@
+{
+  "courseId": "csharp",
+  "combos": [
+    {
+      "title": "Cadastro validado e consulta por identidade",
+      "scenario": "Um aplicativo console recebe quantidades como texto e armazena itens por código. Ausência, zero e erro de formato devem ser estados diferentes; uma entrada recusada não pode alterar o catálogo.",
+      "requiredLessons": [
+        2,
+        3,
+        5,
+        6,
+        7,
+        8
+      ],
+      "skills": [
+        "Conversão",
+        "Funções",
+        "Coleções e presença"
+      ],
+      "questions": [
+        {
+          "prompt": "int.TryParse retorna true para \"-2\", mas a regra aceita somente quantidades positivas. Qual verificação ainda falta antes de salvar?",
+          "options": [
+            "Validar o intervalo e o significado da quantidade numa função de domínio, recusando o valor sem alterar o catálogo.",
+            "Nenhuma; conversão bem-sucedida prova qualquer regra do negócio.",
+            "Trocar -2 por 0 silenciosamente e anunciar sucesso.",
+            "Imprimir o número e considerar a escrita concluída."
+          ],
+          "answer": 0,
+          "explanation": "TryParse verifica o formato representável, não a regra de quantidade positiva. A decisão deve anteceder o efeito.",
+          "reviewLessons": [
+            2,
+            3,
+            5,
+            6
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Um Dictionary guarda A com estoque 0 e não guarda B. Como a consulta pode distinguir esses dois casos sem criar uma entrada?",
+          "options": [
+            "Considerar valor zero como prova de ausência em qualquer consulta.",
+            "Usar TryGetValue e tratar separadamente o booleano de presença e o valor do estoque.",
+            "Usar o tamanho do código como saldo.",
+            "Inserir B com valor 0 antes de responder se existe."
+          ],
+          "answer": 1,
+          "explanation": "Presença da chave e quantidade são dimensões diferentes. A consulta deve conservar o catálogo e respeitar o contrato de ausência.",
+          "reviewLessons": [
+            3,
+            5,
+            8
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "Duas variáveis referenciam a mesma List<Item>. Uma função adiciona um item por uma delas e a outra lista observada muda. Qual contrato precisa ficar explícito?",
+          "options": [
+            "Toda atribuição de lista faz cópia profunda automática.",
+            "O efeito é impossível porque o parâmetro tem outro nome.",
+            "Se a função altera a coleção recebida ou produz uma coleção independente, considerando também referências aos objetos internos.",
+            "Basta transformar o nome local em const para copiar os objetos."
+          ],
+          "answer": 2,
+          "explanation": "Copiar uma referência não copia a coleção. Mesmo uma cópia do contêiner pode continuar compartilhando objetos internos.",
+          "reviewLessons": [
+            5,
+            7,
+            8
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-1"
+    },
+    {
+      "title": "Relatório LINQ com estado e recursos controlados",
+      "scenario": "Um relatório agrupa registros, usa records como valores e lê um recurso descartável. A execução adiada e as cópias rasas não podem surpreender o contrato da resposta nem os testes.",
+      "requiredLessons": [
+        11,
+        13,
+        14,
+        16,
+        17,
+        18
+      ],
+      "skills": [
+        "Records",
+        "LINQ",
+        "Exceções, descarte e testes"
+      ],
+      "questions": [
+        {
+          "prompt": "Um record contém List<string> Tags. b = a with { } é criado e b.Tags.Add(\"novo\") também afeta a.Tags. Qual conclusão é correta?",
+          "options": [
+            "with sempre faz cópia profunda de qualquer objeto interno.",
+            "Records impedem toda mutação de objetos referenciados.",
+            "O problema desaparece ao enumerar a lista duas vezes.",
+            "A cópia do record é rasa e compartilha a lista; é preciso copiar ou trocar a representação interna quando a independência for necessária."
+          ],
+          "answer": 3,
+          "explanation": "Igualdade por valor e cópia de um record não significam imutabilidade profunda. A coleção interna continua tendo identidade e mutabilidade próprias.",
+          "reviewLessons": [
+            11,
+            13
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "var consulta = itens.Where(...); é criado, depois itens recebe outro elemento e só então a consulta é enumerada. Se o contrato exige um retrato no momento da criação, o que mudar?",
+          "options": [
+            "Materializar o resultado no ponto de corte apropriado e definir se também é necessário copiar os objetos mutáveis do resultado.",
+            "Assumir que Where executa e congela os dados imediatamente.",
+            "Enumerar mais rápido para impedir mudanças anteriores.",
+            "Trocar o nome consulta por snapshot sem mudar a operação."
+          ],
+          "answer": 0,
+          "explanation": "LINQ pode ter execução adiada. Materializar fixa os membros do resultado naquele momento, mas não torna todos os objetos internos imutáveis.",
+          "reviewLessons": [
+            11,
+            13,
+            14
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A leitura lança uma exceção dentro de using. Qual teste verifica o contrato do recurso e da falha?",
+          "options": [
+            "Testar somente que o método retornou alguma string.",
+            "Conferir que Dispose foi chamado e que o erro esperado foi observado ou traduzido com sua causa, sem transformar a falha em relatório válido.",
+            "Aceitar qualquer exceção como prova de relatório correto.",
+            "Depender da coleta de lixo imediata em vez de using."
+          ],
+          "answer": 1,
+          "explanation": "Descarte determinístico e propagação de erro são efeitos observáveis distintos. O teste deve verificar ambos os caminhos do contrato.",
+          "reviewLessons": [
+            16,
+            17,
+            18
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-2"
+    },
+    {
+      "title": "API, cancelamento e snapshot validado",
+      "scenario": "Uma API local recebe JSON, acessa uma dependência HTTP e pode restaurar um snapshot. Identidade, autorização, validação e prazo precisam ser tratados antes de substituir o estado em uso.",
+      "requiredLessons": [
+        20,
+        21,
+        23,
+        25,
+        26,
+        27
+      ],
+      "skills": [
+        "DTO e snapshots",
+        "HTTP",
+        "Cancelamento e autorização"
+      ],
+      "questions": [
+        {
+          "prompt": "O corpo do POST contém donoId de outro usuário e um pedido de alteração. Qual decisão deve preceder a escrita?",
+          "options": [
+            "Aceitar donoId como prova de identidade porque veio em JSON.",
+            "Alterar primeiro e retornar 403 depois.",
+            "Usar a identidade autenticada, verificar a propriedade/permissão sobre o recurso e validar o DTO antes do efeito.",
+            "Autorizar qualquer usuário que saiba o ID da entidade."
+          ],
+          "answer": 2,
+          "explanation": "JSON é dado não confiável. Autenticação identifica a pessoa e autorização verifica a operação sobre o recurso solicitado.",
+          "reviewLessons": [
+            20,
+            26,
+            27
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "O endpoint usa CancellationToken, mas não o passa para HttpClient. O cliente encerrou a requisição; qual comportamento não está garantido?",
+          "options": [
+            "Que uma variável local deixou de existir.",
+            "Que a rota tenha um nome.",
+            "Que HttpClient reconheça códigos de status.",
+            "Que a operação dependente interrompeu o trabalho; o token precisa chegar à API cooperativa e o resultado ainda pode ser incerto."
+          ],
+          "answer": 3,
+          "explanation": "Receber um token não cancela automaticamente todas as dependências. Prazo, cancelamento e efeito externo precisam de contratos próprios.",
+          "reviewLessons": [
+            23,
+            25,
+            26
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "Um snapshot possui JSON válido, versão desconhecida e estoque negativo. Qual restauração preserva o estado ativo?",
+          "options": [
+            "Desserializar para um candidato, verificar versão e invariantes e só então efetivar uma troca válida; caso contrário manter o estado anterior.",
+            "Substituir o estado logo após desserializar, porque sintaxe válida basta.",
+            "Aplicar os registros válidos e ignorar o resto sem regra de aceitação parcial.",
+            "Converter o estoque negativo em zero silenciosamente."
+          ],
+          "answer": 0,
+          "explanation": "A fronteira do formato não valida o domínio. Estado candidato e troca após validação evitam uma restauração parcial ou incompatível.",
+          "reviewLessons": [
+            20,
+            21
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-3"
+    },
+    {
+      "title": "Fila limitada, diagnóstico e confirmação única",
+      "scenario": "O serviço processa confirmações com Channels e guarda chaves de operações. O número de tarefas, as regiões críticas e as evidências de desempenho precisam preservar o mesmo resultado de negócio.",
+      "requiredLessons": [
+        28,
+        29,
+        30,
+        31,
+        33,
+        35
+      ],
+      "skills": [
+        "Locks",
+        "Channels",
+        "Diagnóstico e idempotência"
+      ],
+      "questions": [
+        {
+          "prompt": "O código verifica se a operação já existe fora do lock, debita estoque dentro e só depois registra a operação. Duas chamadas iguais podem passar pela primeira checagem. O que corrigir?",
+          "options": [
+            "Adicionar apenas Interlocked.Increment num contador de logs.",
+            "Proteger verificação, efeito e registro da operação na mesma coordenação do invariante, com contrato de persistência definido.",
+            "Proteger somente o texto da resposta.",
+            "Presumir que await impede intercalamento de requisições."
+          ],
+          "answer": 1,
+          "explanation": "A sequência composta precisa de um limite comum; operações atômicas isoladas e assincronia não tornam a decisão inteira indivisível.",
+          "reviewLessons": [
+            28,
+            35
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Um Channel sem limite cresce e a latência aumenta, mas o relatório só mostra tarefas concluídas. Que revisão combina controle e diagnóstico?",
+          "options": [
+            "Remover todo log para afirmar que a fila desapareceu.",
+            "Criar consumidores ilimitados sem medir recursos escassos.",
+            "Definir capacidade/política de pressão e observar fila, tempo de espera, falhas e correlação de cada operação.",
+            "Contar apenas requisições aceitas e tratar as demais como concluídas."
+          ],
+          "answer": 2,
+          "explanation": "Conclusão é só uma parte do fluxo. Backpressure e sinais de espera ajudam a entender a diferença entre admissão e capacidade de processamento.",
+          "reviewLessons": [
+            29,
+            33
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A versão paralela executa em menos tempo numa rodada, mas devolve soma diferente da sequencial. Ela pode ser declarada uma otimização válida?",
+          "options": [
+            "Sim, qualquer redução de tempo compensa resultado errado.",
+            "Sim, Task.Run valida a soma automaticamente.",
+            "Não, porque .NET proíbe medir CPU.",
+            "Não; primeiro preserve a correção e compare a mesma carga em condições documentadas, com limite de paralelismo."
+          ],
+          "answer": 3,
+          "explanation": "Medição de desempenho depende de trabalho equivalente e resultado correto. Agendamento e quantidade de tarefas também têm custo e limites.",
+          "reviewLessons": [
+            30,
+            31
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-4"
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Central local de empréstimos em C#",
+    "scenario": "Entregue uma aplicação .NET com CLI e API local para emprestar equipamentos. O mesmo domínio atende as duas interfaces, com snapshot validado, fila de trabalho limitada e confirmação repetível.",
+    "requirements": [
+      "Validar identificadores, quantidades e transições por operações encapsuladas; distinguir igualdade, identidade e cópia rasa.",
+      "Expor casos de uso por CLI/ASP.NET Core, validar DTOs e autorização antes de alterar recursos.",
+      "Salvar um formato versionado e restaurar por estado candidato, preservando os dados necessários à garantia de repetição anunciada.",
+      "Descartar recursos, propagar tokens de cancelamento e encerrar produtor/consumidor sem fila ou tarefa ilimitada.",
+      "Proteger o invariante de disponibilidade e deduplicação e verificar falha, fronteira e disputa com testes determinísticos.",
+      "Documentar SDK/projetos corretos, comandos, logs correlacionados, medições em configuração adequada e reabertura de backup."
+    ],
+    "deliverables": [
+      "Solução .NET com domínio, CLI, API e persistência separados.",
+      "Testes e fixtures de entrada, snapshot, disputa e repetição.",
+      "README de instalação, execução e contratos de acesso/cancelamento.",
+      "Relatório de recuperação e de um experimento de desempenho, com limites."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Contratos de domínio",
+        "description": "Validar identificadores, quantidades e transições por operações encapsuladas; distinguir igualdade, identidade e cópia rasa.",
+        "reviewLessons": [
+          6,
+          8,
+          10,
+          11
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Interface e acesso",
+        "description": "Expor casos de uso por CLI/ASP.NET Core, validar DTOs e autorização antes de alterar recursos.",
+        "reviewLessons": [
+          12,
+          20,
+          26,
+          27,
+          34
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Persistência e recuperação",
+        "description": "Salvar um formato versionado e restaurar por estado candidato, preservando os dados necessários à garantia de repetição anunciada.",
+        "reviewLessons": [
+          19,
+          20,
+          21,
+          35
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Ciclo de vida",
+        "description": "Descartar recursos, propagar tokens de cancelamento e encerrar produtor/consumidor sem fila ou tarefa ilimitada.",
+        "reviewLessons": [
+          17,
+          22,
+          23,
+          24,
+          29
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Concorrência e testes",
+        "description": "Proteger o invariante de disponibilidade e deduplicação e verificar falha, fronteira e disputa com testes determinísticos.",
+        "reviewLessons": [
+          18,
+          28,
+          30,
+          35
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Entrega e evidências",
+        "description": "Documentar SDK/projetos corretos, comandos, logs correlacionados, medições em configuração adequada e reabertura de backup.",
+        "reviewLessons": [
+          25,
+          26,
+          31,
+          33,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Confirmação válida e duplicata",
+        "setup": "Equipamento E possui 3 unidades; operação e-1 é inédita.",
+        "input": "Emprestar 1 unidade e repetir e-1 com o mesmo conteúdo.",
+        "expected": "Uma confirmação, saldo 2 e resposta da operação original na repetição dentro da garantia documentada.",
+        "reviewLessons": [
+          10,
+          28,
+          35
+        ]
+      },
+      {
+        "title": "Restauração inválida",
+        "setup": "Estado ativo válido e snapshot com versão desconhecida ou quantidade negativa.",
+        "input": "Solicitar carga do snapshot.",
+        "expected": "Erro identificável e estado anterior preservado, sem troca parcial.",
+        "reviewLessons": [
+          18,
+          20,
+          21
+        ]
+      },
+      {
+        "title": "Cancelamento e encerramento",
+        "setup": "Fila limitada com consumidor em operação cooperativa e registros de correlação.",
+        "input": "Sinalizar encerramento e aguardar até o prazo definido.",
+        "expected": "Admissão cessa, tarefas são concluídas/canceladas segundo o contrato e não há promessa falsa de efeito externo desfeito.",
+        "reviewLessons": [
+          23,
+          29,
+          33,
+          36
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "A API recebe um token de cancelamento, mas a chamada HTTP o ignora. Qual critério final continua pendente?",
+        "options": [
+          "Propagação do cancelamento até o trabalho cooperativo e tratamento do resultado incerto.",
+          "A existência de uma rota apenas.",
+          "A escolha de uma cor para erros.",
+          "O uso de namespace no código."
+        ],
+        "answer": 0,
+        "explanation": "O ciclo de vida precisa atravessar as dependências, não ficar apenas na assinatura do endpoint.",
+        "reviewLessons": [
+          23,
+          25,
+          26
+        ],
+        "id": "q1"
+      },
+      {
+        "prompt": "O backup reabre, mas não contém as chaves que impediam duplicar confirmações. Pode manter a mesma promessa de idempotência após recuperar?",
+        "options": [
+          "Sim, o arquivo JSON recria qualquer dado omitido.",
+          "Não sem restaurar consistentemente essa informação ou restringir explicitamente o contrato da garantia.",
+          "Sim, locks sobrevivem automaticamente ao processo.",
+          "Não, porque C# não permite serializar chaves."
+        ],
+        "answer": 1,
+        "explanation": "A informação necessária ao invariante faz parte do estado recuperável.",
+        "reviewLessons": [
+          20,
+          21,
+          35,
+          36
+        ],
+        "id": "q2"
+      },
+      {
+        "prompt": "Um teste confirma que houve erro, mas não verifica o saldo depois da tentativa. O que falta para provar recusa sem efeito parcial?",
+        "options": [
+          "Apenas uma mensagem maior no console.",
+          "Um delay para dar tempo de esconder a alteração.",
+          "Asserções sobre estoque, confirmação e identidade da operação depois da falha.",
+          "Trocar todos os tipos por dynamic."
+        ],
+        "answer": 2,
+        "explanation": "O resultado e o estado final precisam ser observados juntos.",
+        "reviewLessons": [
+          18,
+          28,
+          35
+        ],
+        "id": "q3"
+      }
+    ]
+  }
+}

@@ -1,0 +1,478 @@
+{
+  "courseId": "java",
+  "combos": [
+    {
+      "title": "Reserva tipada e comparação correta",
+      "scenario": "Uma aplicação console recebe código e quantidade, encontra um recurso e tenta reservá-lo. Estados finitos, igualdade de texto e validação na criação devem produzir resultados previsíveis.",
+      "requiredLessons": [
+        2,
+        3,
+        4,
+        6,
+        7,
+        8
+      ],
+      "skills": [
+        "Tipos",
+        "Igualdade",
+        "Invariantes e estados"
+      ],
+      "questions": [
+        {
+          "prompt": "O código digitado tem o mesmo conteúdo de um código carregado, mas codigo == cadastrado retorna false. Qual comparação e validação correspondem à busca?",
+          "options": [
+            "Comparar conteúdo com equals de forma segura para a nulidade e validar a quantidade antes de efetuar a reserva.",
+            "Manter == porque strings de entrada sempre compartilham a mesma referência.",
+            "Usar apenas o comprimento das duas strings.",
+            "Reservar primeiro e comparar conteúdo depois."
+          ],
+          "answer": 0,
+          "explanation": "== compara referências de objetos. Igualdade de conteúdo e regra da quantidade precisam ser verificadas antes da alteração do recurso.",
+          "reviewLessons": [
+            3,
+            4,
+            6,
+            7
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "A taxa é calculada por int percentual = 3/2*100 e aparece 100 em vez de 150. Qual revisão separa representação e regra?",
+          "options": [
+            "Mudar o texto exibido para 150 sem alterar o cálculo.",
+            "Reconhecer a divisão inteira e escolher um cálculo com escala/tipo adequado, preservando a validação dos limites.",
+            "Esperar que multiplicar depois recupere a parte fracionária já perdida.",
+            "Trocar todos os nomes para String."
+          ],
+          "answer": 1,
+          "explanation": "3/2 com inteiros produz 1; a multiplicação posterior não recupera a fração. A representação deve corresponder à unidade pretendida.",
+          "reviewLessons": [
+            2,
+            3,
+            4
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "Uma Reserva pode nascer com quantidade -1 e só depois receber estado CONFIRMADA. Que contrato impede criar esse objeto inválido?",
+          "options": [
+            "Deixar todos os campos públicos para qualquer valor.",
+            "Usar números mágicos e presumir que a interface enviará dados corretos.",
+            "Validar no construtor/fábrica e nas transições, representando os estados permitidos com um tipo finito apropriado.",
+            "Validar apenas quando imprimir o objeto."
+          ],
+          "answer": 2,
+          "explanation": "Encapsulamento protege o invariante desde a criação. Enum representa o conjunto de estados, mas a legalidade de cada transição continua sendo uma regra.",
+          "reviewLessons": [
+            3,
+            7,
+            8
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-1"
+    },
+    {
+      "title": "Relatório com coleções e ausência explícita",
+      "scenario": "O relatório agrupa pedidos por cliente, ordena por total e usa objetos como chaves. Um cliente pode não ter pedidos; chaves mutáveis e acumuladores externos não devem comprometer o resultado.",
+      "requiredLessons": [
+        12,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "skills": [
+        "Igualdade e hash",
+        "Coleções",
+        "Streams e Optional"
+      ],
+      "questions": [
+        {
+          "prompt": "Um objeto usado como chave de HashMap altera um campo que participa de equals/hashCode depois de inserido. A busca falha. Qual correção preserva o contrato?",
+          "options": [
+            "Recalcular manualmente o bucket com um número fixo.",
+            "Trocar apenas o nome da variável do mapa.",
+            "Assumir que HashMap procura por todos os campos após qualquer mutação.",
+            "Usar uma chave de identidade estável e imutável, mantendo dados mutáveis fora da identidade da chave."
+          ],
+          "answer": 3,
+          "explanation": "As regras de hash e igualdade precisam permanecer estáveis enquanto o objeto funciona como chave. Estado mutável não deve alterar essa identidade.",
+          "reviewLessons": [
+            12,
+            14,
+            17
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Dois pedidos têm o mesmo total. O relatório exige ordem reproduzível por total e depois ID. Qual abordagem atende sem risco de overflow na subtração?",
+          "options": [
+            "Compor comparadores com comparing/thenComparing ou comparações apropriadas, incluindo o ID como desempate.",
+            "Retornar a.total-b.total como único comparador de inteiros para qualquer faixa.",
+            "Confiar que um Set produz ordem de inserção em toda implementação.",
+            "Omitir desempate porque empates não podem ocorrer em dinheiro."
+          ],
+          "answer": 0,
+          "explanation": "Comparador deve respeitar seu contrato e o domínio numérico. Desempate explícito torna a apresentação determinística.",
+          "reviewLessons": [
+            14,
+            15,
+            17
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A consulta devolve Optional.empty para cliente sem pedido. O que a camada de relatório deve fazer?",
+          "options": [
+            "Chamar get porque Optional sempre contém um valor.",
+            "Tratar a ausência deliberadamente, com saída ou valor de domínio definido, sem chamar get cegamente nem inventar pedido.",
+            "Converter ausência em erro de sintaxe.",
+            "Criar um pedido de valor zero sem regra de negócio."
+          ],
+          "answer": 1,
+          "explanation": "Optional explicita um resultado possível ausente. A decisão de apresentação ou regra deve ocorrer na fronteira adequada.",
+          "reviewLessons": [
+            16,
+            17,
+            18
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-2"
+    },
+    {
+      "title": "Entrada HTTP e confirmação transacional",
+      "scenario": "Uma aplicação Maven recebe JSON de um serviço local, converte para DTO e confirma pedidos em JDBC. Testes controlam respostas e comprovam rollback quando a reserva não pode ser concluída.",
+      "requiredLessons": [
+        20,
+        21,
+        23,
+        24,
+        25,
+        26
+      ],
+      "skills": [
+        "DTO e HTTP",
+        "JUnit",
+        "JDBC e atomicidade"
+      ],
+      "questions": [
+        {
+          "prompt": "O JSON foi desserializado para um DTO com quantidade 0. Isso autoriza o serviço a debitar estoque?",
+          "options": [
+            "Sim, desserializar valida qualquer regra do negócio.",
+            "Sim, zero é sempre uma quantidade válida.",
+            "Não; o DTO ainda precisa de validação do domínio e o teste deve provar a recusa sem escrita.",
+            "Não, porque DTOs não podem conter números."
+          ],
+          "answer": 2,
+          "explanation": "Mapear o formato não valida os valores do caso de uso. O teste precisa observar recusa e estado preservado.",
+          "reviewLessons": [
+            20,
+            21,
+            23,
+            26
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Uma consulta de cliente é montada concatenando nome recebido pelo HTTP. Qual revisão usa corretamente a fronteira JDBC?",
+          "options": [
+            "Concatenar e chamar commit para neutralizar o conteúdo.",
+            "Remover apenas espaços do nome.",
+            "Confiar que o DTO torna o texto parte segura da sintaxe SQL.",
+            "Usar PreparedStatement com parâmetros para valores, verificando o resultado e fechando os recursos."
+          ],
+          "answer": 3,
+          "explanation": "Parâmetros mantêm valores fora da estrutura SQL. Recursos e transação precisam de ciclo de vida próprio; commit não corrige concatenação.",
+          "reviewLessons": [
+            23,
+            24,
+            25,
+            26
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "O teste força falha depois do débito e antes de inserir a confirmação. Qual evidência demonstra atomicidade?",
+          "options": [
+            "Após rollback, estoque e quantidade de confirmações correspondem ao estado anterior, e o erro é observado pelo chamador.",
+            "Apenas verificar que houve uma exceção qualquer.",
+            "Aceitar estoque menor se não existir confirmação.",
+            "Ignorar a exceção e retornar sucesso."
+          ],
+          "answer": 0,
+          "explanation": "Erro isolado não prova que os efeitos foram desfeitos. O teste deve conferir a unidade de estado e a propagação da falha.",
+          "reviewLessons": [
+            20,
+            21,
+            25,
+            26
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-3"
+    },
+    {
+      "title": "Concorrência, limites e diagnóstico na JVM",
+      "scenario": "A API disputa estoque, chama dependências com tarefas concorrentes e expõe contratos HTTP. Uma investigação de desempenho deve usar evidências e o cliente não pode confundir timeout com interrupção confirmada.",
+      "requiredLessons": [
+        27,
+        28,
+        29,
+        30,
+        31,
+        35
+      ],
+      "skills": [
+        "Atualização condicional",
+        "Concorrência",
+        "Timeouts e observabilidade"
+      ],
+      "questions": [
+        {
+          "prompt": "Dois pedidos disputam uma unidade. Ambos leram saldo 1 antes de gravar. Qual operação permite detectar o perdedor sem saldo negativo?",
+          "options": [
+            "Proteger só uma variável local em cada requisição com volatile.",
+            "Uma baixa condicional no banco dentro da transação, conferindo quantidade de linhas alteradas e retornando conflito quando não houver efeito.",
+            "Gravar sempre zero e confirmar ambos os pedidos.",
+            "Usar mais virtual threads para tornar a disputa impossível."
+          ],
+          "answer": 1,
+          "explanation": "A condição precisa participar da escrita que decide o efeito. Memória local e maior concorrência não substituem o invariante no banco.",
+          "reviewLessons": [
+            27,
+            28,
+            35
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Uma virtual thread por chamada faz I/O barato, mas todas disputam um pool de dez conexões. Qual limite permanece necessário?",
+          "options": [
+            "Nenhum, porque virtual threads criam conexões de banco infinitas.",
+            "Aumentar tarefas sem limite e esconder timeout.",
+            "Controlar admissão/concorrência e tempo de espera pelo recurso escasso, observando cancelamento e saturação.",
+            "Trocar todo I/O por laços de CPU."
+          ],
+          "answer": 2,
+          "explanation": "Virtual threads reduzem um custo de agendamento, não eliminam a capacidade finita das dependências.",
+          "reviewLessons": [
+            27,
+            29,
+            30,
+            31
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "Um CompletableFuture estourou o prazo do resultado. Isso prova que o efeito HTTP ou SQL já parou?",
+          "options": [
+            "Sim, timeout desfaz qualquer transação externa.",
+            "Sim, toda tarefa morre no mesmo instante.",
+            "Não, porque futures nunca possuem timeout.",
+            "Não; o cancelamento e a capacidade de interromper a operação precisam ser propagados e verificados pelo protocolo."
+          ],
+          "answer": 3,
+          "explanation": "Prazo de espera e término do trabalho são contratos diferentes. Resultado incerto também influencia repetição e a resposta da API.",
+          "reviewLessons": [
+            29,
+            30,
+            35
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-4"
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Agenda de reservas em Java",
+    "scenario": "Construa uma aplicação local de reserva de salas/equipamentos, com interface de terminal e consulta/confirmação HTTP. As reservas devem respeitar capacidade e conservar seu resultado sob falha e repetição.",
+    "requirements": [
+      "Modelar identidades, estados e valores monetários/temporais com tipos coerentes e invariantes por construção.",
+      "Produzir filtros e relatórios por coleções/streams com tratamento de ausência, empate e vazio.",
+      "Usar JDBC parametrizado e uma transação para reserva, disponibilidade e chave idempotente, verificando a escrita condicional.",
+      "Separar casos de uso de CLI/HTTP, validar DTOs e entradas, definir status e recusar acesso indevido antes de efeitos.",
+      "Limitar trabalho concorrente, propagar interrupção/prazo e testar rejeições e falhas com JUnit e colaboradores controlados.",
+      "Fornecer build Maven/JAR reproduzível, dados locais de teste, hipótese de desempenho e restauração conferida."
+    ],
+    "deliverables": [
+      "Projeto Maven com domínio, adaptadores e interfaces executáveis.",
+      "Testes JUnit e cenários locais de concorrência e falha.",
+      "README com comandos de build, execução, configuração e contratos.",
+      "Relatório de recuperação de dados e investigação de uma hipótese de desempenho."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Modelo estável",
+        "description": "Modelar identidades, estados e valores monetários/temporais com tipos coerentes e invariantes por construção.",
+        "reviewLessons": [
+          7,
+          8,
+          11,
+          12
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Consultas determinísticas",
+        "description": "Produzir filtros e relatórios por coleções/streams com tratamento de ausência, empate e vazio.",
+        "reviewLessons": [
+          14,
+          15,
+          17,
+          18
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Persistência atômica",
+        "description": "Usar JDBC parametrizado e uma transação para reserva, disponibilidade e chave idempotente, verificando a escrita condicional.",
+        "reviewLessons": [
+          25,
+          26,
+          27,
+          36
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Fronteiras e acesso",
+        "description": "Separar casos de uso de CLI/HTTP, validar DTOs e entradas, definir status e recusar acesso indevido antes de efeitos.",
+        "reviewLessons": [
+          23,
+          24,
+          33,
+          34,
+          35
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Concorrência e testes",
+        "description": "Limitar trabalho concorrente, propagar interrupção/prazo e testar rejeições e falhas com JUnit e colaboradores controlados.",
+        "reviewLessons": [
+          20,
+          21,
+          28,
+          29,
+          30
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Entrega verificável",
+        "description": "Fornecer build Maven/JAR reproduzível, dados locais de teste, hipótese de desempenho e restauração conferida.",
+        "reviewLessons": [
+          19,
+          22,
+          31,
+          32,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Reserva com capacidade",
+        "setup": "Recurso R tem 3 vagas e operação res-1 ainda não existe.",
+        "input": "Reservar 2 vagas usando res-1.",
+        "expected": "Uma reserva confirmada e uma vaga disponível; resultado persistido para a operação.",
+        "reviewLessons": [
+          7,
+          25,
+          26,
+          27,
+          36
+        ]
+      },
+      {
+        "title": "Disputa pela última vaga",
+        "setup": "Uma vaga e duas conexões/tentativas independentes.",
+        "input": "Cada tentativa solicita uma vaga com chave própria.",
+        "expected": "Somente uma confirma; a outra recebe recusa/conflito e a disponibilidade não fica negativa.",
+        "reviewLessons": [
+          20,
+          21,
+          26,
+          27
+        ]
+      },
+      {
+        "title": "Falha e retorno da operação",
+        "setup": "Falha de comunicação após possível commit; base reaberta conforme o roteiro.",
+        "input": "Repetir res-1 com mesmo conteúdo.",
+        "expected": "A resposta corresponde à reserva original sem nova baixa; conteúdo divergente para a chave é recusado.",
+        "reviewLessons": [
+          24,
+          26,
+          34,
+          35,
+          36
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "A interface console e o endpoint HTTP confirmam a mesma reserva com regras diferentes. Qual parte do desenho precisa ser consolidada?",
+        "options": [
+          "O caso de uso e seus invariantes, mantendo só tradução de protocolo nos adaptadores.",
+          "Apenas a quantidade de classes.",
+          "O nome do arquivo JAR.",
+          "O método toString de todo objeto."
+        ],
+        "answer": 0,
+        "explanation": "Reutilização deve ocorrer na regra, não na cópia de detalhes de apresentação.",
+        "reviewLessons": [
+          9,
+          34,
+          35
+        ],
+        "id": "q1"
+      },
+      {
+        "prompt": "O teste de concorrência verifica apenas que as duas threads terminaram. O que falta para provar a regra da última vaga?",
+        "options": [
+          "Usar nomes diferentes nas threads apenas.",
+          "Conferir exatamente uma confirmação, a recusa concorrente e o saldo final sem negatividade.",
+          "Adicionar um sleep maior sem asserções.",
+          "Executar o teste somente no computador do autor."
+        ],
+        "answer": 1,
+        "explanation": "Término de trabalho não comprova o invariante de negócio.",
+        "reviewLessons": [
+          20,
+          21,
+          27,
+          28
+        ],
+        "id": "q2"
+      },
+      {
+        "prompt": "Uma medição do JFR mostra espera por conexões, mas a solução proposta só troca List por Set. Qual decisão é mais fundamentada?",
+        "options": [
+          "Fazer a troca porque qualquer Set elimina espera no banco.",
+          "Descartar a medição para preservar a hipótese inicial.",
+          "Investigar a saturação e o limite do pool com a mesma carga antes de alterar estruturas sem relação com o sinal.",
+          "Afirmar que memória e espera são sempre a mesma causa."
+        ],
+        "answer": 2,
+        "explanation": "A otimização deve corresponder à evidência observada e manter o resultado correto.",
+        "reviewLessons": [
+          27,
+          29,
+          31
+        ],
+        "id": "q3"
+      }
+    ]
+  }
+}

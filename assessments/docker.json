@@ -1,0 +1,472 @@
+{
+  "courseId": "docker",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Imagem, processo e dados persistentes",
+      "scenario": "Uma equipe publica uma aplicação de anotações. O serviço lê /dados/notas.txt, o processo encerra ao receber SIGTERM e os dados devem sobreviver à troca do container.",
+      "requiredLessons": [
+        2,
+        3,
+        4,
+        5,
+        8,
+        9
+      ],
+      "skills": [
+        "Imagem e contexto",
+        "Processo principal",
+        "Volume e recuperação"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Montar um volume em /dados e testar a reabertura dos dados no container novo.",
+            "Alterar somente a tag da imagem para persistente.",
+            "Usar EXPOSE 8080 sem volume.",
+            "Executar docker stop e concluir que docker rm terá o mesmo efeito sobre os dados."
+          ],
+          "answer": 0,
+          "prompt": "O arquivo foi criado apenas na camada gravável do container. Depois de remover o container e criar outro da mesma imagem, o que preservaria o arquivo por projeto?",
+          "explanation": "A imagem e a camada gravável não substituem um volume independente. Revise remoção de containers e o ciclo de vida do volume; a prova é ler os dados depois da substituição.",
+          "reviewLessons": [
+            2,
+            8
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Substituir COPY por EXPOSE e manter a pasta no contexto.",
+            "Restringir o contexto com .dockerignore e manter dados de execução em volume próprio.",
+            "Mudar WORKDIR para /dados e assumir que isso cria um volume.",
+            "Criar uma tag nova e conservar todo o contexto."
+          ],
+          "answer": 1,
+          "prompt": "O Dockerfile usa COPY . /app e o contexto contém uma pasta de dados locais. Qual combinação evita transportar esses dados por acidente e separa a persistência?",
+          "explanation": "COPY trabalha a partir do contexto de build; WORKDIR só muda o diretório de trabalho. Conteúdo de execução deve ter ciclo de vida separado da imagem.",
+          "reviewLessons": [
+            4,
+            5,
+            8
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "O número de containers listados por docker ps, sem conferir o arquivo.",
+            "Uma porta publicada em todas as interfaces.",
+            "Abrir a cópia restaurada em um novo container e verificar um conteúdo conhecido.",
+            "Somente o tamanho não zero de um arquivo chamado backup."
+          ],
+          "answer": 2,
+          "prompt": "A equipe copiou os arquivos do volume, mas ainda não iniciou um container com o destino restaurado. Qual evidência está faltando?",
+          "explanation": "Uma cópia só se torna evidência de recuperação ao ser reaberta e conferida. Faça a verificação no destino, sem sobrescrever o volume de origem.",
+          "reviewLessons": [
+            3,
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Aplicação e banco em Compose",
+      "scenario": "Um serviço HTTP e seu banco local devem conversar pela rede interna do Compose. Somente a aplicação precisa ser acessível no host; o build não pode deixar credenciais na imagem.",
+      "requiredLessons": [
+        10,
+        11,
+        13,
+        14,
+        15,
+        18
+      ],
+      "skills": [
+        "DNS por serviço",
+        "Publicação restrita",
+        "Readiness e segredos"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Publicar 5432 em 0.0.0.0 e manter localhost dentro de app.",
+            "Trocar apenas EXPOSE por uma porta maior.",
+            "Colocar a senha no nome da rede e manter o endereço.",
+            "Usar db:5432 na configuração da aplicação e deixar a porta do banco sem publicação no host."
+          ],
+          "answer": 3,
+          "prompt": "O serviço app tenta conectar em localhost:5432 e o banco está no serviço db da mesma rede. Qual ajuste atende à comunicação e evita exposição desnecessária?",
+          "explanation": "Dentro de app, localhost é o próprio container. O DNS interno resolve o serviço db; exposição ao host é uma decisão diferente da comunicação entre serviços.",
+          "reviewLessons": [
+            10,
+            11,
+            13,
+            14
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Definir um healthcheck apropriado, condicionar a dependência à saúde e manter retentativas limitadas na aplicação.",
+            "Adicionar somente sleep infinito em app.",
+            "Assumir que estar running equivale a aceitar consultas.",
+            "Publicar a porta do banco em toda interface para acelerar o boot."
+          ],
+          "answer": 0,
+          "prompt": "depends_on iniciou db antes de app, mas a primeira conexão falhou porque o banco ainda inicializava. Qual solução combina ordem e prontidão?",
+          "explanation": "Ordem de criação não garante prontidão. O sinal de saúde precisa verificar a capacidade necessária, e a aplicação ainda deve tolerar falhas transitórias.",
+          "reviewLessons": [
+            13,
+            14,
+            15
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Porque ARG sempre fica criptografado dentro da imagem.",
+            "ARG pode deixar o segredo em lugares do build ou metadados; um mount de segredo é temporário e não deve ser copiado para camadas.",
+            "Porque qualquer variável em Compose vira automaticamente segredo de build.",
+            "Porque secret mount permite publicar a credencial no README."
+          ],
+          "answer": 1,
+          "prompt": "Uma etapa de build baixa uma dependência privada. Por que ARG TOKEN seguido de RUN não é a mesma garantia de um secret mount temporário?",
+          "explanation": "Configuração, segredo de runtime e segredo temporário de build possuem fronteiras diferentes. Mesmo com mount, o comando não deve gravar o segredo no resultado.",
+          "reviewLessons": [
+            14,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Imagem pequena, processo saudável e limites",
+      "scenario": "A aplicação cresce e passa por builds repetidos. O container deve respeitar memória/CPU, executar com menos privilégios e encerrar sem perder trabalho em andamento.",
+      "requiredLessons": [
+        16,
+        17,
+        19,
+        20,
+        23,
+        24
+      ],
+      "skills": [
+        "Build multi-stage",
+        "Recursos e privilégio mínimo",
+        "Diagnóstico de encerramento"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Copiar todo o diretório raiz do builder e chamar isso de multi-stage.",
+            "Remover limites de memória para compensar a imagem maior.",
+            "Copiar apenas os artefatos necessários para o estágio final e configurar um usuário de execução apropriado.",
+            "Usar exec no container como substituto permanente do Dockerfile."
+          ],
+          "answer": 2,
+          "prompt": "O estágio final precisa somente do binário, mas recebeu compilador e cache do estágio de build. Qual alteração atende tamanho e superfície de execução?",
+          "explanation": "Multi-stage é útil quando há uma fronteira de artefatos. O estágio final deve conter o necessário para rodar, com usuário e permissões compatíveis.",
+          "reviewLessons": [
+            16,
+            17,
+            20
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Concluir OOM só porque exit code é diferente de zero.",
+            "Aumentar memória indefinidamente sem reproduzir a carga.",
+            "Adicionar cache de build ao container em execução.",
+            "Correlacionar inspect, estado OOMKilled, logs e métricas de uso com o instante da falha."
+          ],
+          "answer": 3,
+          "prompt": "O container termina sob carga. Como diferenciar problema de memória de um encerramento normal antes de alterar o limite?",
+          "explanation": "Exit code isolado não explica a causa. Observe recursos e evidências do processo; uma mudança de limite precisa de uma hipótese e um ensaio comparável.",
+          "reviewLessons": [
+            19,
+            23,
+            24
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Usar a forma exec apropriada ou um init adequado e verificar que o servidor recebe o sinal e termina dentro do prazo.",
+            "Transformar o healthcheck em comando de build.",
+            "Parar de enviar qualquer sinal e usar apenas encerramento forçado.",
+            "Executar como root para que sinais passem automaticamente ao filho."
+          ],
+          "answer": 0,
+          "prompt": "Um shell permanece como PID 1 e não encaminha SIGTERM ao servidor filho. Que mudança deve ser testada junto da rotina de encerramento?",
+          "explanation": "A árvore de processos e o comportamento de PID 1 afetam entrega de sinais. Saúde e encerramento são verificações diferentes; teste os efeitos na aplicação.",
+          "reviewLessons": [
+            20,
+            23,
+            24
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Entrega reproduzível e recuperação",
+      "scenario": "Uma versão nova foi publicada num registry local. A equipe precisa provar qual imagem executou, detectar uma regressão e recuperar o banco sem depender de uma tag mutável.",
+      "requiredLessons": [
+        28,
+        29,
+        30,
+        31,
+        32,
+        33
+      ],
+      "skills": [
+        "Testes de entrega",
+        "Identidade de imagem",
+        "Rollback e restauração"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Guardar apenas o texto latest no histórico.",
+            "Registrar digest e configuração da versão anterior e testar a implantação dessa referência exata.",
+            "Apagar a versão anterior imediatamente após o push.",
+            "Usar SBOM como substituto do conteúdo da imagem."
+          ],
+          "answer": 1,
+          "prompt": "A tag atual aponta para outro conteúdo após um novo push. Como tornar a versão implantada identificável e permitir uma reversão reproduzível?",
+          "explanation": "A tag é um nome mutável. Digest identifica o conteúdo; rollback também depende de configuração e compatibilidade de dados, não só da referência.",
+          "reviewLessons": [
+            29,
+            30,
+            31,
+            33
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Porque testes em container nunca validam nada.",
+            "Porque o registry reverte o banco automaticamente.",
+            "O esquema/dados podem ter deixado de ser compatíveis; é necessário um plano de compatibilidade e recuperação testado.",
+            "Porque trocar um digest apaga toda migração."
+          ],
+          "answer": 2,
+          "prompt": "Os testes da imagem passaram, mas a migração da versão nova alterou o banco. Por que voltar apenas a imagem antiga pode não recuperar o serviço?",
+          "explanation": "Testes de imagem e reversão de dados cobrem riscos diferentes. Documente a migração, a janela de compatibilidade e o procedimento de recuperação.",
+          "reviewLessons": [
+            28,
+            31,
+            32,
+            33
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Marcar sucesso porque o arquivo foi importado sem erro de shell.",
+            "Sobrescrever a origem até os números coincidirem.",
+            "Afirmar que provenance substitui consultas de validação.",
+            "Investigar a divergência e manter o ensaio de recuperação como não concluído, preservando origem e logs."
+          ],
+          "answer": 3,
+          "prompt": "Um dump foi importado num banco vazio separado e as consultas de conferência divergiram. Qual decisão corresponde à evidência?",
+          "explanation": "Restauração precisa preservar as propriedades esperadas do dado. Logs, retorno do processo e conferência de domínio devem concordar antes de concluir.",
+          "reviewLessons": [
+            30,
+            32,
+            33
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Serviço de catálogo com entrega e recuperação demonstradas",
+    "scenario": "Entregue um catálogo fictício com uma aplicação HTTP e um banco local. Outra pessoa deve conseguir iniciar a versão documentada, executar os testes, substituir o container e recuperar uma cópia sem credenciais nos arquivos publicados.",
+    "requirements": [
+      "Construir a imagem da aplicação com estágio final contendo somente artefatos de execução e usuário adequado.",
+      "Executar aplicação e banco por Compose, usando DNS interno e publicando somente a entrada necessária no host.",
+      "Separar configuração, segredos e dados; os dados precisam sobreviver à substituição do container.",
+      "Definir healthcheck, recursos e rotina de encerramento com observação do processo.",
+      "Executar testes locais antes de publicar num registry de laboratório e registrar digest e configuração da entrega.",
+      "Produzir backup lógico, restaurar em destino separado e demonstrar rollback de aplicação com análise de compatibilidade dos dados."
+    ],
+    "deliverables": [
+      "Dockerfile, .dockerignore e compose.yaml sem credenciais reais.",
+      "README com ambiente, comandos, versão/digest, entradas de teste e limites do laboratório.",
+      "Relatório de testes, prontidão, recursos e encerramento com saídas reais identificadas.",
+      "Runbook de backup, restauração e rollback com evidências do destino recuperado."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Imagem reproduzível",
+        "description": "O contexto exclui arquivos indevidos e o estágio final contém os artefatos definidos.",
+        "reviewLessons": [
+          4,
+          5,
+          16,
+          17
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Rede e configuração",
+        "description": "A aplicação usa nomes de serviço, exposição restrita e configuração sem segredos embutidos.",
+        "reviewLessons": [
+          10,
+          11,
+          13,
+          14,
+          18,
+          31
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Ciclo dos dados",
+        "description": "A substituição do container preserva registros via armazenamento planejado.",
+        "reviewLessons": [
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Processo operável",
+        "description": "Saúde, limites e encerramento possuem ensaios e interpretação, além de configuração declarada.",
+        "reviewLessons": [
+          15,
+          19,
+          20,
+          22,
+          23,
+          24
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Entrega verificável",
+        "description": "Testes e identidade da imagem permitem reproduzir a versão e investigar regressões.",
+        "reviewLessons": [
+          25,
+          28,
+          29,
+          30
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Recuperação demonstrada",
+        "description": "Uma cópia é aberta, conferida e relacionada ao plano de reversão e aos limites reais.",
+        "reviewLessons": [
+          9,
+          32,
+          33,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Dados após substituição",
+        "setup": "Inicie a stack num diretório de laboratório e crie um item identificável no catálogo.",
+        "input": "Substitua o container da aplicação e reinicie o serviço do banco mantendo o volume previsto.",
+        "expected": "O item continua consultável; registre os IDs de containers e a referência do volume, sem confundir volume com backup.",
+        "reviewLessons": [
+          2,
+          8,
+          13
+        ]
+      },
+      {
+        "title": "Prontidão e encerramento",
+        "setup": "Configure o healthcheck e uma operação curta observável na aplicação.",
+        "input": "Inicie a stack com banco ainda inicializando e depois solicite encerramento gracioso.",
+        "expected": "O cliente trata a indisponibilidade inicial; o processo recebe o sinal e encerra dentro do prazo definido, com logs suficientes para conferir.",
+        "reviewLessons": [
+          15,
+          23,
+          24
+        ]
+      },
+      {
+        "title": "Cópia recuperada e versão exata",
+        "setup": "Preserve origem, dump e digest da entrega. Crie um banco de restauração vazio separado.",
+        "input": "Restaure o dump, execute consultas de domínio e inicie a referência de aplicação compatível com esse estado.",
+        "expected": "Quantidade/valores conhecidos coincidem no destino e a versão executada corresponde ao digest registrado; divergência permanece uma falha a investigar.",
+        "reviewLessons": [
+          29,
+          31,
+          32,
+          33
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "options": [
+          "Montagem e ciclo de vida do armazenamento, distinguindo imagem, camada gravável e volume.",
+          "Assumir que o digest deveria conter os registros do banco.",
+          "Alterar a cor da interface.",
+          "Remover o healthcheck e declarar recuperação."
+        ],
+        "answer": 0,
+        "prompt": "No projeto, container novo inicia com banco vazio apesar de a imagem correta estar identificada por digest. Que parte revisar primeiro?",
+        "explanation": "Digest identifica a imagem, não o estado de dados. Confira destino da montagem, volume efetivamente usado e se houve troca involuntária do armazenamento.",
+        "reviewLessons": [
+          6,
+          8,
+          9,
+          29
+        ]
+      },
+      {
+        "id": "q2",
+        "options": [
+          "Sim, funcionar prova que o segredo foi protegido.",
+          "Não; refaça a separação de segredos de build/runtime e revise os artefatos antes de compartilhar.",
+          "Sim, um container cifra todo arquivo automaticamente.",
+          "Não, porque Compose não aceita configuração."
+        ],
+        "answer": 1,
+        "prompt": "A aplicação funciona, mas o segredo aparece no histórico da imagem e no compose.yaml publicado. O requisito de entrega passou?",
+        "explanation": "Funcionamento e proteção de credenciais são requisitos independentes. Elimine a exposição dos artefatos e trate qualquer credencial real exposta segundo o procedimento do serviço.",
+        "reviewLessons": [
+          14,
+          18,
+          30,
+          31
+        ]
+      },
+      {
+        "id": "q3",
+        "options": [
+          "Tudo passou porque algum banco abriu.",
+          "Tudo passou porque a tag antiga existe.",
+          "Recuperação da cópia passou, porém rollback da aplicação está bloqueado pela incompatibilidade ainda não resolvida.",
+          "Backup e rollback são sempre a mesma operação."
+        ],
+        "answer": 2,
+        "prompt": "O backup restaurou corretamente, mas a imagem anterior não entende o esquema novo. Qual resultado deve constar no relatório de rollback?",
+        "explanation": "Relate separadamente a cópia recuperada e a compatibilidade da versão. Um resultado positivo não elimina a falha do outro caminho.",
+        "reviewLessons": [
+          28,
+          31,
+          32,
+          33
+        ]
+      }
+    ]
+  }
+}

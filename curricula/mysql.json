@@ -1,0 +1,3529 @@
+{
+  "id": "mysql",
+  "name": "MySQL",
+  "title": "MySQL Forge",
+  "updated": "2026-10-24",
+  "hours": 216,
+  "description": "SQL e modelagem no MySQL 8.4 LTS, do cliente e das restrições ao InnoDB, à concorrência, à otimização, à segurança e à recuperação ensaiada.",
+  "prerequisites": [
+    "Conhecer lógica básica; a trilha de fundamentos de bancos de dados ajuda, mas as primeiras aulas revisam SQL.",
+    "Computador com MySQL Community Server 8.4 LTS e cliente mysql; acesso administrativo apenas à instância local de laboratório.",
+    "Terminal e editor; a aula de backup usa Bash e mysqldump. Os ensaios concorrentes exigem duas conexões; replicação exige duas instâncias descartáveis."
+  ],
+  "outcome": "Construir e documentar um banco de pedidos idempotentes com integridade, reserva concorrente de estoque, consultas medidas, permissões limitadas, migrações compatíveis e restauração verificada.",
+  "extension": "sql",
+  "codeLanguage": "sql",
+  "setup": [
+    {
+      "title": "Servidor e versão-base",
+      "text": "Instale MySQL Community Server 8.4 LTS pelo guia oficial do seu sistema e mantenha os patches dessa linha atualizados. Instale o cliente mysql e mysqldump. Não é necessário comprar serviços de nuvem. Confirme mysql --version no terminal e SELECT VERSION() na conexão: são versões de componentes diferentes. Esta trilha fixa 8.4 LTS, sem afirmar que seja a versão mais recente do produto. MariaDB não é substituição automática para todos estes exemplos."
+    },
+    {
+      "title": "Bancos e conta de laboratório",
+      "text": "Em uma instância local dedicada, entre com a conta administrativa definida na instalação. Crie CREATE DATABASE forge_mysql CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci; e CREATE DATABASE forge_mysql_restore CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;. Crie CREATE USER 'forge_aluno'@'127.0.0.1' IDENTIFIED BY RANDOM PASSWORD; guarde a senha gerada apenas localmente. Conceda GRANT ALL PRIVILEGES ON forge_mysql.* TO 'forge_aluno'@'127.0.0.1'; e a concessão equivalente em forge_mysql_restore.*. Essas permissões amplas são só para schemas descartáveis de estudo. Não reutilize nomes existentes com dados a preservar; não altere contas de outra aplicação."
+    },
+    {
+      "title": "Executar um arquivo SQL",
+      "text": "Salve cada aula SQL em sua própria pasta com o nome indicado. Conecte por TCP com mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql e digite a senha no prompt. Dentro do cliente use source aula_01.sql; com o nome correto. Alternativamente, os comandos da aula usam --execute com source. No Windows, use caminhos com / no comando source. DELIMITER é processado pelo cliente mysql; não faz parte do protocolo SQL de drivers."
+    },
+    {
+      "title": "Escopo e permissões especiais",
+      "text": "As tabelas temporárias desaparecem com a conexão. Exemplos de foreign keys, views, triggers, particionamento e concorrência criam e removem tabelas lXX_ comuns apenas no banco dedicado; leia a limpeza antes de rodar. Para exercícios em etapas, adie o DROP final e conclua COMMIT/ROLLBACK em todas as sessões. Aulas de roles e diagnóstico administrativo indicam ADMIN_LOCAL como nome a substituir pela sua conta local autorizada. Aplicações reais devem usar contas com privilégios mínimos. A aula 23 cria trigger: com binlog habilitado e log_bin_trust_function_creators=0, a criação pode exigir privilégio global adicional, além de TRIGGER. Execute esse ensaio com o operador administrativo local indicado na aula, sem ampliar forge_aluno para SUPER."
+    },
+    {
+      "title": "Ferramentas e laboratórios avançados",
+      "text": "A aula31 é Bash: use Linux/macOS, WSL ou Git Bash com mysql e mysqldump compatíveis no PATH. Ela grava um dump local e restaura no banco forge_mysql_restore. TLS com verificação de identidade exige certificados configurados; PITR requer backup-base e logs preservados; replicação exige duas instâncias. Registre uma etapa como pendente enquanto não houver evidência real. Não interprete um SELECT diagnóstico como prova de recuperação ou disponibilidade."
+    },
+    {
+      "title": "Prática e progressão",
+      "text": "A plataforma oferece conteúdo, rascunhos, quizzes e progresso; não conecta a um servidor MySQL nem executa seu SQL. Faça os ensaios com dados fictícios, sem credenciais ou bancos de produção. Os exercícios e projetos são autoavaliados com critérios; os quizzes corrigem conceitos. As 216 horas incluem leitura, variações, exercícios, projetos e revisão; a conquista final não substitui experiência operacional nem certificação."
+    }
+  ],
+  "references": [
+    {
+      "title": "Manual MySQL 8.4",
+      "description": "Referência da versão-base usada nesta trilha; confirme também as notas do patch instalado.",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/"
+    },
+    {
+      "title": "Instalação",
+      "description": "Guias oficiais por plataforma para instalar servidor e ferramentas.",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/installing.html"
+    },
+    {
+      "title": "Linhas LTS e Innovation",
+      "description": "Modelo de versões e escolha explícita da linha 8.4 LTS.",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/mysql-releases.html"
+    },
+    {
+      "title": "InnoDB e transações",
+      "description": "Isolamento, locks, MVCC e comportamentos de concorrência.",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-transaction-model.html"
+    },
+    {
+      "title": "Prepared statements",
+      "description": "Separação de valores e estrutura no mecanismo de preparação SQL.",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html"
+    },
+    {
+      "title": "Backup e recuperação",
+      "description": "Procedimentos de backup e recuperação; replicação tem objetivo distinto.",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/backup-and-recovery.html"
+    },
+    {
+      "title": "Performance Schema",
+      "description": "Coleta e interpretação de dados reais de execução.",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html"
+    },
+    {
+      "title": "Connector/Python",
+      "description": "API de execução parametrizada usada como exemplo de integração.",
+      "url": "https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-execute.html"
+    },
+    {
+      "title": "Triggers e binary log",
+      "description": "Requisitos administrativos adicionais na criação de programas armazenados.",
+      "url": "https://dev.mysql.com/doc/refman/8.4/en/stored-programs-logging.html"
+    }
+  ],
+  "levels": [
+    {
+      "id": 1,
+      "title": "Ambiente e contratos de conexão",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Distinguir cliente e servidor, criar tabelas de laboratório e observar configuração de texto.",
+      "skills": [
+        "Cliente mysql",
+        "Schemas e metadados",
+        "Unicode e sql_mode"
+      ],
+      "project": "Caderno de laboratório MySQL",
+      "deliverables": [
+        "README com instalação 8.4 LTS, versão observada, endereço, porta e conta sem revelar senha.",
+        "Arquivo SQL que cria uma tabela de tarefas temporária, insere três linhas e consulta em ordem explícita.",
+        "Comparação documentada de texto sensível/insensível e comportamento de uma nova conexão."
+      ],
+      "rubric": [
+        "Os comandos identificam MySQL e o banco dedicado antes de alterar dados.",
+        "As três linhas aparecem com os valores previstos e a tabela temporária não é visível em outra sessão.",
+        "O relatório distingue charset, collation e sql_mode com valores observados."
+      ],
+      "challenge": [
+        {
+          "question": "Um aplicativo abriu a porta 3307 e você usou 3306. Qual investigação vem primeiro?",
+          "options": [
+            "Renomear todas as tabelas.",
+            "Desativar o autocommit global.",
+            "Conferir endereço, porta e versão do servidor ao qual a sessão se conectou.",
+            "Trocar SELECT por INSERT."
+          ],
+          "answer": 2,
+          "explanation": "Uma conexão bem-sucedida pode apontar para outra instância."
+        },
+        {
+          "question": "Duas conexões criaram TEMPORARY TABLE teste. Uma recebe linhas da outra?",
+          "options": [
+            "Sim, porque o nome é igual.",
+            "Sim, se usarem SELECT *.",
+            "Somente se a coluna for INT.",
+            "Não; cada conexão tem sua própria tabela temporária."
+          ],
+          "answer": 3,
+          "explanation": "O escopo é a conexão, mesmo com nomes iguais."
+        },
+        {
+          "question": "Uma UNIQUE textual passa a rejeitar Ana e ana como duplicadas. O que pode explicar isso?",
+          "options": [
+            "Uma collation que considera os dois textos equivalentes.",
+            "A chave usa mais memória.",
+            "A tabela possui exatamente duas colunas.",
+            "O cliente se chama mysql."
+          ],
+          "answer": 0,
+          "explanation": "Unicidade textual usa as regras de comparação da coluna."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Modelagem e integridade",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Traduzir tipos, unicidade e dependências em regras verificáveis no InnoDB.",
+      "skills": [
+        "DECIMAL e datas",
+        "CHECK e chaves",
+        "Foreign keys"
+      ],
+      "project": "Catálogo de produtos e pedidos",
+      "deliverables": [
+        "Schema com clientes, produtos e pedidos, tipos justificados e valores monetários exatos.",
+        "Chaves técnicas e de negócio, CHECKs, NOT NULL e foreign keys InnoDB com política de exclusão definida.",
+        "Carga fictícia e scripts de teste de preço inválido, código repetido, filho órfão e exclusão com dependência."
+      ],
+      "rubric": [
+        "Um pedido válido é inserido e as consultas exibem seus valores corretos.",
+        "Os quatro casos inválidos falham pela regra esperada sem criar linhas indevidas.",
+        "O README justifica tipo temporal, precisão monetária e RESTRICT/CASCADE pelo domínio."
+      ],
+      "challenge": [
+        {
+          "question": "Um campo DATETIME contém 2026-10-24 10:00:00. Ele revela sozinho o fuso de origem?",
+          "options": [
+            "Sim, sempre guarda o fuso do cliente.",
+            "Não; o contrato da aplicação deve informar como interpretar esse valor.",
+            "Sim, sempre inclui um nome IANA oculto.",
+            "Somente se for chave primária."
+          ],
+          "answer": 1,
+          "explanation": "DATETIME não carrega identificação de fuso."
+        },
+        {
+          "question": "Uma tabela precisa de e-mail único e ID técnico. Qual definição expressa ambas as regras?",
+          "options": [
+            "PRIMARY KEY somente no nome.",
+            "Um comentário dizendo único.",
+            "PRIMARY KEY no ID e UNIQUE NOT NULL no e-mail obrigatório.",
+            "ORDER BY email em toda consulta."
+          ],
+          "answer": 2,
+          "explanation": "Ordenação não impõe uma restrição de unicidade."
+        },
+        {
+          "question": "Desativar foreign_key_checks para carregar dados resolve automaticamente registros órfãos ao reativar?",
+          "options": [
+            "Sim, o servidor cria pais ausentes.",
+            "Sim, o servidor apaga todos os órfãos.",
+            "Somente se usar VARCHAR.",
+            "Não; valide os dados carregados e mantenha a integridade no processo de importação."
+          ],
+          "answer": 3,
+          "explanation": "Reativar checagem não é um reparo automático de dados anteriores."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Escritas e unidades transacionais",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Realizar cadastros e mudanças com identificação de linhas, rollback e confirmação.",
+      "skills": [
+        "AUTO_INCREMENT",
+        "UPDATE e DELETE",
+        "COMMIT e SAVEPOINT"
+      ],
+      "project": "Transferências entre contas fictícias",
+      "deliverables": [
+        "Script de criação de contas e histórico de operações com dados totalmente fictícios.",
+        "Transação de transferência e roteiro de falha após débito, com evidência de rollback.",
+        "Demonstração de LAST_INSERT_ID na conexão correta e contagens de alterações lidas imediatamente."
+      ],
+      "rubric": [
+        "Débito e crédito preservam a soma e pertencem à mesma transação.",
+        "A falha intermediária não deixa um débito parcial confirmado.",
+        "Explica lacunas de AUTO_INCREMENT e por que DDL não participa do ensaio de rollback."
+      ],
+      "challenge": [
+        {
+          "question": "Após um INSERT, o código libera a conexão e consulta LAST_INSERT_ID() em outra. Qual é o defeito?",
+          "options": [
+            "A aplicação perdeu o vínculo entre a inserção e o estado da conexão.",
+            "O ID gerado fica global para todos.",
+            "AUTO_INCREMENT sempre começa em zero.",
+            "SELECT precisa de GROUP BY."
+          ],
+          "answer": 0,
+          "explanation": "Use o retorno do driver ou mantenha a mesma conexão durante a operação."
+        },
+        {
+          "question": "Depois de DELETE, você roda SELECT NOW() e só então ROW_COUNT(). O que revisar?",
+          "options": [
+            "Adicionar uma senha literal ao SQL.",
+            "Ler a contagem imediatamente após a instrução cujo resultado interessa.",
+            "Trocar todas as tabelas para MyISAM.",
+            "Usar COUNT(*) como sinônimo de linhas removidas."
+          ],
+          "answer": 1,
+          "explanation": "A contagem de estado pode ser sobrescrita por instruções seguintes."
+        },
+        {
+          "question": "Um débito e um crédito executam com autocommit em instruções independentes. Se o crédito falhar, qual risco existe?",
+          "options": [
+            "O servidor garante os dois automaticamente pelo nome da tabela.",
+            "Todo SELECT desfaz o débito.",
+            "O débito já pode ter sido confirmado sem o crédito correspondente.",
+            "AUTO_INCREMENT corrige o saldo."
+          ],
+          "answer": 2,
+          "explanation": "Uma unidade de negócio exige uma fronteira de transação explícita."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Consultas e granularidade",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Filtrar ausências, paginar com ordem total e construir resumos sem ambiguidade.",
+      "skills": [
+        "NULL e predicados",
+        "Paginação por chave",
+        "GROUP BY e HAVING"
+      ],
+      "project": "Relatório paginado de vendas",
+      "deliverables": [
+        "Dados fictícios com empates de data, valores ausentes e vendedores sem todas as medidas.",
+        "Consultas de listagem com cursor composto e relatórios por vendedor.",
+        "Casos de teste para NULL, zero, grupo vazio e filtro antes/depois da agregação."
+      ],
+      "rubric": [
+        "A paginação usa a mesma ordem e campos do cursor e demonstra duas páginas corretas.",
+        "COUNT(*) e COUNT(coluna) são distinguidos por um caso com NULL.",
+        "O relatório mantém ONLY_FULL_GROUP_BY e define a granularidade de cada linha."
+      ],
+      "challenge": [
+        {
+          "question": "Uma consulta usa NOT IN (1,NULL) e não retorna o ID 2. Qual explicação é plausível?",
+          "options": [
+            "O ID 2 virou texto automaticamente.",
+            "Toda cláusula NOT IN exige índice.",
+            "ORDER BY apaga linhas com ID par.",
+            "O NULL introduz UNKNOWN; use um desenho que trate ausência, frequentemente NOT EXISTS."
+          ],
+          "answer": 3,
+          "explanation": "A lógica de três valores afeta a negação."
+        },
+        {
+          "question": "Uma API ordena por data DESC,id DESC, mas filtra o cursor com id > último_id somente. Qual é o problema?",
+          "options": [
+            "O predicado não segue a ordem composta e pode perder ou repetir linhas.",
+            "O uso de DESC desativa índices.",
+            "O cursor precisa ser sempre uma senha.",
+            "LIMIT transforma datas em inteiros."
+          ],
+          "answer": 0,
+          "explanation": "Todos os campos e suas direções devem concordar."
+        },
+        {
+          "question": "O relatório seleciona vendedor, id e SUM(valor), agrupando apenas por vendedor. Por que isso exige revisão?",
+          "options": [
+            "SUM exige sempre coluna textual.",
+            "O id não tem um valor único por grupo; é preciso definir a granularidade ou uma agregação válida.",
+            "MySQL não possui GROUP BY.",
+            "O erro prova que o servidor está desligado."
+          ],
+          "answer": 1,
+          "explanation": "Uma coluna não agregada não deve introduzir um valor arbitrário."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Relações e decomposição de consultas",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Controlar cardinalidade de joins e expressar existência e recursão com limites.",
+      "skills": [
+        "LEFT JOIN",
+        "EXISTS e NOT EXISTS",
+        "CTEs e recursão"
+      ],
+      "project": "Painel de clientes e hierarquia",
+      "deliverables": [
+        "Consultas de clientes com e sem pedidos, incluindo múltiplos pedidos e múltiplos contatos.",
+        "Comparação reproduzível de NOT EXISTS e NOT IN com NULL.",
+        "Uma CTE recursiva limitada e um roteiro que detecta ou evita ciclo na hierarquia do projeto."
+      ],
+      "rubric": [
+        "O total de pedidos não aumenta artificialmente ao adicionar contatos.",
+        "Clientes sem pedido continuam visíveis quando essa é a intenção do relatório.",
+        "A recursão tem limite explícito, tipos adequados e política para ciclos."
+      ],
+      "challenge": [
+        {
+          "question": "Um total dobrou após adicionar JOIN com telefones. Qual evidência investigar?",
+          "options": [
+            "A cor dos telefones no editor.",
+            "Se SUM precisa ser trocado por MAX sempre.",
+            "Quantos telefones cada entidade possui e quantas vezes cada fato foi repetido.",
+            "Se o servidor deve ignorar chaves."
+          ],
+          "answer": 2,
+          "explanation": "Joins de relações 1:N podem multiplicar os fatos."
+        },
+        {
+          "question": "Você quer cada cliente uma vez se existir um pedido pago. Qual construção expressa diretamente a regra?",
+          "options": [
+            "CROSS JOIN com todos os pedidos.",
+            "COUNT(*) sem agrupamento da tabela cliente.",
+            "ORDER BY status sem filtro.",
+            "EXISTS correlacionado com cliente_id e status pago."
+          ],
+          "answer": 3,
+          "explanation": "A existência evita multiplicar a entidade externa."
+        },
+        {
+          "question": "Uma CTE recursiva concatena nomes longos e falha por truncamento. O que revisar?",
+          "options": [
+            "O tipo e o tamanho definido na parte inicial, usando CAST apropriado.",
+            "Renomear WITH para JOIN.",
+            "Desativar todos os índices.",
+            "Assumir que o tipo cresce sem limite."
+          ],
+          "answer": 0,
+          "explanation": "O contrato de tipos nasce na parte inicial da recursão."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Leitura analítica, views e documentos",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Preservar fatos em rankings, criar contratos de leitura e usar JSON de forma tipada.",
+      "skills": [
+        "Funções de janela",
+        "Views INVOKER",
+        "JSON nativo"
+      ],
+      "project": "Painel analítico de eventos e vendas",
+      "deliverables": [
+        "Ranking por vendedor com empates definidos e acumulado com frame explícito.",
+        "View de leitura com colunas declaradas e modo de segurança documentado.",
+        "Tabela de eventos JSON com exemplos válidos, caminho ausente e validação estrutural planejada."
+      ],
+      "rubric": [
+        "ROW_NUMBER e DENSE_RANK têm resultados distintos e justificados nos empates.",
+        "A view reflete mudanças na origem e não é apresentada como backup ou materialização.",
+        "Campos JSON usados como números são tipados e as diferenças com MariaDB são registradas."
+      ],
+      "challenge": [
+        {
+          "question": "A consulta quer a primeira linha de cada grupo e tenta WHERE ROW_NUMBER() OVER(...)=1. Como reestruturar?",
+          "options": [
+            "Usar um comentário no WHERE.",
+            "Calcular a janela em CTE ou subconsulta e filtrar no SELECT externo.",
+            "Desligar ONLY_FULL_GROUP_BY.",
+            "Trocar WHERE por PRIMARY KEY."
+          ],
+          "answer": 1,
+          "explanation": "A etapa de cálculo da janela exige uma camada externa para esse filtro."
+        },
+        {
+          "question": "Uma view de SUM por vendedor rejeita UPDATE. Isso prova defeito do servidor?",
+          "options": [
+            "Sim, toda view aceita toda escrita.",
+            "Sim, SUM só existe em MariaDB.",
+            "Não; uma view agregada pode não ser atualizável.",
+            "Não; basta adicionar LIMIT para torná-la gravável."
+          ],
+          "answer": 2,
+          "explanation": "Verifique as regras de atualizabilidade e use uma operação de negócio apropriada."
+        },
+        {
+          "question": "Um JSON válido com total=\"vinte\" foi aceito pela coluna. Qual regra faltou?",
+          "options": [
+            "A coluna deveria aceitar apenas XML.",
+            "Todo JSON nativo valida qualquer regra de negócio.",
+            "A chave primária deveria ser FLOAT.",
+            "Validação de estrutura e tipo do domínio, além da sintaxe JSON."
+          ],
+          "answer": 3,
+          "explanation": "A validade sintática não conhece o significado de total."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Índices e investigação de planos",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Desenhar acessos a partir de consultas e avaliar custo com evidência.",
+      "skills": [
+        "Índices compostos",
+        "EXPLAIN ANALYZE",
+        "Colunas geradas"
+      ],
+      "project": "Otimização de uma consulta de catálogo",
+      "deliverables": [
+        "Carga fictícia com volume e distribuição registrados para filtros por cliente, data e atributo JSON.",
+        "Índice composto e índice sobre coluna gerada, com justificativa dos campos e da ordem.",
+        "Comparação antes/depois contendo resultado equivalente, planos, cardinalidades e medições repetidas."
+      ],
+      "rubric": [
+        "A proposta mantém os mesmos resultados e considera custo das escritas.",
+        "Distingue estimativas de medidas e documenta que EXPLAIN ANALYZE executa.",
+        "Não promete um plano exato em qualquer máquina nem usa FORCE INDEX como única justificativa."
+      ],
+      "challenge": [
+        {
+          "question": "Uma tabela tem três linhas e EXPLAIN escolhe varredura apesar do índice. Qual conclusão é correta?",
+          "options": [
+            "O custo estimado pode favorecer a varredura; teste uma carga representativa antes de mudar o desenho.",
+            "O índice está sempre corrompido.",
+            "InnoDB não suporta índices compostos.",
+            "É obrigatório usar FORCE INDEX em toda consulta."
+          ],
+          "answer": 0,
+          "explanation": "Tamanho e seletividade influenciam a escolha."
+        },
+        {
+          "question": "Uma proposta de otimização mostra apenas um tempo menor em uma execução. Que evidência falta?",
+          "options": [
+            "Uma mudança no nome da coluna.",
+            "Resultados equivalentes, carga representativa e medições repetidas sob condições registradas.",
+            "Um SELECT sem WHERE.",
+            "A exclusão de todos os índices."
+          ],
+          "answer": 1,
+          "explanation": "Uma observação isolada não separa ruído, cache e mudança efetiva."
+        },
+        {
+          "question": "O atributo JSON tipo contém textos maiores que VARCHAR(20). Qual decisão precisa ocorrer antes de indexar?",
+          "options": [
+            "Usar o primeiro byte sempre.",
+            "Desativar o modo estrito para esconder truncamento.",
+            "Definir e validar o tamanho do domínio ou ampliar a projeção adequadamente.",
+            "Remover a chave primária."
+          ],
+          "answer": 2,
+          "explanation": "A projeção tem limites de tipo e não deve perder significado silenciosamente."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Objetos armazenados e particionamento",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Encapsular regras pequenas e avaliar manutenção de dados por faixa.",
+      "skills": [
+        "Procedures e SIGNAL",
+        "Triggers",
+        "Partições RANGE"
+      ],
+      "project": "Histórico operacional por período",
+      "deliverables": [
+        "Procedure com parâmetros validados e teste de erro, usando o cliente adequado para DELIMITER.",
+        "Trigger de histórico com teste de COMMIT e ROLLBACK em tabelas InnoDB.",
+        "Protótipo separado de tabela particionada, chaves compatíveis e ensaio de retenção com dados fictícios."
+      ],
+      "rubric": [
+        "Entradas inválidas da procedure produzem erro claro e não resultado válido.",
+        "O histórico acompanha a transação e seus limites de segurança são explicitados.",
+        "A escolha de particionamento considera chaves únicas, foreign keys e exclusão de dados por retenção."
+      ],
+      "challenge": [
+        {
+          "question": "Uma biblioteca recebe erro de sintaxe ao enviar DELIMITER //. Qual ajuste faz sentido?",
+          "options": [
+            "Ativar todos os privilégios globais.",
+            "Substituir os parâmetros por concatenação de texto.",
+            "Trocar o banco para MyISAM.",
+            "Tratar DELIMITER no cliente e enviar apenas a definição SQL completa pelo driver."
+          ],
+          "answer": 3,
+          "explanation": "O protocolo SQL não recebe esse comando do cliente mysql."
+        },
+        {
+          "question": "Uma importação ficou lenta após criar trigger por linha. O que medir?",
+          "options": [
+            "Quantidade de linhas afetadas e custo adicional do corpo para cada linha.",
+            "Somente a cor do terminal.",
+            "Se o nome da tabela possui mais de oito letras.",
+            "Se o SELECT final usa alias."
+          ],
+          "answer": 0,
+          "explanation": "O custo se multiplica pelo volume de alterações."
+        },
+        {
+          "question": "Um modelo exige foreign keys InnoDB e também particionamento nativo da mesma tabela. Qual atitude é correta?",
+          "options": [
+            "Assumir que tudo que existe no PostgreSQL funciona igual.",
+            "Verificar as restrições de compatibilidade e reconsiderar o desenho antes de implementá-lo.",
+            "Desligar checagens para sempre.",
+            "Trocar todas as chaves por comentários."
+          ],
+          "answer": 1,
+          "explanation": "Recursos de armazenamento possuem restrições que afetam o modelo."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Concorrência e invariantes",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Observar snapshots, proteger a última unidade e tratar ciclos de locks.",
+      "skills": [
+        "MVCC e isolamento",
+        "Locks e atualização condicional",
+        "Deadlocks e idempotência"
+      ],
+      "project": "Reserva concorrente de estoque",
+      "deliverables": [
+        "Roteiro de duas sessões comparando REPEATABLE READ e READ COMMITTED com leituras observadas.",
+        "Teste de duas reservas concorrentes sobre uma unidade, com estado e contagem finais.",
+        "Ensaio de deadlock e proposta de retentativa limitada da unidade inteira com efeitos externos idempotentes."
+      ],
+      "rubric": [
+        "Só uma reserva é confirmada e a quantidade nunca fica negativa.",
+        "Registra a sequência A/B e finaliza todas as transações após cada ensaio.",
+        "Distingue espera, deadlock e timeout e não assume uma vítima fixa."
+      ],
+      "challenge": [
+        {
+          "question": "Em REPEATABLE READ, uma leitura comum e SELECT FOR UPDATE têm obrigatoriamente a mesma visão histórica?",
+          "options": [
+            "Sim, toda operação usa sempre uma cópia imutável.",
+            "Sim, FOR UPDATE é apenas decoração.",
+            "Não; leituras com lock e operações de escrita seguem regras diferentes das leituras consistentes.",
+            "Não; SELECT comum confirma a transação."
+          ],
+          "answer": 2,
+          "explanation": "Misturar contratos sem entender sua semântica pode produzir decisões incoerentes."
+        },
+        {
+          "question": "Uma tela mantém FOR UPDATE aberto enquanto o usuário decide por dez minutos. Qual melhoria faz sentido?",
+          "options": [
+            "Aumentar apenas o tamanho do texto da tela.",
+            "Desativar logs.",
+            "Usar SKIP LOCKED para qualquer saldo.",
+            "Encurtar a transação e usar um protocolo de reserva/expiração ou nova validação adequado ao domínio."
+          ],
+          "answer": 3,
+          "explanation": "A duração dos locks deve ser controlada pelo desenho da operação."
+        },
+        {
+          "question": "Um timeout de lock e um deadlock devem ser tratados como mensagens idênticas sem revisar o estado da transação?",
+          "options": [
+            "Não; confirme a semântica do erro e encerre/reinicie a unidade de forma explícita.",
+            "Sim, ambos confirmam tudo.",
+            "Sim, basta ignorar e continuar.",
+            "Somente se a tabela tiver índice."
+          ],
+          "answer": 0,
+          "explanation": "A estratégia deve conhecer o que foi revertido e o que continua aberto."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Segurança de aplicação e transporte",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Definir limites de conta, parametrizar valores e validar o destino de conexão.",
+      "skills": [
+        "Roles e menor privilégio",
+        "Prepared statements",
+        "TLS e segredos"
+      ],
+      "project": "Acesso controlado ao catálogo",
+      "deliverables": [
+        "Role e conta limitada de leitura, com criação e limpeza somente no laboratório.",
+        "Consulta parametrizada com testes de apóstrofo, valor inexistente e entrada com aparência de SQL.",
+        "Contrato de TLS com CA/identidade e teste de host incompatível, ou registro explícito de laboratório pendente."
+      ],
+      "rubric": [
+        "SELECT permitido funciona e uma operação proibida falha com a conta limitada.",
+        "Entradas de valor não mudam a estrutura e opções de ordenação vêm de lista permitida.",
+        "Não inclui senhas reais em arquivos e não declara TLS validado com uma cifra vazia."
+      ],
+      "challenge": [
+        {
+          "question": "Uma aplicação de leitura usa root porque resolve um erro de permissão. Qual correção deve orientar o desenho?",
+          "options": [
+            "Guardar a senha root no JavaScript público.",
+            "Identificar os privilégios necessários e concedê-los a uma conta de aplicação limitada.",
+            "Conceder todos os privilégios globais a qualquer host.",
+            "Desativar autenticação."
+          ],
+          "answer": 1,
+          "explanation": "A fronteira de permissão deve refletir a função da aplicação."
+        },
+        {
+          "question": "Uma entrada com aspas foi rejeitada por validação, mas a consulta ainda concatena nomes válidos. A proteção está completa?",
+          "options": [
+            "Sim, uma aspas bloqueada prova qualquer caso.",
+            "Sim, charset elimina toda SQL injection.",
+            "Não; valide o domínio e use parâmetros para valores, independentemente de exemplos de ataque bloqueados.",
+            "Não; a solução é guardar senha no cliente."
+          ],
+          "answer": 2,
+          "explanation": "A estrutura do comando não deve depender de texto livre de entrada."
+        },
+        {
+          "question": "A conexão exige TLS, mas aceita qualquer identidade sem validar CA e host. O que ainda precisa ser definido?",
+          "options": [
+            "Somente o título da janela.",
+            "A largura da coluna VARCHAR.",
+            "A remoção da chave primária.",
+            "A validação do certificado e da identidade esperada do servidor."
+          ],
+          "answer": 3,
+          "explanation": "Proteção do canal e validação do destino são responsabilidades relacionadas, mas distintas."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Recuperação e replicação",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Testar restauração e compreender cobertura de logs e limites de réplicas.",
+      "skills": [
+        "mysqldump e restauração",
+        "PITR e binary log",
+        "GTID e réplica"
+      ],
+      "project": "Plano de recuperação ensaiado",
+      "deliverables": [
+        "Dump local de tabelas InnoDB e restauração em banco separado com comparação de definição e dados.",
+        "Plano de recuperação até um ponto com backup-base, logs, posições, RPO/RTO e evidências do ensaio isolado.",
+        "Topologia de replicação com identidades distintas, canal observado e teste de marcador, ou pendência explicitada."
+      ],
+      "rubric": [
+        "A recuperação é validada pelos dados restaurados, não apenas pela existência de um arquivo.",
+        "Reconhece que logs ausentes impedem certos objetivos e que réplica pode aplicar exclusão acidental.",
+        "Não chama uma consulta local de prova de alta disponibilidade e distingue GTID de MySQL e MariaDB."
+      ],
+      "challenge": [
+        {
+          "question": "Um dump --single-transaction inclui tabelas MyISAM alteradas por outras sessões. A consistência delas está garantida?",
+          "options": [
+            "Não; a garantia de snapshot transacional não se estende automaticamente a esses mecanismos.",
+            "Sim, a extensão .sql garante atomicidade.",
+            "Sim, MyISAM usa o mesmo MVCC do InnoDB.",
+            "Somente se a senha tiver números."
+          ],
+          "answer": 0,
+          "explanation": "Escolha um procedimento de backup coerente com todos os mecanismos envolvidos."
+        },
+        {
+          "question": "Você tem um backup de domingo, mas os logs de segunda foram apagados e quer recuperar terça integralmente. Qual é a limitação?",
+          "options": [
+            "O MySQL inventa automaticamente os eventos ausentes.",
+            "A cadeia está incompleta; o backup e os logs restantes não garantem reconstruir todas as mudanças faltantes.",
+            "SELECT NOW() recompõe o histórico.",
+            "A réplica sempre contém cada versão anterior."
+          ],
+          "answer": 1,
+          "explanation": "O objetivo de recuperação depende de cobertura contínua dos eventos necessários."
+        },
+        {
+          "question": "Duas instâncias estão sincronizadas agora. Isso já prova failover sem perda em toda falha futura?",
+          "options": [
+            "Sim, um único SELECT prova qualquer falha.",
+            "Sim, UUID remove a necessidade de operação.",
+            "Não; é preciso definir promoção, prevenção de dupla escrita, RPO/RTO e ensaiar os cenários de falha.",
+            "Somente se a réplica estiver no mesmo disco."
+          ],
+          "answer": 2,
+          "explanation": "Estado atual não valida todo o protocolo de disponibilidade."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Operação e projeto integrado",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Evoluir schema e reunir evidências de integridade, desempenho e recuperação.",
+      "skills": [
+        "Performance Schema",
+        "Migrações compatíveis",
+        "Pedidos idempotentes"
+      ],
+      "project": "Sistema de pedidos MySQL reproduzível",
+      "deliverables": [
+        "Schema versionado e carga fictícia com pedidos, itens e estoque, incluindo chave de requisição idempotente.",
+        "Testes de caso normal, duplicidade, conteúdo conflitante, última unidade concorrente e recuperação isolada.",
+        "README operacional com versão, configuração, privilégios, migração em etapas, planos e métricas observadas."
+      ],
+      "rubric": [
+        "Uma repetição válida devolve o mesmo pedido e uma repetição conflitante é rejeitada explicitamente.",
+        "Falhas e retentativas não produzem pedido parcial, estoque negativo ou efeito externo duplicado.",
+        "Explica limites de DDL atômico, instrumentação e portabilidade para MariaDB, com laboratórios pendentes claramente marcados."
+      ],
+      "challenge": [
+        {
+          "question": "A tabela de digests está vazia. Qual próximo passo é razoável?",
+          "options": [
+            "Declarar que o banco não consumiu nenhum recurso.",
+            "Inventar cinco consultas para o relatório.",
+            "Apagar todos os logs.",
+            "Verificar privilégios, instrumentação/consumers e a existência de carga na janela observada."
+          ],
+          "answer": 3,
+          "explanation": "Ausência de coleta não é evidência de custo zero."
+        },
+        {
+          "question": "Uma mudança pode usar INSTANT, mas a aplicação mantém transações antigas abertas. O tempo total está garantido como zero?",
+          "options": [
+            "Não; esperas por metadata locks e outras condições ainda podem existir.",
+            "Sim, INSTANT elimina qualquer espera de sessão.",
+            "Sim, a palavra INSTANT desliga concorrência.",
+            "Somente se a coluna for textual."
+          ],
+          "answer": 0,
+          "explanation": "Algoritmo de alteração e disponibilidade operacional não são sinônimos."
+        },
+        {
+          "question": "Um projeto passa no quiz, mas nunca restaurou o dump. Pode declarar o objetivo de recuperação validado?",
+          "options": [
+            "Sim, a pontuação comprova qualquer operação.",
+            "Não; falta executar a restauração isolada e conferir suas invariantes.",
+            "Sim, o nome backup.sql basta.",
+            "Somente se usar mais de três tabelas."
+          ],
+          "answer": 1,
+          "explanation": "Progresso de estudo e evidência operacional são medidas distintas."
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": 1,
+      "level": 1,
+      "title": "Cliente, servidor e primeira conexão",
+      "goal": "Identificar o servidor MySQL e enviar uma consulta pelo cliente correto.",
+      "theory": [
+        {
+          "title": "Dois processos",
+          "text": "mysql é o cliente de terminal; mysqld é o servidor que mantém tabelas e aceita conexões. Abrir o cliente não cria um servidor. Instale MySQL Community Server 8.4 LTS com seu cliente, usando a documentação do seu sistema operacional."
+        },
+        {
+          "title": "Identidade da sessão",
+          "text": "O endereço, a porta e o usuário escolhem onde o SQL executa. USER() mostra a identidade de conexão; CURRENT_USER() mostra a conta usada na autorização. VERSION() confirma a família e evita estudar MySQL contra um servidor MariaDB sem perceber."
+        },
+        {
+          "title": "Comandos e resultados",
+          "text": "O ponto e vírgula termina uma instrução SQL. source é um comando do cliente mysql para ler um arquivo, não uma instrução que qualquer driver aceite. A plataforma guarda seu rascunho; a execução desta trilha ocorre no seu ambiente local."
+        }
+      ],
+      "code": "SELECT VERSION() AS versao, DATABASE() AS banco;\nSELECT 2 + 3 AS resultado, 'Olá, MySQL!' AS mensagem;\n",
+      "filename": "aula_01.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_01.sql\"",
+      "expected": "A primeira linha identifica uma versão 8.4.x e o banco forge_mysql; a segunda consulta retorna resultado=5 e mensagem=Olá, MySQL!. O número de patch depende da instalação.",
+      "quiz": {
+        "question": "O comando mysql executado no terminal representa o quê?",
+        "options": [
+          "O arquivo onde todas as tabelas ficam.",
+          "Um cliente que se conecta ao servidor.",
+          "Uma palavra reservada de SQL.",
+          "A criação automática de um banco remoto."
+        ],
+        "answer": 1,
+        "explanation": "Cliente e servidor têm responsabilidades distintas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confirme o destino",
+          "prompt": "Registre versão, banco e CURRENT_USER() da sua conexão local.",
+          "hint": "Acrescente CURRENT_USER() à primeira consulta.",
+          "solution": "SELECT VERSION(), DATABASE(), CURRENT_USER(); documenta o servidor, o schema escolhido e a conta de autorização.",
+          "criteria": [
+            "Aponta MySQL 8.4.x.",
+            "Distingue banco de conta."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Preveja a expressão",
+          "prompt": "Calcule (8 + 2) * 3 e 8 + 2 * 3, prevendo os dois resultados.",
+          "hint": "Multiplicação tem precedência.",
+          "solution": "SELECT (8+2)*3 AS a, 8+2*3 AS b; retorna 30 e 14.",
+          "criteria": [
+            "Previsão escrita antes da execução.",
+            "Resultado inclui 30 e 14."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Arquivo e cliente",
+          "prompt": "Salve duas consultas em um .sql e execute com source no cliente mysql.",
+          "hint": "Use caminhos com / no cliente, inclusive no Windows.",
+          "solution": "Salve SELECT 1 AS primeiro; e SELECT 2 AS segundo;. Dentro de mysql, rode source caminho/aula.sql; e confira dois conjuntos de resultados.",
+          "criteria": [
+            "Arquivo contém as duas instruções.",
+            "Explica onde source foi digitado."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/mysql.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 2,
+      "level": 1,
+      "title": "Schemas, tabelas e metadados",
+      "goal": "Criar uma tabela de laboratório e verificar sua definição.",
+      "theory": [
+        {
+          "title": "Banco como namespace",
+          "text": "No MySQL, DATABASE e SCHEMA são termos equivalentes para esse namespace. USE escolhe o banco padrão da sessão. Os arquivos desta trilha usam forge_mysql, que deve ser criado na preparação; uma conta de estudo não precisa administrar bancos reais."
+        },
+        {
+          "title": "Definição e armazenamento",
+          "text": "CREATE TABLE declara colunas, tipos e restrições. ENGINE=InnoDB torna explícito o mecanismo usado nos exemplos. As tabelas temporárias pertencem à conexão e desaparecem quando ela fecha; são úteis para experiências sem acumular dados entre aulas."
+        },
+        {
+          "title": "Verificação",
+          "text": "SHOW CREATE TABLE revela o contrato efetivo, incluindo índices e charset. Não deduza a definição apenas da aparência de uma grade de dados. DROP TEMPORARY TABLE é limitado à tabela temporária da sessão; ainda assim, confirme o nome antes de executar."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l02_tarefa;\nCREATE TEMPORARY TABLE l02_tarefa (\n id INT PRIMARY KEY, titulo VARCHAR(80) NOT NULL\n) ENGINE=InnoDB;\nINSERT INTO l02_tarefa VALUES (1, 'Ler o contrato da tabela');\nSHOW CREATE TABLE l02_tarefa;\nSELECT id, titulo FROM l02_tarefa ORDER BY id;\n",
+      "filename": "aula_02.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_02.sql\"",
+      "expected": "SHOW CREATE TABLE apresenta id, titulo, chave primária e InnoDB. O SELECT retorna 1 | Ler o contrato da tabela; detalhes de charset e formatação dependem da sessão.",
+      "quiz": {
+        "question": "Por que uma tabela temporária é útil nestes exemplos?",
+        "options": [
+          "Ela persiste para todos os usuários para sempre.",
+          "Ela não aceita chaves primárias.",
+          "Ela pertence à conexão e é removida quando a conexão termina.",
+          "Ela dispensa qualquer permissão."
+        ],
+        "answer": 2,
+        "explanation": "O tempo de vida reduz o estado deixado entre laboratórios."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Descreva o contrato",
+          "prompt": "Acrescente prioridade INT NOT NULL à tabela e insira uma linha completa.",
+          "hint": "Altere o CREATE antes de recriar a tabela temporária.",
+          "solution": "Defina prioridade INT NOT NULL; insira (1,'Ler',2) e consulte id,titulo,prioridade.",
+          "criteria": [
+            "A coluna existe no SHOW CREATE.",
+            "A consulta retorna prioridade 2."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Nome qualificado",
+          "prompt": "Explique como forge_mysql.tarefas difere de outro_banco.tarefas.",
+          "hint": "O prefixo é o namespace, não um servidor.",
+          "solution": "São tabelas distintas em bancos diferentes da mesma instância. USE só altera o padrão para nomes sem prefixo.",
+          "criteria": [
+            "Distingue namespace de instância.",
+            "Dá um exemplo de nome qualificado."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Vida da tabela",
+          "prompt": "Crie a tabela temporária, feche a conexão e tente consultá-la em outra sessão.",
+          "hint": "Repita somente o SELECT na conexão nova.",
+          "solution": "A segunda sessão não vê l02_tarefa e recebe erro de tabela inexistente. Reexecute o script para recriá-la.",
+          "criteria": [
+            "Registra o erro da segunda sessão.",
+            "Não usa DROP DATABASE para limpar o teste."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/create-temporary-table.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 3,
+      "level": 1,
+      "title": "Unicode, collations e modos SQL",
+      "goal": "Observar comparação textual e registrar configurações que influenciam o resultado.",
+      "theory": [
+        {
+          "title": "Unicode completo",
+          "text": "utf8mb4 suporta o conjunto completo de caracteres Unicode. Um charset descreve codificação; uma collation determina comparação e ordenação. Para demonstrar uma comparação, declare a collation em vez de supor que todos os servidores tenham a mesma configuração."
+        },
+        {
+          "title": "Comparação",
+          "text": "Em utf8mb4_0900_ai_ci, ai indica insensibilidade a acento e ci a maiúsculas/minúsculas. Uma collation as_cs é sensível a essas diferenças. Isso importa para pesquisa, ORDER BY e unicidade; escolher uma regra é uma decisão de domínio."
+        },
+        {
+          "title": "Modo da sessão",
+          "text": "SQL modes mudam validações e interpretação. Registre @@SESSION.sql_mode antes de investigar um comportamento. Os próximos exemplos usam o modo estrito normal de MySQL 8.4; não desligue validações para esconder dados inválidos e não extrapole os resultados para MariaDB."
+        }
+      ],
+      "code": "SET NAMES utf8mb4;\nSELECT _utf8mb4'Cafe' COLLATE utf8mb4_0900_ai_ci =\n       _utf8mb4'café' COLLATE utf8mb4_0900_ai_ci AS sem_diferenca;\nSELECT _utf8mb4'Cafe' COLLATE utf8mb4_0900_as_cs =\n       _utf8mb4'café' COLLATE utf8mb4_0900_as_cs AS com_diferenca;\nSELECT @@SESSION.sql_mode AS modos;\n",
+      "filename": "aula_03.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_03.sql\"",
+      "expected": "sem_diferenca=1 e com_diferenca=0. modos contém a configuração real da sessão, normalmente incluindo STRICT_TRANS_TABLES e ONLY_FULL_GROUP_BY.",
+      "quiz": {
+        "question": "Charset e collation são a mesma coisa?",
+        "options": [
+          "Sim; os dois só mudam a cor do editor.",
+          "Sim; ambos são sinônimos de índice.",
+          "Não: collation é a senha do banco.",
+          "Não: charset codifica; collation define comparação e ordenação."
+        ],
+        "answer": 3,
+        "explanation": "As duas escolhas afetam texto de formas diferentes."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste de caixa",
+          "prompt": "Compare A com a nas duas collations do exemplo.",
+          "hint": "Use literais _utf8mb4.",
+          "solution": "A igualdade retorna 1 com ai_ci e 0 com as_cs. A diferença não está nos bytes de entrada, mas na comparação escolhida.",
+          "criteria": [
+            "Registra os dois resultados.",
+            "Relaciona ci a insensibilidade de caixa."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Texto sem perda",
+          "prompt": "Armazene um emoji em VARCHAR(20) CHARACTER SET utf8mb4 e consulte CHAR_LENGTH e OCTET_LENGTH.",
+          "hint": "Um caractere pode ocupar vários bytes.",
+          "solution": "Use uma tabela temporária com texto utf8mb4; para um emoji como 😀, CHAR_LENGTH(texto)=1 e OCTET_LENGTH(texto)=4.",
+          "criteria": [
+            "Preserva o caractere na leitura.",
+            "Distingue caracteres e bytes."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Registre o ambiente",
+          "prompt": "Escreva uma nota com sql_mode e character_set_connection da sessão.",
+          "hint": "SELECT @@SESSION.character_set_connection.",
+          "solution": "SELECT @@SESSION.sql_mode, @@SESSION.character_set_connection; permite reproduzir escolhas de validação e codificação.",
+          "criteria": [
+            "Inclui os dois valores.",
+            "Não altera configuração global."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/charset-collation-names.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 4,
+      "level": 2,
+      "title": "Tipos numéricos, temporais e valores exatos",
+      "goal": "Escolher tipos a partir do domínio e verificar conversões.",
+      "theory": [
+        {
+          "title": "Valores exatos",
+          "text": "DECIMAL representa valores decimais exatos dentro da precisão e escala declaradas. FLOAT e DOUBLE são aproximações binárias, adequadas a outros domínios. Valores monetários podem usar DECIMAL ou unidades inteiras, com política explícita de arredondamento."
+        },
+        {
+          "title": "Datas e instantes",
+          "text": "DATE representa uma data civil. DATETIME armazena data e hora sem conversão de fuso; TIMESTAMP tem conversão relacionada ao fuso da sessão e intervalo próprio. Usar UTC por convenção em DATETIME não faz o tipo guardar automaticamente um fuso."
+        },
+        {
+          "title": "Limites",
+          "text": "Tipos têm faixa e tamanho. INT não é um depósito genérico para qualquer quantidade e VARCHAR não valida uma data. Faça entradas inválidas falharem no modo estrito e registre a regra; a aplicação também precisa validar e apresentar o erro ao usuário."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l04_item;\nCREATE TEMPORARY TABLE l04_item (\n id INT PRIMARY KEY, preco DECIMAL(10,2) NOT NULL,\n quantidade INT NOT NULL, dia DATE NOT NULL\n) ENGINE=InnoDB;\nINSERT INTO l04_item VALUES (1, 12.30, 3, '2026-10-24');\nSELECT preco * quantidade AS total, DATE_ADD(dia, INTERVAL 7 DAY) AS entrega\nFROM l04_item;\n",
+      "filename": "aula_04.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_04.sql\"",
+      "expected": "total=36.90 e entrega=2026-10-31.",
+      "quiz": {
+        "question": "Qual tipo expressa diretamente um preço decimal de duas casas?",
+        "options": [
+          "DECIMAL(10,2), com regra de arredondamento documentada.",
+          "VARCHAR(10) sem validação.",
+          "DOUBLE garante todo decimal exato.",
+          "INT sempre aceita casas decimais sem conversão."
+        ],
+        "answer": 0,
+        "explanation": "A escolha expressa precisão e escala do domínio."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Cálculo exato",
+          "prompt": "Troque o preço por 0.10 e quantidade por 3.",
+          "hint": "Mantenha DECIMAL.",
+          "solution": "A consulta retorna 0.30; a coluna guarda um decimal exato com duas casas.",
+          "criteria": [
+            "Resultado decimal 0.30.",
+            "Não converte preço para string."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Prazo por data",
+          "prompt": "Calcule a data 30 dias após 2026-02-15.",
+          "hint": "DATE_ADD aceita INTERVAL 30 DAY.",
+          "solution": "SELECT DATE_ADD('2026-02-15', INTERVAL 30 DAY); retorna 2026-03-17.",
+          "criteria": [
+            "Usa função temporal.",
+            "Obtém 2026-03-17."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Escolha de domínio",
+          "prompt": "Proponha tipos para estoque, data de nascimento e horário UTC de um evento.",
+          "hint": "Separe quantidades de datas e instantes.",
+          "solution": "Estoque: INT com CHECK >=0; nascimento: DATE; evento: DATETIME(6) seguindo contrato UTC, ou TIMESTAMP(6) após avaliar faixa e conversão de fuso.",
+          "criteria": [
+            "Justifica as três escolhas.",
+            "Documenta a política de fuso."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/fixed-point-types.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 5,
+      "level": 2,
+      "title": "Chaves e restrições de domínio",
+      "goal": "Usar PRIMARY KEY, UNIQUE, NOT NULL e CHECK como contratos de dados.",
+      "theory": [
+        {
+          "title": "Identidade",
+          "text": "PRIMARY KEY identifica uma linha e não permite NULL. Uma chave de negócio pode ser UNIQUE mesmo quando existe uma chave técnica numérica. No InnoDB, a chave primária também organiza o índice clustered; escolher uma chave larga tem efeito nos índices secundários."
+        },
+        {
+          "title": "Restrições complementares",
+          "text": "CHECK testa uma expressão por linha. Uma expressão que resulta UNKNOWN não rejeita NULL, por isso NOT NULL continua necessário quando ausência é proibida. MySQL 8.4 aplica CHECK; exemplos antigos de versões que ignoravam a declaração não descrevem esta trilha."
+        },
+        {
+          "title": "Falhas previstas",
+          "text": "Não use INSERT IGNORE como correção genérica para dados inválidos. Um erro de unicidade ou de domínio revela uma entrada que precisa de decisão explícita. Para testes negativos, execute uma instrução por vez e confirme que a linha inválida não apareceu."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l05_produto;\nCREATE TEMPORARY TABLE l05_produto (\n id INT PRIMARY KEY,\n codigo VARCHAR(20) NOT NULL UNIQUE,\n estoque INT NOT NULL CHECK (estoque >= 0)\n) ENGINE=InnoDB;\nINSERT INTO l05_produto VALUES (1, 'CABO', 4), (2, 'FONTE', 0);\nSELECT codigo, estoque FROM l05_produto ORDER BY id;\n",
+      "filename": "aula_05.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_05.sql\"",
+      "expected": "CABO | 4 e FONTE | 0. Inserções duplicadas ou com estoque negativo, propostas nos exercícios, devem ser rejeitadas.",
+      "quiz": {
+        "question": "CHECK (estoque >= 0) substitui NOT NULL?",
+        "options": [
+          "Sim, todo CHECK proíbe NULL.",
+          "Não; NULL pode produzir UNKNOWN, que não viola esse CHECK.",
+          "Sim, porque >= converte NULL em zero.",
+          "Somente em tabelas com dois índices."
+        ],
+        "answer": 1,
+        "explanation": "Ausência e faixa são regras distintas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Unicidade real",
+          "prompt": "Tente inserir id=3 e codigo=CABO, depois confira a contagem.",
+          "hint": "Execute após o exemplo na mesma conexão.",
+          "solution": "INSERT INTO l05_produto VALUES(3,'CABO',1); falha por UNIQUE; SELECT COUNT(*) retorna 2.",
+          "criteria": [
+            "Captura erro de chave duplicada.",
+            "Continua com duas linhas."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Faixa inválida",
+          "prompt": "Teste estoque=-1 e estoque=NULL em comandos separados.",
+          "hint": "Observe CHECK e NOT NULL separadamente.",
+          "solution": "-1 viola o CHECK; NULL viola NOT NULL. Nenhuma das duas linhas pode persistir.",
+          "criteria": [
+            "Identifica as duas restrições.",
+            "Mostra ausência das linhas inválidas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Preço obrigatório",
+          "prompt": "Inclua preco DECIMAL(10,2) NOT NULL CHECK(preco > 0).",
+          "hint": "Recrie a tabela temporária com a coluna.",
+          "solution": "Teste um preço 12.50 válido e 0 inválido; a regra exclui zero e negativos, além de NULL por NOT NULL.",
+          "criteria": [
+            "Demonstra um caso válido.",
+            "Demonstra rejeição de zero."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 6,
+      "level": 2,
+      "title": "Relacionamentos e integridade referencial",
+      "goal": "Criar uma relação pai-filho no InnoDB e escolher uma política de exclusão.",
+      "theory": [
+        {
+          "title": "Relação explícita",
+          "text": "FOREIGN KEY relaciona valores da tabela filha com uma chave apropriada na tabela pai. Tipos, sinal e regras textuais precisam ser compatíveis. No MySQL 8.4, prefira referência a PRIMARY KEY ou UNIQUE de forma explícita; não dependa de extensões antigas de chaves não únicas."
+        },
+        {
+          "title": "Política de exclusão",
+          "text": "RESTRICT impede remover um pai com filhos; CASCADE remove os filhos correspondentes. A escolha depende do domínio. Um pedido financeiro não deve desaparecer só porque um cadastro foi excluído; às vezes, arquivar o pai é a política correta."
+        },
+        {
+          "title": "Laboratório persistente",
+          "text": "InnoDB não oferece foreign keys em tabelas TEMPORARY. Este exemplo usa nomes l06_ no banco dedicado, remove primeiro a filha e depois o pai e os elimina ao final. Nunca reutilize esses nomes em um banco com dados que queira preservar."
+        }
+      ],
+      "code": "DROP TABLE IF EXISTS l06_pedido;\nDROP TABLE IF EXISTS l06_cliente;\nCREATE TABLE l06_cliente (id INT PRIMARY KEY, nome VARCHAR(40) NOT NULL) ENGINE=InnoDB;\nCREATE TABLE l06_pedido (\n id INT PRIMARY KEY, cliente_id INT NOT NULL,\n CONSTRAINT fk_l06_cliente FOREIGN KEY (cliente_id)\n REFERENCES l06_cliente(id) ON DELETE RESTRICT\n) ENGINE=InnoDB;\nINSERT INTO l06_cliente VALUES (1,'Ana');\nINSERT INTO l06_pedido VALUES (10,1);\nSELECT p.id, c.nome FROM l06_pedido p JOIN l06_cliente c ON c.id=p.cliente_id;\nDROP TABLE l06_pedido;\nDROP TABLE l06_cliente;\n",
+      "filename": "aula_06.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_06.sql\"",
+      "expected": "A consulta retorna 10 | Ana. As duas tabelas do laboratório são removidas no final.",
+      "quiz": {
+        "question": "O que ON DELETE RESTRICT faz se o cliente ainda tiver pedidos?",
+        "options": [
+          "Apaga todas as tabelas.",
+          "Transforma a chave primária em texto.",
+          "Rejeita a exclusão do cliente referenciado.",
+          "Remove a foreign key automaticamente."
+        ],
+        "answer": 2,
+        "explanation": "A referência deve continuar válida."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Filho órfão",
+          "prompt": "Antes dos DROP finais, tente inserir pedido (11,99).",
+          "hint": "Nenhum cliente 99 foi cadastrado.",
+          "solution": "A foreign key rejeita o pedido porque o cliente não existe. Verifique que só o pedido 10 continua presente.",
+          "criteria": [
+            "Captura o erro de referência.",
+            "Confirma ausência do pedido 11."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Excluir com dependência",
+          "prompt": "Antes da limpeza, tente DELETE do cliente 1.",
+          "hint": "RESTRICT protege referências existentes.",
+          "solution": "DELETE FROM l06_cliente WHERE id=1; falha. Excluir o pedido primeiro permite remover o cliente.",
+          "criteria": [
+            "Demonstra bloqueio da exclusão.",
+            "Explica a ordem correta."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Política alternativa",
+          "prompt": "Em uma cópia local, use ON DELETE CASCADE e repita a exclusão.",
+          "hint": "Recrie as duas tabelas entre os testes.",
+          "solution": "Excluir o cliente agora remove também seu pedido; SELECT COUNT(*) na filha retorna 0. Use esse comportamento apenas quando o domínio o exigir.",
+          "criteria": [
+            "Contagem da filha fica 0.",
+            "Explica um risco de CASCADE."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html",
+      "caution": "O script remove somente as tabelas l06_ no laboratório. Para testar falhas antes da limpeza, execute as etapas na mesma conexão.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 7,
+      "level": 3,
+      "title": "Inserção, AUTO_INCREMENT e identificadores",
+      "goal": "Cadastrar linhas e recuperar o identificador gerado na mesma conexão.",
+      "theory": [
+        {
+          "title": "Identidade gerada",
+          "text": "AUTO_INCREMENT gera identificadores para a chave numérica, mas não promete uma sequência sem lacunas. Tentativas falhas, rollback e concorrência podem consumir valores. Números fiscais sequenciais exigem outro desenho, com regras e auditoria próprias."
+        },
+        {
+          "title": "Retorno da inserção",
+          "text": "LAST_INSERT_ID() é associado à conexão. Consulte-o depois da inserção apropriada na mesma conexão, sem devolver a conexão ao pool antes. Em INSERT de várias linhas ele representa o primeiro valor gerado, não uma lista de todos os IDs."
+        },
+        {
+          "title": "Portabilidade",
+          "text": "A sintaxe genérica INSERT ... RETURNING de outros bancos não está disponível como mecanismo geral em MySQL 8.4. MariaDB possui extensões diferentes; compartilhar origem histórica não torna os dialetos intercambiáveis. Consulte a sintaxe da versão escolhida."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l07_nota;\nCREATE TEMPORARY TABLE l07_nota (\n id INT AUTO_INCREMENT PRIMARY KEY, texto VARCHAR(80) NOT NULL\n) ENGINE=InnoDB;\nINSERT INTO l07_nota(texto) VALUES ('Primeira nota');\nSELECT LAST_INSERT_ID() AS id_criado;\nSELECT id, texto FROM l07_nota ORDER BY id;\n",
+      "filename": "aula_07.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_07.sql\"",
+      "expected": "id_criado=1; a tabela contém 1 | Primeira nota.",
+      "quiz": {
+        "question": "Quando consultar LAST_INSERT_ID() para associar uma inserção ao ID?",
+        "options": [
+          "Em qualquer servidor escolhido ao acaso.",
+          "Depois de trocar de conexão no pool sem cuidado.",
+          "Somente após reiniciar o servidor.",
+          "Na mesma conexão, logo após a inserção relevante."
+        ],
+        "answer": 3,
+        "explanation": "O estado é associado à conexão."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Dois cadastros",
+          "prompt": "Insira duas notas em instruções separadas e consulte o ID após cada uma.",
+          "hint": "Não feche a sessão entre INSERT e SELECT.",
+          "solution": "Em uma tabela nova, os IDs observados serão 1 e 2; cada consulta segue sua própria inserção.",
+          "criteria": [
+            "Mostra os dois IDs.",
+            "Mantém a mesma conexão."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Inserção em lote",
+          "prompt": "Recrie a tabela, insira três linhas em um INSERT e observe LAST_INSERT_ID().",
+          "hint": "Ele não retorna uma coleção.",
+          "solution": "INSERT ... VALUES('A'),('B'),('C'); retorna primeiro ID 1; consulte a tabela para ver 1,2,3.",
+          "criteria": [
+            "Distingue primeiro ID de lista.",
+            "Mostra três linhas inseridas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Lacunas permitidas",
+          "prompt": "Escreva por que um ID faltante não prova exclusão de uma linha.",
+          "hint": "Considere falha e rollback.",
+          "solution": "Um valor pode ser reservado e não persistir; AUTO_INCREMENT identifica linhas, não é um contador de registros nem uma trilha de auditoria.",
+          "criteria": [
+            "Menciona uma causa sem exclusão.",
+            "Usa COUNT para contar linhas."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/information-functions.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 8,
+      "level": 3,
+      "title": "UPDATE, DELETE e escopo de mudanças",
+      "goal": "Modificar somente as linhas pretendidas e conferir a quantidade afetada.",
+      "theory": [
+        {
+          "title": "Predicado antes da mudança",
+          "text": "Uma cláusula WHERE define o conjunto alterado. Execute primeiro um SELECT com o mesmo predicado e verifique as chaves. A ausência de WHERE em UPDATE ou DELETE pode atingir todas as linhas; LIMIT sozinho não substitui uma regra de domínio."
+        },
+        {
+          "title": "Quantidade afetada",
+          "text": "ROW_COUNT() consulta o resultado da instrução anterior; outra instrução pode substituir esse estado. Em UPDATE, a contagem normalmente representa linhas realmente alteradas, com diferenças possíveis conforme opções do cliente. Não interprete qualquer zero como falha de conexão."
+        },
+        {
+          "title": "Teste reversível",
+          "text": "Em tabelas InnoDB, use uma transação para ensaiar alterações e ROLLBACK para desfazê-las. Não generalize isso para DDL: CREATE, ALTER e DROP de tabelas comuns causam commit implícito em vários casos. O próximo exemplo prepara a tabela antes da transação."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l08_tarefa;\nCREATE TEMPORARY TABLE l08_tarefa (id INT PRIMARY KEY, concluida BOOLEAN NOT NULL) ENGINE=InnoDB;\nINSERT INTO l08_tarefa VALUES(1,0),(2,0),(3,1);\nSTART TRANSACTION;\nUPDATE l08_tarefa SET concluida=1 WHERE id=2;\nSELECT ROW_COUNT() AS alteradas;\nDELETE FROM l08_tarefa WHERE id=3;\nSELECT ROW_COUNT() AS removidas;\nROLLBACK;\nSELECT id, concluida FROM l08_tarefa ORDER BY id;\n",
+      "filename": "aula_08.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_08.sql\"",
+      "expected": "alteradas=1, removidas=1. Após ROLLBACK, as linhas voltam a (1,0),(2,0),(3,1). BOOLEAN é sinônimo de TINYINT(1), não uma validação automática restrita a 0 e 1.",
+      "quiz": {
+        "question": "Qual ação delimita as linhas de um UPDATE?",
+        "options": [
+          "O predicado WHERE, idealmente verificado antes com SELECT.",
+          "O nome curto da tabela.",
+          "O tema visual do editor.",
+          "Um comentário no final do arquivo."
+        ],
+        "answer": 0,
+        "explanation": "A condição deve expressar exatamente o conjunto pretendido."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Predicado verificável",
+          "prompt": "Conclua apenas as tarefas ainda pendentes e confira a contagem antes de rollback.",
+          "hint": "WHERE concluida=0.",
+          "solution": "SELECT mostra IDs 1,2; UPDATE ... SET concluida=1 WHERE concluida=0; ROW_COUNT() retorna 2.",
+          "criteria": [
+            "Seleciona IDs 1 e 2 antes.",
+            "Registra duas mudanças."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Zero explicável",
+          "prompt": "Execute duas vezes UPDATE id=1 SET concluida=1.",
+          "hint": "A segunda operação pode não alterar um valor novo.",
+          "solution": "No comportamento padrão, a primeira altera 1 linha e a segunda 0. Registre as opções do cliente antes de generalizar o retorno de drivers.",
+          "criteria": [
+            "Mostra o estado final.",
+            "Explica zero sem supor erro."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Remoção seletiva",
+          "prompt": "Remova somente id=2 dentro de uma transação e confira COUNT antes e após ROLLBACK.",
+          "hint": "Comece com as três linhas originais.",
+          "solution": "A contagem cai de 3 para 2 e volta a 3; WHERE id=2 limita o ensaio.",
+          "criteria": [
+            "Contagens 2 e 3 demonstradas.",
+            "Não usa TRUNCATE no ensaio."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/update.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 9,
+      "level": 3,
+      "title": "Transações, COMMIT e SAVEPOINT",
+      "goal": "Agrupar mudanças e reverter uma parte sem perder o restante.",
+      "theory": [
+        {
+          "title": "Unidade de trabalho",
+          "text": "START TRANSACTION inicia uma unidade explícita; COMMIT confirma e ROLLBACK desfaz mudanças transacionais ainda abertas. Com autocommit habilitado, cada instrução fora da transação forma sua própria unidade. Uma regra que abrange várias tabelas precisa de uma fronteira coerente."
+        },
+        {
+          "title": "Ponto de retorno",
+          "text": "SAVEPOINT marca um ponto dentro da transação; ROLLBACK TO SAVEPOINT desfaz o trabalho posterior e mantém a transação aberta. Não desfaz uma transação já confirmada e não substitui recuperação após falha de disco."
+        },
+        {
+          "title": "Atomicidade e durabilidade",
+          "text": "InnoDB oferece transações, mas a durabilidade observada também depende de configuração, logs, armazenamento e confirmação do cliente. Separe a garantia lógica de rollback do procedimento operacional de backup. Nunca mantenha uma transação aberta enquanto aguarda uma pessoa preencher uma tela."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l09_saldo;\nCREATE TEMPORARY TABLE l09_saldo(id INT PRIMARY KEY, saldo DECIMAL(10,2) NOT NULL) ENGINE=InnoDB;\nINSERT INTO l09_saldo VALUES(1,100.00),(2,50.00);\nSTART TRANSACTION;\nUPDATE l09_saldo SET saldo=saldo-20 WHERE id=1;\nSAVEPOINT apos_debito;\nUPDATE l09_saldo SET saldo=saldo+200 WHERE id=2;\nROLLBACK TO SAVEPOINT apos_debito;\nUPDATE l09_saldo SET saldo=saldo+20 WHERE id=2;\nCOMMIT;\nSELECT id,saldo FROM l09_saldo ORDER BY id;\n",
+      "filename": "aula_09.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_09.sql\"",
+      "expected": "Os saldos finais são 1 | 80.00 e 2 | 70.00; a soma continua 150.00.",
+      "quiz": {
+        "question": "ROLLBACK TO SAVEPOINT encerra toda a transação?",
+        "options": [
+          "Sim, sempre desconecta o cliente.",
+          "Não; desfaz o trabalho posterior ao ponto e mantém a transação aberta.",
+          "Sim, apaga o banco.",
+          "Não; confirma todas as mudanças automaticamente."
+        ],
+        "answer": 1,
+        "explanation": "A aplicação ainda precisa finalizar com COMMIT ou ROLLBACK."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Conserve o total",
+          "prompt": "Transfira 15 entre as duas contas e confira a soma antes de confirmar.",
+          "hint": "Faça débito e crédito na mesma transação.",
+          "solution": "Atualize -15 na conta 1 e +15 na 2; SELECT SUM(saldo) deve manter o total original.",
+          "criteria": [
+            "Duas mudanças agrupadas.",
+            "Soma preservada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Falha no meio",
+          "prompt": "Faça apenas o débito e simule uma falha chamando ROLLBACK.",
+          "hint": "A tabela deve existir antes do START.",
+          "solution": "Após o rollback, o saldo da conta debitada é o valor anterior à transação; nenhuma transferência incompleta persiste.",
+          "criteria": [
+            "Saldo original restaurado.",
+            "Não usa COMMIT no caminho de falha."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "DDL não é ensaio",
+          "prompt": "Explique por que ALTER TABLE entre débito e crédito não pertence à transação de negócio.",
+          "hint": "Releia os commits implícitos.",
+          "solution": "DDL comum pode confirmar implicitamente a unidade; migrações de schema devem ter procedimento próprio, fora da transferência.",
+          "criteria": [
+            "Identifica o commit implícito.",
+            "Separa migração de operação de negócio."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/savepoint.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 10,
+      "level": 4,
+      "title": "Filtros, NULL e lógica de três valores",
+      "goal": "Escrever predicados que tratam explicitamente a ausência de dados.",
+      "theory": [
+        {
+          "title": "Ausência não é valor comum",
+          "text": "NULL representa ausência ou desconhecimento conforme o domínio. Comparações como coluna=NULL não são verdadeiras; use IS NULL ou IS NOT NULL. WHERE mantém apenas linhas cujo predicado resulta verdadeiro, descartando também UNKNOWN."
+        },
+        {
+          "title": "Operadores e precedência",
+          "text": "AND liga condições e OR amplia alternativas. Use parênteses quando a intenção combinar grupos; uma consulta legível reduz alterações acidentais. O operador <=> do MySQL testa igualdade de forma segura para NULL, mas não é SQL portátil."
+        },
+        {
+          "title": "Substituição consciente",
+          "text": "COALESCE escolhe o primeiro argumento não nulo. Usá-lo na apresentação não significa que zero e ausência sejam equivalentes no armazenamento. Decida se uma nota não informada deve aparecer em média ou ser tratada separadamente."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l10_aluno;\nCREATE TEMPORARY TABLE l10_aluno(id INT PRIMARY KEY, nota INT NULL);\nINSERT INTO l10_aluno VALUES(1,8),(2,NULL),(3,0);\nSELECT id, COALESCE(nota,-1) AS exibida FROM l10_aluno\nWHERE nota IS NULL OR nota >= 7 ORDER BY id;\nSELECT NULL = NULL AS comum, NULL <=> NULL AS segura;\n",
+      "filename": "aula_10.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_10.sql\"",
+      "expected": "A primeira consulta retorna (1,8),(2,-1). Na segunda, comum=NULL e segura=1.",
+      "quiz": {
+        "question": "Como selecionar notas ainda não informadas?",
+        "options": [
+          "WHERE nota = NULL.",
+          "WHERE nota = 0, em qualquer domínio.",
+          "WHERE nota IS NULL.",
+          "WHERE nota <> NULL."
+        ],
+        "answer": 2,
+        "explanation": "IS NULL testa ausência diretamente."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Zero separado",
+          "prompt": "Selecione somente nota zero e depois somente ausência.",
+          "hint": "Use dois predicados distintos.",
+          "solution": "WHERE nota=0 retorna id 3; WHERE nota IS NULL retorna id 2.",
+          "criteria": [
+            "Identifica 3 e 2 separadamente.",
+            "Não converte ausência em nota zero."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Parênteses claros",
+          "prompt": "Selecione id 1 ou 2, desde que a nota esteja informada.",
+          "hint": "Agrupe o OR antes do AND.",
+          "solution": "WHERE (id=1 OR id=2) AND nota IS NOT NULL retorna só id 1.",
+          "criteria": [
+            "Usa parênteses.",
+            "Retorna somente id 1."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Igualdade com ausência",
+          "prompt": "Compare 4<=>4, 4<=>NULL e NULL<=>NULL.",
+          "hint": "<=> sempre devolve igualdade definida.",
+          "solution": "Os resultados são 1,0,1; documente que o operador é uma extensão MySQL.",
+          "criteria": [
+            "Prevê três resultados.",
+            "Menciona portabilidade."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 11,
+      "level": 4,
+      "title": "Ordenação, LIMIT e paginação por chave",
+      "goal": "Definir uma ordem total e evitar saltos imprevisíveis entre páginas.",
+      "theory": [
+        {
+          "title": "Ordem contratada",
+          "text": "Sem ORDER BY, a ordem das linhas não faz parte do contrato. Se o campo de ordenação empata, acrescente uma chave única como critério secundário. LIMIT escolhe uma quantidade de linhas da ordem pedida, não a definição de mais recentes por si só."
+        },
+        {
+          "title": "Offset e custo",
+          "text": "LIMIT n OFFSET m pode precisar percorrer e descartar muitas linhas antes de retornar a página. Novas inserções entre pedidos podem deslocar posições. Para navegação progressiva, paginação por chave usa o último par de valores visto."
+        },
+        {
+          "title": "Cursor coerente",
+          "text": "A condição do cursor deve seguir a mesma direção e os mesmos campos do ORDER BY. Para (data,id) crescente, use uma comparação equivalente ao par. Autorizações e filtros fixos também precisam acompanhar o cursor; ele não deve ampliar o conjunto visível."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l11_evento;\nCREATE TEMPORARY TABLE l11_evento(id INT PRIMARY KEY, dia DATE NOT NULL);\nINSERT INTO l11_evento VALUES(1,'2026-10-01'),(2,'2026-10-01'),(3,'2026-10-02'),(4,'2026-10-03');\nSELECT id,dia FROM l11_evento ORDER BY dia,id LIMIT 2;\nSELECT id,dia FROM l11_evento\nWHERE dia>'2026-10-01' OR (dia='2026-10-01' AND id>2)\nORDER BY dia,id LIMIT 2;\n",
+      "filename": "aula_11.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_11.sql\"",
+      "expected": "Primeira página: IDs 1,2. Próxima página após o cursor (2026-10-01,2): IDs 3,4.",
+      "quiz": {
+        "question": "Para ordenar eventos com a mesma data de forma determinística, o que acrescentar?",
+        "options": [
+          "Somente LIMIT 2.",
+          "Um comentário de ordem crescente.",
+          "SELECT * sem ORDER BY.",
+          "Uma chave única como id ao ORDER BY."
+        ],
+        "answer": 3,
+        "explanation": "O desempate produz uma ordem total."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Ordem inversa",
+          "prompt": "Liste os dois eventos mais recentes usando dia DESC,id DESC.",
+          "hint": "Os dois critérios descem.",
+          "solution": "SELECT id,dia ... ORDER BY dia DESC,id DESC LIMIT 2 retorna 4 e 3.",
+          "criteria": [
+            "Retorna 4 antes de 3.",
+            "Usa desempate por ID."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Mais um empate",
+          "prompt": "Insira id=5 no dia 2026-10-01 e repita a próxima página.",
+          "hint": "O cursor é o mesmo par do exemplo.",
+          "solution": "A próxima página passa a retornar 5 e 3; 5 vem depois do par (dia,2), mas antes do dia seguinte.",
+          "criteria": [
+            "Prevê IDs 5 e 3.",
+            "Explica a ordenação composta."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Compare estratégias",
+          "prompt": "Descreva um cenário em que OFFSET perde estabilidade com inserções.",
+          "hint": "Imagine uma nova linha antes da página já lida.",
+          "solution": "Se uma linha nova entra no início, os offsets seguintes se deslocam; um item pode repetir entre páginas. O cursor fixa a posição relativa por chave, sujeito ao contrato de atualização dos campos.",
+          "criteria": [
+            "Dá um exemplo concreto.",
+            "Não promete snapshot entre requisições independentes."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 12,
+      "level": 4,
+      "title": "Agregação, GROUP BY e HAVING",
+      "goal": "Resumir fatos sem esconder a granularidade da consulta.",
+      "theory": [
+        {
+          "title": "Granularidade",
+          "text": "GROUP BY cria um grupo por combinação de chaves. SUM, COUNT, AVG, MIN e MAX resumem o grupo. COUNT(*) conta linhas; COUNT(coluna) conta valores não nulos. Escolha a medida de acordo com o que uma linha representa."
+        },
+        {
+          "title": "Dois filtros",
+          "text": "WHERE atua antes da agregação; HAVING filtra grupos após o cálculo. Um filtro sobre total do grupo pertence a HAVING. ONLY_FULL_GROUP_BY ajuda a evitar colunas ambíguas; não o desabilite para obter uma linha arbitrária."
+        },
+        {
+          "title": "Casos vazios",
+          "text": "COUNT retorna zero quando não há linhas; SUM pode retornar NULL. Se o relatório exige zero, use COALESCE na apresentação e documente essa escolha. Sempre teste grupos sem ocorrência e entradas com valores ausentes."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l12_venda;\nCREATE TEMPORARY TABLE l12_venda(id INT PRIMARY KEY, vendedor VARCHAR(20), valor DECIMAL(10,2));\nINSERT INTO l12_venda VALUES(1,'Ana',10),(2,'Ana',20),(3,'Beto',5),(4,'Beto',NULL);\nSELECT vendedor,COUNT(*) AS linhas,COUNT(valor) AS valores,SUM(valor) AS total\nFROM l12_venda GROUP BY vendedor HAVING SUM(valor)>=10 ORDER BY vendedor;\n",
+      "filename": "aula_12.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_12.sql\"",
+      "expected": "Ana | linhas=2 | valores=2 | total=30.00. Beto é removido por HAVING porque seu total é 5.00.",
+      "quiz": {
+        "question": "Qual é a diferença entre COUNT(*) e COUNT(valor)?",
+        "options": [
+          "O primeiro conta linhas; o segundo exclui os valores NULL da coluna.",
+          "São sempre iguais por definição.",
+          "COUNT(*) conta só chaves únicas.",
+          "COUNT(valor) soma o valor monetário."
+        ],
+        "answer": 0,
+        "explanation": "A nulabilidade pode mudar a contagem."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confira o grupo excluído",
+          "prompt": "Remova HAVING e calcule os dois vendedores.",
+          "hint": "COUNT(valor) ignora o NULL de Beto.",
+          "solution": "Beto tem 2 linhas,1 valor e total 5.00; Ana tem 2,2,30.00.",
+          "criteria": [
+            "Mostra as duas contagens de Beto.",
+            "Mantém NULL fora da soma."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Antes ou depois",
+          "prompt": "Compare WHERE valor>=10 com HAVING SUM(valor)>=10.",
+          "hint": "Um predicado filtra fatos; o outro, totais.",
+          "solution": "WHERE remove os fatos de valor menor que 10 antes de formar grupos. HAVING preserva todos os fatos e decide pelo total; um vendedor com 6+6 demonstra a diferença.",
+          "criteria": [
+            "Constrói o caso 6+6.",
+            "Explica as etapas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Grupo vazio",
+          "prompt": "Consulte COUNT(*) e COALESCE(SUM(valor),0) com WHERE id<0.",
+          "hint": "A seleção não contém fatos.",
+          "solution": "O resultado é 0 linhas contadas e total 0 pela substituição explícita; SUM isolado seria NULL.",
+          "criteria": [
+            "Confere COUNT=0.",
+            "Distingue SUM e COALESCE."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/group-by-handling.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 13,
+      "level": 5,
+      "title": "JOIN e multiplicação de linhas",
+      "goal": "Unir entidades preservando a cardinalidade esperada.",
+      "theory": [
+        {
+          "title": "Par correspondente",
+          "text": "INNER JOIN produz uma linha por combinação que satisfaz ON. LEFT JOIN preserva a linha esquerda mesmo sem correspondência e preenche a direita com NULL. O resultado depende da cardinalidade, não apenas da sintaxe parecer correta."
+        },
+        {
+          "title": "Multiplicação",
+          "text": "Se um cliente tem dois pedidos e três contatos, unir ambas as relações diretamente pode gerar seis linhas. DISTINCT no final pode esconder sintomas sem corrigir a medida. Agregue fatos na granularidade adequada antes de combinar relações independentes."
+        },
+        {
+          "title": "Filtro que elimina ausência",
+          "text": "Uma condição da tabela direita em WHERE pode descartar as linhas sem correspondência de um LEFT JOIN. Quando a intenção é preservar o pai e limitar quais filhos entram, coloque essa condição no ON e teste o caso sem filhos."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l13_cliente;\nDROP TEMPORARY TABLE IF EXISTS l13_pedido;\nCREATE TEMPORARY TABLE l13_cliente(id INT PRIMARY KEY,nome VARCHAR(20));\nCREATE TEMPORARY TABLE l13_pedido(id INT PRIMARY KEY,cliente_id INT,total INT);\nINSERT INTO l13_cliente VALUES(1,'Ana'),(2,'Beto');\nINSERT INTO l13_pedido VALUES(10,1,30),(11,1,20);\nSELECT c.nome,COUNT(p.id) AS pedidos,COALESCE(SUM(p.total),0) AS total\nFROM l13_cliente c LEFT JOIN l13_pedido p ON p.cliente_id=c.id\nGROUP BY c.id,c.nome ORDER BY c.id;\n",
+      "filename": "aula_13.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_13.sql\"",
+      "expected": "Ana | 2 | 50 e Beto | 0 | 0.",
+      "quiz": {
+        "question": "Por que COUNT(p.id), e não COUNT(*), mede pedidos neste LEFT JOIN?",
+        "options": [
+          "COUNT(*) sempre divide por dois.",
+          "COUNT(p.id) não conta a linha preenchida com NULL de um cliente sem pedidos.",
+          "COUNT(p.id) conta todos os clientes duas vezes.",
+          "LEFT JOIN não aceita COUNT(*)."
+        ],
+        "answer": 1,
+        "explanation": "A linha preservada não representa um pedido real."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Filtre no ON",
+          "prompt": "Conte somente pedidos com total>=25 sem remover Beto.",
+          "hint": "Inclua AND p.total>=25 no ON.",
+          "solution": "Ana passa a ter 1 pedido e total 30; Beto continua com 0 e 0.",
+          "criteria": [
+            "Mantém Beto.",
+            "Conta só o pedido 10."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare INNER",
+          "prompt": "Troque LEFT por INNER e explique o resultado.",
+          "hint": "Não há pedido de Beto.",
+          "solution": "Somente Ana aparece; INNER exige correspondência.",
+          "criteria": [
+            "Retorna Ana.",
+            "Explica o desaparecimento de Beto."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Multiplicação prevista",
+          "prompt": "Acrescente uma relação de dois contatos da Ana e preveja quantas linhas o join com dois pedidos gera.",
+          "hint": "Cada pedido combina com cada contato.",
+          "solution": "São quatro linhas. Some pedidos antes de juntar contatos, ou consulte relações separadas quando a tela exigir listas independentes.",
+          "criteria": [
+            "Prevê quatro combinações.",
+            "Propõe correção de granularidade."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/join.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 14,
+      "level": 5,
+      "title": "Subconsultas, EXISTS e antijoin",
+      "goal": "Expressar existência e ausência sem contar linhas desnecessárias.",
+      "theory": [
+        {
+          "title": "Existência",
+          "text": "EXISTS pergunta se a subconsulta encontra alguma linha e não precisa devolver seus dados ao relatório externo. Uma subconsulta correlacionada pode referenciar a chave da linha externa. Isso expressa clientes com pedido sem multiplicar o cliente por cada pedido."
+        },
+        {
+          "title": "Ausência robusta",
+          "text": "NOT EXISTS é útil para entidades sem filhos e não sofre a mesma armadilha de NULL em NOT IN. O predicado da correlação ainda precisa estar correto; esquecer a referência externa muda a pergunta para a existência global de qualquer linha."
+        },
+        {
+          "title": "Escolha e plano",
+          "text": "Não declare que subconsulta é sempre lenta e JOIN é sempre rápido. O otimizador pode transformar expressões e a cardinalidade importa. Primeiro prove a semântica em poucos dados, incluindo ausência e NULL; depois compare planos com uma carga representativa."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l14_cliente;\nDROP TEMPORARY TABLE IF EXISTS l14_pedido;\nCREATE TEMPORARY TABLE l14_cliente(id INT PRIMARY KEY,nome VARCHAR(20));\nCREATE TEMPORARY TABLE l14_pedido(id INT PRIMARY KEY,cliente_id INT NULL);\nINSERT INTO l14_cliente VALUES(1,'Ana'),(2,'Beto');\nINSERT INTO l14_pedido VALUES(10,1),(11,NULL);\nSELECT c.id,c.nome FROM l14_cliente c WHERE NOT EXISTS\n(SELECT 1 FROM l14_pedido p WHERE p.cliente_id=c.id) ORDER BY c.id;\n",
+      "filename": "aula_14.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_14.sql\"",
+      "expected": "Retorna somente 2 | Beto. O pedido com cliente_id NULL não muda essa conclusão.",
+      "quiz": {
+        "question": "Qual pergunta NOT EXISTS correlacionado responde no exemplo?",
+        "options": [
+          "Quantos bancos estão ativos.",
+          "Qual pedido possui maior preço.",
+          "Quais clientes não têm pedido correspondente.",
+          "Quais clientes têm necessariamente nome único."
+        ],
+        "answer": 2,
+        "explanation": "A correlação liga o filho ao cliente atual."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Inverta a existência",
+          "prompt": "Retorne clientes com pelo menos um pedido.",
+          "hint": "Troque NOT EXISTS por EXISTS.",
+          "solution": "A consulta retorna Ana uma vez, mesmo que novos pedidos dela sejam inseridos.",
+          "criteria": [
+            "Retorna Ana.",
+            "Não duplica a cliente ao adicionar pedido."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Demonstre NULL",
+          "prompt": "Compare id NOT IN (SELECT cliente_id...) com o NOT EXISTS original.",
+          "hint": "A lista contém NULL.",
+          "solution": "NOT IN não seleciona Beto nesse conjunto devido a UNKNOWN; NOT EXISTS mantém a pergunta de ausência por cliente.",
+          "criteria": [
+            "Registra a diferença.",
+            "Explica o papel do NULL."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Correlação removida",
+          "prompt": "Retire p.cliente_id=c.id do NOT EXISTS e preveja o resultado.",
+          "hint": "Há ao menos um pedido no banco.",
+          "solution": "A subconsulta passa a existir para qualquer cliente, portanto NOT EXISTS é falso para todos e nenhuma linha retorna.",
+          "criteria": [
+            "Prevê zero linhas.",
+            "Identifica a referência externa perdida."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/exists-and-not-exists-subqueries.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 15,
+      "level": 5,
+      "title": "CTEs comuns e recursivas",
+      "goal": "Decompor consultas e estabelecer uma condição de término.",
+      "theory": [
+        {
+          "title": "Nomes locais à consulta",
+          "text": "WITH nome AS (...) atribui um nome a uma expressão usada na instrução seguinte. A CTE não cria uma tabela permanente e não promete materialização nem melhora de desempenho. Ela ajuda a tornar etapas e granularidade legíveis."
+        },
+        {
+          "title": "Recursão",
+          "text": "WITH RECURSIVE combina uma parte inicial e uma parte que referencia o resultado anterior. A condição de término deve limitar a expansão. Um limite de profundidade protege o servidor, mas não substitui a prova de término nem detecta todo ciclo de domínio."
+        },
+        {
+          "title": "Tipos e crescimento",
+          "text": "Os tipos das colunas recursivas vêm da parte inicial; textos que crescem podem exigir CAST com tamanho suficiente. UNION ALL mantém ocorrências e costuma ser adequado a uma sequência simples; percursos de grafos exigem uma política de visitas e ciclos."
+        }
+      ],
+      "code": "WITH RECURSIVE dias(n) AS (\n SELECT 1\n UNION ALL\n SELECT n+1 FROM dias WHERE n<5\n)\nSELECT n,n*n AS quadrado FROM dias ORDER BY n;\n",
+      "filename": "aula_15.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_15.sql\"",
+      "expected": "Retorna (1,1),(2,4),(3,9),(4,16),(5,25). Nenhuma tabela persistente é criada.",
+      "quiz": {
+        "question": "O que limita a sequência recursiva do exemplo?",
+        "options": [
+          "ORDER BY garante término.",
+          "O nome dias.",
+          "SELECT sempre limita cinco linhas.",
+          "A condição n<5 na parte recursiva."
+        ],
+        "answer": 3,
+        "explanation": "A condição impede produzir o sucessor após o valor 5."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Sequência parametrizada",
+          "prompt": "Gere números de 1 até 8 e calcule sua soma.",
+          "hint": "Mude o limite e agregue na consulta externa.",
+          "solution": "WITH RECURSIVE ... WHERE n<8 SELECT SUM(n) FROM dias; retorna 36.",
+          "criteria": [
+            "Oito valores gerados.",
+            "Soma 36 verificada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Duas etapas nomeadas",
+          "prompt": "Use uma CTE com valores 10,20,30 e outra para filtrar >=20.",
+          "hint": "Uma CTE pode usar a anterior.",
+          "solution": "WITH base AS (SELECT 10 AS n UNION ALL SELECT 20 UNION ALL SELECT 30), filtrados AS (SELECT n FROM base WHERE n>=20) SELECT SUM(n) FROM filtrados; retorna 50. A primeira CTE define os fatos e a segunda limita o conjunto.",
+          "criteria": [
+            "Define duas CTEs válidas.",
+            "Soma 50."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Ciclo de domínio",
+          "prompt": "Explique o risco de uma hierarquia em que A aponta para B e B para A.",
+          "hint": "Um limite de execução não resolve a modelagem.",
+          "solution": "O percurso pode repetir nós até atingir o limite. Valide relações, acompanhe nós visitados ou restrinja a profundidade com uma política explícita.",
+          "criteria": [
+            "Descreve o ciclo.",
+            "Propõe prevenção ou detecção."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/with.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 16,
+      "level": 6,
+      "title": "Funções de janela e rankings",
+      "goal": "Calcular posições e acumulados preservando as linhas originais.",
+      "theory": [
+        {
+          "title": "Grupos sem colapso",
+          "text": "Uma função de janela calcula sobre um conjunto relacionado a cada linha sem reduzir tudo a uma linha por grupo. PARTITION BY separa conjuntos e ORDER BY define a sequência da janela. O ORDER BY externo continua necessário para ordenar o resultado exibido."
+        },
+        {
+          "title": "Empates",
+          "text": "ROW_NUMBER numera linhas; DENSE_RANK mantém a mesma posição para valores empatados sem lacunas entre posições distintas. Um desempate por ID em ROW_NUMBER torna a numeração estável. Não acrescente ID ao DENSE_RANK se a intenção for manter empates por valor."
+        },
+        {
+          "title": "Frame explícito",
+          "text": "SUM ... ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW produz um acumulado por linha na ordem definida. Frames padrão e empates podem surpreender; escreva a janela pretendida e teste duas linhas com o mesmo valor de ordenação."
+        }
+      ],
+      "code": "WITH vendas AS (\n SELECT 1 id,'Ana' vendedor,10 valor UNION ALL\n SELECT 2,'Ana',20 UNION ALL SELECT 3,'Ana',20 UNION ALL SELECT 4,'Beto',5\n)\nSELECT id,vendedor,valor,\n ROW_NUMBER() OVER(PARTITION BY vendedor ORDER BY valor DESC,id) AS numero,\n DENSE_RANK() OVER(PARTITION BY vendedor ORDER BY valor DESC) AS posicao,\n SUM(valor) OVER(PARTITION BY vendedor ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS acumulado\nFROM vendas ORDER BY vendedor,id;\n",
+      "filename": "aula_16.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_16.sql\"",
+      "expected": "Ana: id 1→numero3,posicao2,acumulado10; id 2→1,1,30; id 3→2,1,50. Beto id 4→1,1,5.",
+      "quiz": {
+        "question": "O que diferencia uma janela de GROUP BY nesta consulta?",
+        "options": [
+          "Ela preserva cada venda enquanto calcula valores relacionados.",
+          "Ela apaga linhas empatadas automaticamente.",
+          "Ela cria uma tabela permanente.",
+          "Ela dispensa ORDER BY externo."
+        ],
+        "answer": 0,
+        "explanation": "O resultado mantém a granularidade de venda."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Maior por vendedor",
+          "prompt": "Use uma CTE com ROW_NUMBER e selecione numero=1 em uma consulta externa.",
+          "hint": "O filtro da janela ocorre em outra camada.",
+          "solution": "A consulta externa retorna id 2 para Ana e id 4 para Beto, pelo desempate escolhido.",
+          "criteria": [
+            "Filtra depois da janela.",
+            "Retorna IDs 2 e 4."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ranking empatado",
+          "prompt": "Compare RANK e DENSE_RANK nos valores 20,20,10.",
+          "hint": "O RANK pode deixar lacunas.",
+          "solution": "RANK produz 1,1,3; DENSE_RANK produz 1,1,2.",
+          "criteria": [
+            "Mostra os dois vetores.",
+            "Explica a lacuna."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Acumulado inverso",
+          "prompt": "Calcule o acumulado por id DESC com frame ROWS explícito.",
+          "hint": "A ordem da janela muda a medida.",
+          "solution": "Para Ana, id 3 acumula 20, id 2 acumula 40 e id 1 acumula 50; ordenar a saída por id não altera o cálculo.",
+          "criteria": [
+            "Obtém 20,40,50 na ordem da janela.",
+            "Distingue cálculo e apresentação."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/window-functions-usage.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 17,
+      "level": 6,
+      "title": "Views e fronteiras de consulta",
+      "goal": "Criar uma view com contrato explícito e entender seus limites.",
+      "theory": [
+        {
+          "title": "Consulta nomeada",
+          "text": "Uma view armazena a definição de uma consulta. Ela não é uma cópia materializada dos resultados e não garante redução de custo. Defina colunas explicitamente para manter um contrato claro quando as tabelas de origem evoluírem."
+        },
+        {
+          "title": "Segurança de execução",
+          "text": "SQL SECURITY INVOKER verifica os privilégios no contexto do chamador; DEFINER usa o contexto do definidor segundo as regras do servidor. Uma view não concede acesso automaticamente. Documente o modo e teste a conta que vai utilizá-la."
+        },
+        {
+          "title": "Atualizações",
+          "text": "Nem toda view é atualizável. Agregações, agrupamentos e outras construções podem impedir mudanças por ela. Separe o contrato de leitura do contrato de escrita e não trate uma view de relatório como substituto automático da API de negócio."
+        }
+      ],
+      "code": "DROP VIEW IF EXISTS l17_abertas;\nDROP TABLE IF EXISTS l17_tarefa;\nCREATE TABLE l17_tarefa(id INT PRIMARY KEY,titulo VARCHAR(40),status VARCHAR(10)) ENGINE=InnoDB;\nINSERT INTO l17_tarefa VALUES(1,'Revisar','aberta'),(2,'Publicar','fechada');\nCREATE SQL SECURITY INVOKER VIEW l17_abertas AS\n SELECT id,titulo FROM l17_tarefa WHERE status='aberta';\nSELECT id,titulo FROM l17_abertas ORDER BY id;\nDROP VIEW l17_abertas;\nDROP TABLE l17_tarefa;\n",
+      "filename": "aula_17.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_17.sql\"",
+      "expected": "Retorna 1 | Revisar. A view e sua tabela de laboratório são removidas ao final.",
+      "quiz": {
+        "question": "Uma view comum guarda automaticamente os resultados de ontem?",
+        "options": [
+          "Sim, toda view é um backup diário.",
+          "Não; guarda uma definição de consulta.",
+          "Sim, ORDER BY torna a view materializada.",
+          "Somente se o nome começar com v_."
+        ],
+        "answer": 1,
+        "explanation": "Mudanças na origem podem alterar a próxima leitura da view."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Mudança observada",
+          "prompt": "Antes da limpeza, altere a tarefa 1 para fechada e consulte a view.",
+          "hint": "A view usa a consulta sobre a origem.",
+          "solution": "UPDATE l17_tarefa SET status='fechada' WHERE id=1; o SELECT da view retorna zero linhas.",
+          "criteria": [
+            "Demonstra resultado vazio.",
+            "Explica ausência de cópia materializada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Colunas do contrato",
+          "prompt": "Inclua status na definição da view e revise o SELECT externo.",
+          "hint": "Recrie a view antes dos DROP finais.",
+          "solution": "CREATE OR REPLACE SQL SECURITY INVOKER VIEW ... AS SELECT id,titulo,status...; a nova coluna passa a compor o contrato.",
+          "criteria": [
+            "Declara as colunas explicitamente.",
+            "Mostra a coluna na consulta."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Permissão testável",
+          "prompt": "Descreva como testar acesso da view com uma conta de leitura limitada.",
+          "hint": "Defina o contexto INVOKER.",
+          "solution": "Conceda privilégios necessários no laboratório, conecte como a conta limitada e teste SELECT; tente uma escrita proibida e registre a rejeição.",
+          "criteria": [
+            "Prevê teste positivo e negativo.",
+            "Distingue view de GRANT."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/create-view.html",
+      "caution": "Este exemplo cria e remove l17_abertas e l17_tarefa apenas no laboratório.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 18,
+      "level": 6,
+      "title": "JSON nativo e extração de campos",
+      "goal": "Usar JSON com validação e transformar valores em tipos úteis.",
+      "theory": [
+        {
+          "title": "Documento validado",
+          "text": "A coluna JSON do MySQL armazena documentos em formato interno próprio e valida o texto inserido. Isso difere do alias JSON baseado em LONGTEXT do MariaDB; funções, armazenamento e replicação entre os produtos exigem avaliação específica."
+        },
+        {
+          "title": "Caminhos e escalares",
+          "text": "JSON_EXTRACT retorna um valor JSON. JSON_UNQUOTE remove a representação JSON de uma string. Para números usados em comparação ou ordenação, converta explicitamente ao tipo de domínio em vez de confiar em comparação textual."
+        },
+        {
+          "title": "Modelo híbrido",
+          "text": "JSON não elimina modelagem. IDs, relações e campos com restrições frequentes podem merecer colunas normais. Um documento variável é útil para atributos opcionais, mas índices, validação de schema e mudanças de estrutura continuam sendo decisões de projeto."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l18_evento;\nCREATE TEMPORARY TABLE l18_evento(id INT PRIMARY KEY,dados JSON NOT NULL);\nINSERT INTO l18_evento VALUES(1,JSON_OBJECT('tipo','compra','total',25,'itens',JSON_ARRAY('cabo','fonte')));\nSELECT JSON_UNQUOTE(JSON_EXTRACT(dados,'$.tipo')) AS tipo,\n CAST(JSON_UNQUOTE(JSON_EXTRACT(dados,'$.total')) AS DECIMAL(10,2)) AS total,\n JSON_LENGTH(dados,'$.itens') AS itens FROM l18_evento;\n",
+      "filename": "aula_18.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_18.sql\"",
+      "expected": "tipo=compra,total=25.00,itens=2.",
+      "quiz": {
+        "question": "A coluna JSON do MySQL 8.4 é idêntica ao alias JSON do MariaDB?",
+        "options": [
+          "Sim; qualquer binlog pode ser reaplicado sem verificação.",
+          "Sim; os dois são sempre VARCHAR(255).",
+          "Não; o armazenamento e aspectos de compatibilidade diferem.",
+          "Não; MySQL nunca valida JSON."
+        ],
+        "answer": 2,
+        "explanation": "O MySQL usa um tipo JSON nativo."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Campo ausente",
+          "prompt": "Extraia $.cupom e compare com IS NULL.",
+          "hint": "Caminho ausente retorna SQL NULL na extração.",
+          "solution": "SELECT JSON_EXTRACT(dados,'$.cupom') IS NULL ... retorna 1; documente a diferença entre ausência e um membro com JSON null.",
+          "criteria": [
+            "Resultado 1.",
+            "Distingue ausência e JSON null."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Modificação do documento",
+          "prompt": "Use JSON_SET para mudar total para 30 e consulte novamente.",
+          "hint": "Atualize a coluna com o documento retornado.",
+          "solution": "UPDATE l18_evento SET dados=JSON_SET(dados,'$.total',30) WHERE id=1; a extração numérica retorna 30.00.",
+          "criteria": [
+            "Persiste o novo documento.",
+            "Mantém os outros membros."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Schema mínimo",
+          "prompt": "Proponha uma validação que exija tipo textual e total numérico.",
+          "hint": "JSON válido pode ter estrutura inadequada.",
+          "solution": "Um JSON Schema com type:object,required:[tipo,total],properties com type:string e type:number pode ser testado por JSON_SCHEMA_VALID; use CHECK adequado após estudar os limites da função.",
+          "criteria": [
+            "Separa sintaxe e schema.",
+            "Inclui teste válido e inválido."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/json.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 19,
+      "level": 7,
+      "title": "Índices B-tree e prefixos compostos",
+      "goal": "Relacionar caminhos de acesso com filtros e ordenação.",
+      "theory": [
+        {
+          "title": "Custo de acesso",
+          "text": "Um índice permite localizar faixas ou valores sem necessariamente ler toda a tabela. Também custa espaço e trabalho em cada escrita. No InnoDB, índices secundários carregam a chave primária, portanto seu tamanho influencia o custo total."
+        },
+        {
+          "title": "Ordem das colunas",
+          "text": "Um índice (cliente_id,dia,id) organiza primeiro por cliente e depois por data e ID. Ele pode atender consultas por cliente e intervalos de data; não deve ser considerado equivalente a um índice iniciado por dia. A utilidade depende dos predicados e da seletividade."
+        },
+        {
+          "title": "Medição",
+          "text": "A presença de um índice não obriga o otimizador a utilizá-lo. Para tabelas pequenas, uma varredura pode custar menos. Verifique a definição com SHOW INDEX e avalie planos em carga representativa, sem usar FORCE INDEX como resposta automática."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l19_pedido;\nCREATE TEMPORARY TABLE l19_pedido(\n id INT PRIMARY KEY,cliente_id INT NOT NULL,dia DATE NOT NULL,total INT NOT NULL,\n INDEX ix_l19_cliente_dia(cliente_id,dia,id)\n) ENGINE=InnoDB;\nINSERT INTO l19_pedido VALUES(1,7,'2026-10-01',10),(2,7,'2026-10-02',20),(3,8,'2026-10-02',30);\nSHOW INDEX FROM l19_pedido;\nSELECT id,total FROM l19_pedido WHERE cliente_id=7 AND dia>='2026-10-02'\nORDER BY dia,id;\n",
+      "filename": "aula_19.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_19.sql\"",
+      "expected": "SHOW INDEX mostra a chave primária e ix_l19_cliente_dia nas posições cliente_id,dia,id. A consulta retorna id 2,total20. Estatísticas do índice podem variar.",
+      "quiz": {
+        "question": "Um índice (cliente_id,dia) é equivalente a (dia,cliente_id)?",
+        "options": [
+          "Sim, qualquer ordem sempre produz o mesmo acesso.",
+          "Sim, se os nomes forem curtos.",
+          "Não; o segundo nunca pode existir.",
+          "Não; a ordem define quais prefixos e faixas são acessíveis diretamente."
+        ],
+        "answer": 3,
+        "explanation": "A estrutura é organizada lexicograficamente pela ordem declarada."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Prefixo útil",
+          "prompt": "Liste consultas por cliente, por cliente+data e por data somente; indique qual mais naturalmente usa o prefixo do índice.",
+          "hint": "Observe a primeira coluna.",
+          "solution": "cliente e cliente+data seguem o prefixo. data isolada não tem o mesmo acesso direto, embora o otimizador possa escolher outras estratégias.",
+          "criteria": [
+            "Compara as três consultas.",
+            "Não promete uso obrigatório."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ordenação alinhada",
+          "prompt": "Consulte todos os pedidos do cliente 7 ordenados por dia,id.",
+          "hint": "Fixar o primeiro campo permite percorrer o restante em ordem.",
+          "solution": "A saída é IDs 1,2. Compare EXPLAIN para entender se o servidor aproveita o índice sem impor FORCE INDEX.",
+          "criteria": [
+            "Obtém 1,2.",
+            "Relaciona igualdade inicial e ordem posterior."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Custo de escrita",
+          "prompt": "Explique por que criar dez índices extras pode piorar uma carga de INSERT.",
+          "hint": "Cada índice deve refletir as mudanças.",
+          "solution": "As inserções atualizam as estruturas secundárias e consomem I/O, memória e espaço. Justifique índices por consultas observadas e custo de manutenção.",
+          "criteria": [
+            "Menciona escrita e espaço.",
+            "Propõe medir a carga real."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 20,
+      "level": 7,
+      "title": "EXPLAIN e EXPLAIN ANALYZE",
+      "goal": "Comparar estimativas e execução sem confundir plano com resultado.",
+      "theory": [
+        {
+          "title": "Plano estimado",
+          "text": "EXPLAIN descreve um caminho escolhido pelo otimizador. Observe acesso, índices candidatos, estimativa de linhas e operações extras. O plano depende dos dados, estatísticas, versão e configuração; não compare apenas textos exatos entre máquinas."
+        },
+        {
+          "title": "Execução medida",
+          "text": "EXPLAIN ANALYZE executa a consulta suportada e mostra medidas. Use consultas de leitura do laboratório e compreenda efeitos, custo e permissões antes de instrumentar outras instruções. Um comando com ANALYZE não é uma simulação sem trabalho."
+        },
+        {
+          "title": "Investigação",
+          "text": "Comece por uma consulta lenta definida, cardinalidades e resultado correto. Compare estimado e observado; uma grande diferença pode indicar distribuição de dados ou estatísticas inadequadas. Otimizar uma consulta semanticamente errada só produz um erro mais rápido."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l20_medida;\nCREATE TEMPORARY TABLE l20_medida(id INT PRIMARY KEY,categoria INT NOT NULL,valor INT NOT NULL,INDEX ix_l20_categoria(categoria));\nINSERT INTO l20_medida VALUES(1,1,10),(2,1,20),(3,2,30);\nEXPLAIN FORMAT=TREE SELECT id,valor FROM l20_medida WHERE categoria=1;\nEXPLAIN ANALYZE SELECT id,valor FROM l20_medida WHERE categoria=1;\nSELECT id,valor FROM l20_medida WHERE categoria=1 ORDER BY id;\n",
+      "filename": "aula_20.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_20.sql\"",
+      "expected": "As duas primeiras instruções mostram planos, com custos e tempos variáveis. A última consulta retorna (1,10),(2,20). O plano pode escolher varredura porque a tabela é pequena.",
+      "quiz": {
+        "question": "EXPLAIN ANALYZE apenas imprime estimativas sem executar a consulta?",
+        "options": [
+          "Não; ele executa a consulta suportada e coleta medidas.",
+          "Sim, ANALYZE é só uma cor de apresentação.",
+          "Sim, todo plano é calculado sem acessar dados.",
+          "Somente se houver ORDER BY."
+        ],
+        "answer": 0,
+        "explanation": "Use-o conhecendo o trabalho e os possíveis efeitos da consulta."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compare cardinalidades",
+          "prompt": "Anote linhas estimadas e observadas nos nós do plano.",
+          "hint": "Os nomes e formatos variam por patch.",
+          "solution": "Registre o filtro categoria=1 e a cardinalidade real de 2 linhas; compare com a estimativa sem exigir igualdade dos custos ou tempos.",
+          "criteria": [
+            "Distingue estimativa e observação.",
+            "Confere duas linhas reais."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Mudança de filtro",
+          "prompt": "Troque categoria=1 por categoria=2 e explique a nova cardinalidade.",
+          "hint": "Só existe uma linha da categoria 2.",
+          "solution": "A consulta retorna id 3; compare o plano e a estimativa para a nova distribuição.",
+          "criteria": [
+            "Resultado id 3.",
+            "Não afirma melhoria só por tempo isolado."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Experimento repetível",
+          "prompt": "Descreva uma comparação de índice antes/depois com volume maior.",
+          "hint": "Controle dados, consulta e condições de execução.",
+          "solution": "Use dados fictícios com distribuição registrada, confirme resultados iguais, colete várias execuções e compare trabalho/latência sem misturar criação de dados com a consulta medida.",
+          "criteria": [
+            "Mantém semântica igual.",
+            "Registra volume e distribuição."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/explain.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 21,
+      "level": 7,
+      "title": "Colunas geradas e índices sobre JSON",
+      "goal": "Indexar um atributo derivado preservando um contrato de tipo.",
+      "theory": [
+        {
+          "title": "Derivação declarada",
+          "text": "Uma coluna gerada deriva seu valor de uma expressão. VIRTUAL calcula conforme necessário; STORED guarda o valor calculado, com custos e regras próprios. A expressão deve seguir as restrições do MySQL; nem toda função ou subconsulta pode ser usada."
+        },
+        {
+          "title": "Escalar indexável",
+          "text": "Uma coluna JSON não recebe um índice B-tree convencional diretamente sobre o documento inteiro. Extraia um atributo escalar em coluna gerada tipada e crie o índice nessa coluna. O tamanho e a collation da projeção devem corresponder ao domínio esperado."
+        },
+        {
+          "title": "Consistência do modelo",
+          "text": "Uma mudança de JSON atualiza a derivação conforme o contrato. Isso não transforma uma coluna derivada em lugar independente de escrita. Se o atributo vira parte central da regra, avalie colocá-lo numa coluna normal e manter a modelagem simples."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l21_evento;\nCREATE TEMPORARY TABLE l21_evento(\n id INT PRIMARY KEY,dados JSON NOT NULL,\n tipo VARCHAR(20) GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(dados,'$.tipo'))) STORED,\n INDEX ix_l21_tipo(tipo)\n) ENGINE=InnoDB;\nINSERT INTO l21_evento(id,dados) VALUES(1,JSON_OBJECT('tipo','compra')),(2,JSON_OBJECT('tipo','visita'));\nSELECT id,tipo FROM l21_evento WHERE tipo='compra' ORDER BY id;\nUPDATE l21_evento SET dados=JSON_SET(dados,'$.tipo','venda') WHERE id=1;\nSELECT id,tipo FROM l21_evento ORDER BY id;\n",
+      "filename": "aula_21.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_21.sql\"",
+      "expected": "A primeira consulta retorna 1 |compra; após o UPDATE, a segunda retorna 1 |venda e 2 |visita.",
+      "quiz": {
+        "question": "O que recebe o índice B-tree neste desenho?",
+        "options": [
+          "O documento JSON inteiro sem projeção.",
+          "A coluna gerada tipo, que extrai um escalar tipado do JSON.",
+          "A string contendo o comando SELECT.",
+          "O número de colunas da tabela."
+        ],
+        "answer": 1,
+        "explanation": "A projeção escalar cria um caminho de acesso com contrato conhecido."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Mudança derivada",
+          "prompt": "Acrescente tipo=cancelamento no JSON do evento 2 e consulte a coluna gerada.",
+          "hint": "Mude a origem, não atribua a derivação.",
+          "solution": "UPDATE ... SET dados=JSON_SET(dados,'$.tipo','cancelamento') WHERE id=2; tipo passa a cancelamento.",
+          "criteria": [
+            "Coluna acompanha a origem.",
+            "Não escreve um valor independente na derivada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ausência projetada",
+          "prompt": "Insira um JSON sem tipo e observe a coluna gerada.",
+          "hint": "A extração de caminho ausente produz NULL.",
+          "solution": "INSERT ... VALUES(3,JSON_OBJECT('total',10)); SELECT tipo WHERE id=3 retornaNULL. Defina validação adicional se tipo for obrigatório.",
+          "criteria": [
+            "IdentificaNULL.",
+            "Propõe validação do atributo obrigatório."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Plano por projeção",
+          "prompt": "Compare EXPLAIN da consulta por tipo e registre a definição do índice.",
+          "hint": "SHOW INDEX confirma o contrato, não o uso obrigatório.",
+          "solution": "O índice ix_l21_tipo existe; o otimizador pode preferir varredura com poucos dados. Amplie a carga para avaliar seu benefício.",
+          "criteria": [
+            "Confirma a coluna indexada.",
+            "Não inventa um plano garantido."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/create-table-generated-columns.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 22,
+      "level": 8,
+      "title": "Stored procedures e tratamento de falhas",
+      "goal": "Encapsular uma operação curta com parâmetros e erro explícito.",
+      "theory": [
+        {
+          "title": "Contrato da rotina",
+          "text": "Uma procedure recebe parâmetros e é chamada por CALL. Ela pode executar várias instruções e retornar resultados; uma função tem outro contrato e restrições. Evite esconder commits surpreendentes dentro de rotinas que a aplicação espera compor em uma transação maior."
+        },
+        {
+          "title": "Delimitador do cliente",
+          "text": "DELIMITER muda como o cliente mysql identifica o fim da definição; não é SQL enviado por um driver. O corpo usa BEGIN/END e pontos e vírgulas internos. Em outro editor ou API, envie a definição conforme as regras dessa ferramenta."
+        },
+        {
+          "title": "Falhas visíveis",
+          "text": "SIGNAL SQLSTATE permite rejeitar uma entrada com mensagem definida. Rotinas devem preservar erros que o chamador precisa tratar. Uma procedure não justifica privilégios elevados: escolha SQL SECURITY INVOKER quando o desenho permitir e teste permissões reais."
+        }
+      ],
+      "code": "DROP PROCEDURE IF EXISTS l22_total;\nDELIMITER //\nCREATE PROCEDURE l22_total(IN preco DECIMAL(10,2),IN quantidade INT)\nSQL SECURITY INVOKER\nBEGIN\n IF preco IS NULL OR preco<0 OR quantidade IS NULL OR quantidade<1 THEN\n  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Entrada invalida';\n END IF;\n SELECT preco*quantidade AS total;\nEND//\nDELIMITER ;\nCALL l22_total(12.50,3);\nDROP PROCEDURE l22_total;\n",
+      "filename": "aula_22.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_22.sql\"",
+      "expected": "CALL retorna total=37.50. A rotina é removida no final. O cliente mysql deve processar DELIMITER; não envie essa palavra como SQL de um driver.",
+      "quiz": {
+        "question": "DELIMITER faz parte do corpo SQL executado pelo servidor?",
+        "options": [
+          "Sim, muda o engine da tabela.",
+          "Sim, configura o isolamento global.",
+          "Não; é um comando do cliente mysql para delimitar instruções.",
+          "Não; é um tipo numérico."
+        ],
+        "answer": 2,
+        "explanation": "A ferramenta precisa separar a definição completa antes de enviá-la."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Erro previsto",
+          "prompt": "Antes do DROP final, chame a rotina com quantidade 0 e confira o erro.",
+          "hint": "SIGNAL usa SQLSTATE 45000.",
+          "solution": "CALL l22_total(12.50,0); falha com Entrada invalida; a rotina não apresenta um total válido para esse caso.",
+          "criteria": [
+            "RegistraSQLSTATE ou mensagem.",
+            "Não suprime a falha."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ausência rejeitada",
+          "prompt": "Teste preco NULL e quantidade NULL em chamadas separadas.",
+          "hint": "Os testes IS NULL são explícitos.",
+          "solution": "Ambas as chamadas disparam Entrada invalida; usar apenas preco<0 não cobriria o NULL.",
+          "criteria": [
+            "Demonstra as duas rejeições.",
+            "Explica a lógica de três valores."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Chamada pelo driver",
+          "prompt": "Descreva o envio da definição por um driver que não entende DELIMITER.",
+          "hint": "A definição inteira é uma única string SQL.",
+          "solution": "Remova comandos DELIMITER do protocolo e envie CREATE PROCEDURE completo como uma instrução; CALL posterior usa parâmetros pelo mecanismo do driver.",
+          "criteria": [
+            "Distingue ferramenta e servidor.",
+            "Não concatena entrada do usuário."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/create-procedure.html",
+      "caution": "Exige CREATE ROUTINE e permissões apropriadas somente no laboratório; a conta forge_aluno de preparação recebe privilégios nesse banco.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 23,
+      "level": 8,
+      "title": "Triggers e auditoria transacional",
+      "goal": "Registrar uma mudança de dados e observar o vínculo com a transação.",
+      "theory": [
+        {
+          "title": "Execução por evento",
+          "text": "Um trigger é associado a uma tabela e executa antes ou depois de INSERT, UPDATE ou DELETE por linha. OLD e NEW permitem ler valores anteriores e novos nos eventos apropriados. Triggers tornam efeitos menos visíveis ao chamador; mantenha-os pequenos e documentados."
+        },
+        {
+          "title": "Auditoria limitada",
+          "text": "Uma tabela de histórico com InnoDB participa da mesma transação da mudança: rollback pode desfazer ambos. Isso é útil para coerência, mas não equivale a um log inviolável de segurança. Privilégios, retenção e acesso administrativo continuam importantes."
+        },
+        {
+          "title": "Custo e responsabilidade",
+          "text": "Uma escrita em lote pode disparar milhares de vezes o trigger. Evite operações externas e regras duplicadas que competem com a aplicação. A auditoria do exemplo registra apenas mudanças de status de dados fictícios, sem credenciais ou informações pessoais."
+        },
+        {
+          "title": "Permissão de criação e binary log",
+          "text": "No MySQL 8.4 o binary log normalmente está habilitado. Com log_bin_trust_function_creators=0, a criação de trigger possui exigência administrativa adicional. Por isso esta aula indica ADMIN_LOCAL para o laboratório e não usa a conta comum de aplicação. Confira a documentação de CREATE TRIGGER e binary logging antes de transferir o roteiro para outra instalação."
+        }
+      ],
+      "code": "DROP TABLE IF EXISTS l23_historico;\nDROP TABLE IF EXISTS l23_tarefa;\nCREATE TABLE l23_tarefa(id INT PRIMARY KEY,status VARCHAR(12) NOT NULL) ENGINE=InnoDB;\nCREATE TABLE l23_historico(id INT AUTO_INCREMENT PRIMARY KEY,tarefa_id INT,anterior VARCHAR(12),novo VARCHAR(12)) ENGINE=InnoDB;\nCREATE TRIGGER l23_audita AFTER UPDATE ON l23_tarefa FOR EACH ROW\n INSERT INTO l23_historico(tarefa_id,anterior,novo) VALUES(NEW.id,OLD.status,NEW.status);\nINSERT INTO l23_tarefa VALUES(1,'aberta');\nSTART TRANSACTION;\nUPDATE l23_tarefa SET status='fechada' WHERE id=1;\nSELECT tarefa_id,anterior,novo FROM l23_historico;\nROLLBACK;\nSELECT COUNT(*) AS registros FROM l23_historico;\nDROP TABLE l23_tarefa;\nDROP TABLE l23_historico;\n",
+      "filename": "aula_23.sql",
+      "language": "sql",
+      "run": "Nesta aula, use a conta administrativa local autorizada (substitua ADMIN_LOCAL): mysql -h 127.0.0.1 -P 3306 -u ADMIN_LOCAL -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_23.sql\". O ensaio continua restrito às tabelas l23_ do laboratório.",
+      "expected": "Dentro da transação, histórico1 |aberta|fechada. Após ROLLBACK, registros=0; a tarefa também volta a aberta. As tabelas são removidas ao final.",
+      "quiz": {
+        "question": "O histórico InnoDB criado por esse trigger persiste após ROLLBACK da mudança?",
+        "options": [
+          "Sim, todo trigger cria uma transação autônoma.",
+          "Sim, AUTO_INCREMENT impede rollback.",
+          "Somente se o status tiver letras maiúsculas.",
+          "Não; a gravação do trigger acompanha a transação."
+        ],
+        "answer": 3,
+        "explanation": "Os efeitos transacionais da instrução são revertidos juntos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Mudança confirmada",
+          "prompt": "Troque ROLLBACK por COMMIT e confira tarefa e histórico antes da limpeza.",
+          "hint": "A unidade será confirmada.",
+          "solution": "A tarefa fica fechada e o histórico contém a transição aberta→fechada.",
+          "criteria": [
+            "Estado fechado persistente.",
+            "Uma transição registrada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Atualização sem transição",
+          "prompt": "Faça UPDATE status=status e observe o trigger atual.",
+          "hint": "AFTER UPDATE pode disparar mesmo sem uma mudança útil ao domínio.",
+          "solution": "O desenho registra uma linha desnecessária; reescreva com BEGIN/END e IF NOT(OLD.status <=> NEW.status) THEN INSERT... END IF.",
+          "criteria": [
+            "Identifica efeito redundante.",
+            "Usa comparação segura comNULL."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Limite de auditoria",
+          "prompt": "Explique por que o dono do banco ainda pode adulterar a tabela histórica.",
+          "hint": "Auditoria de segurança inclui governança de acesso.",
+          "solution": "Uma conta com privilégios amplos pode mudar ou apagar o histórico; retenção, separação de funções e envio protegido a outro sistema podem fazer parte do desenho.",
+          "criteria": [
+            "Não chama o exemplo de inviolável.",
+            "Menciona controle de acesso."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/create-trigger.html",
+      "caution": "Além de TRIGGER no schema, criar triggers com binary log habilitado e log_bin_trust_function_creators=0 pode exigir privilégio global adicional. A conta forge_aluno com ALL apenas no schema não atende a essa configuração. Use o operador administrativo local autorizado para esta aula; não conceda SUPER ao usuário da aplicação nem altere a configuração global de uma instância compartilhada. O script cria e remove somente tabelas l23_; DROP da tabela remove o trigger associado.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 24,
+      "level": 8,
+      "title": "Particionamento e manutenção por faixa",
+      "goal": "Definir partições e observar pruning sem tratá-lo como solução universal.",
+      "theory": [
+        {
+          "title": "Divisão lógica",
+          "text": "Particionamento divide uma tabela em partes segundo uma expressão ou colunas. Ele pode ajudar retenção e algumas consultas, mas não distribui automaticamente o MySQL por vários servidores. Índices e modelagem continuam necessários."
+        },
+        {
+          "title": "Chaves e limites",
+          "text": "No particionamento do MySQL, as colunas usadas pela expressão de particionamento precisam estar presentes em todas as chaves únicas. Tabelas InnoDB particionadas têm restrições com foreign keys; avalie isso antes de transportar um modelo relacional completo."
+        },
+        {
+          "title": "Pruning",
+          "text": "Um predicado compatível pode eliminar partições irrelevantes do plano. EXPLAIN mostra quais partições são consideradas; custos e caminhos variam. Remover uma partição também remove seus dados: ensaie retenção em cópias e compare com a política de backup."
+        }
+      ],
+      "code": "DROP TABLE IF EXISTS l24_evento;\nCREATE TABLE l24_evento(\n id INT NOT NULL,ano INT NOT NULL,total INT NOT NULL,\n PRIMARY KEY(id,ano)\n) ENGINE=InnoDB PARTITION BY RANGE(ano)(\n PARTITION p_antigo VALUES LESS THAN(2026),\n PARTITION p_2026 VALUES LESS THAN(2027),\n PARTITION p_futuro VALUES LESS THAN MAXVALUE\n);\nINSERT INTO l24_evento VALUES(1,2025,10),(2,2026,20),(3,2027,30);\nEXPLAIN SELECT id,total FROM l24_evento WHERE ano=2026;\nSELECT id,total FROM l24_evento WHERE ano=2026 ORDER BY id;\nDROP TABLE l24_evento;\n",
+      "filename": "aula_24.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_24.sql\"",
+      "expected": "O SELECT retorna2 |20. Em EXPLAIN, a coluna partitions deve restringir a seleção a p_2026; custos e estimativas variam. A tabela é removida ao final.",
+      "quiz": {
+        "question": "Particionar uma tabela cria automaticamente um cluster com vários servidores?",
+        "options": [
+          "Não; o particionamento desta aula divide dados dentro da tabela.",
+          "Sim, cada partição vira uma máquina remota.",
+          "Sim, substitui backups.",
+          "Somente se existir MAXVALUE."
+        ],
+        "answer": 0,
+        "explanation": "Partição não é sinônimo de sharding distribuído."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Faixa futura",
+          "prompt": "Consulte ano 2027 e observe partições no plano.",
+          "hint": "O valor entra na faixa MAXVALUE.",
+          "solution": "O resultado é id 3,total 30 e o plano deve considerar p_futuro para o predicado direto.",
+          "criteria": [
+            "Confere o resultado.",
+            "Registra a partição considerada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Chave incompatível",
+          "prompt": "Em uma cópia do CREATE, tente PRIMARY KEY(id) sem ano.",
+          "hint": "A chave única deve incluir a coluna de particionamento.",
+          "solution": "A definição é rejeitada; restaure PRIMARY KEY(id,ano). Isso altera a regra de unicidade para o par, exigindo revisão de domínio.",
+          "criteria": [
+            "Registra rejeição.",
+            "Explica unicidade do par."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Retenção ensaiada",
+          "prompt": "Antes do DROP final, remova só p_antigo e confira as linhas restantes.",
+          "hint": "ALTER TABLE ... DROP PARTITION p_antigo.",
+          "solution": "Restam 2026 e 2027; o dado de 2025 foi excluído, portanto a política de retenção exige validação e recuperação planejada.",
+          "criteria": [
+            "Restam IDs 2 e 3.",
+            "Reconhece exclusão de dados."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/partitioning-limitations-partitioning-keys-unique-keys.html",
+      "caution": "Cria e remove l24_evento no laboratório; não copie operações DROP PARTITION para uma tabela real sem um procedimento de retenção.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 25,
+      "level": 9,
+      "title": "MVCC e níveis de isolamento",
+      "goal": "Distinguir leituras consistentes e fronteiras de snapshot.",
+      "theory": [
+        {
+          "title": "Versões de linhas",
+          "text": "MVCC permite leituras consistentes com versões anteriores enquanto outras transações escrevem. Não significa ausência total de locks. Leituras comuns, leituras com lock e atualizações têm comportamentos diferentes; escolha o contrato exigido pela regra de negócio."
+        },
+        {
+          "title": "Snapshots",
+          "text": "O padrão InnoDB é REPEATABLE READ, salvo configuração diferente. Nesse nível, leituras consistentes de uma transação usam o snapshot estabelecido pela primeira leitura; READ COMMITTED obtém snapshot novo por leitura consistente. Mudanças próprias continuam visíveis à transação."
+        },
+        {
+          "title": "Ensaio concorrente",
+          "text": "O exemplo confirma o isolamento da sessão e uma unidade de leitura, sem provar concorrência sozinho. O exercício de duas sessões é necessário para observar alterações entre leituras; uma tabela temporária não serviria porque a outra sessão não a enxerga."
+        }
+      ],
+      "code": "DROP TABLE IF EXISTS l25_saldo;\nCREATE TABLE l25_saldo(id INT PRIMARY KEY,saldo INT NOT NULL) ENGINE=InnoDB;\nINSERT INTO l25_saldo VALUES(1,100);\nSET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;\nSELECT @@SESSION.transaction_isolation AS isolamento;\nSTART TRANSACTION;\nSELECT saldo FROM l25_saldo WHERE id=1;\nSELECT saldo FROM l25_saldo WHERE id=1;\nCOMMIT;\nDROP TABLE l25_saldo;\n",
+      "filename": "aula_25.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_25.sql\"",
+      "expected": "isolamento=REPEATABLE-READ e as duas leituras retornam100. Para observar snapshots concorrentes, execute o roteiro de duas sessões dos exercícios antes de remover a tabela.",
+      "quiz": {
+        "question": "Qual é a configuração padrão de isolamento do InnoDB na linha MySQL 8.4?",
+        "options": [
+          "READ UNCOMMITTED obrigatório.",
+          "REPEATABLE READ, embora a instalação possa alterá-la.",
+          "SERIALIZABLE sem opção de mudança.",
+          "READ COMMITTED idêntico em toda instalação."
+        ],
+        "answer": 1,
+        "explanation": "Leia a variável da sessão em vez de supor a configuração."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Duas sessões em RR",
+          "prompt": "Mantenha l25_saldo compartilhada. A inicia RR e lê 100; B atualiza para 120 e confirma; A lê de novo e depois confirma.",
+          "hint": "Execute cada etapa na conexão indicada, sem rodar o DROP antes.",
+          "solution": "A lê 100 nas duas leituras consistentes da transação; depois de COMMIT, nova leitura vê 120. B precisa fazer COMMIT para disponibilizar a mudança.",
+          "criteria": [
+            "Registra a sequênciaA/B.",
+            "Mostra 100,100 e depois 120."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare RC",
+          "prompt": "Recrie saldo 100 e repita o ensaio com A em READ COMMITTED.",
+          "hint": "Configure antes do START TRANSACTION.",
+          "solution": "A lê 100 inicialmente e 120 na leitura seguinte após o COMMIT de B, porque cada leitura consistente recebe novo snapshot.",
+          "criteria": [
+            "IsolamentoRC registrado.",
+            "Segunda leitura 120."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Transação longa",
+          "prompt": "Explique um custo de manter uma leitura aberta por horas.",
+          "hint": "Versões antigas podem continuar necessárias.",
+          "solution": "Uma transação longa pode atrasar purge de versões e aumentar retenção de undo; limite a duração e investigue sessões abertas, não apenas CPU.",
+          "criteria": [
+            "Menciona retenção de versões.",
+            "Propõe transações curtas."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html",
+      "caution": "Para os testes de duas sessões, execute a preparação uma vez e adie o DROP. Ao terminar, faça COMMIT/ROLLBACK nas duas e remova somente l25_saldo.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 26,
+      "level": 9,
+      "title": "Locks, SELECT FOR UPDATE e invariantes",
+      "goal": "Reservar um recurso de forma atômica sem depender de leitura desprotegida.",
+      "theory": [
+        {
+          "title": "Corrida de leitura",
+          "text": "Duas sessões podem ler estoque 1 e ambas decidir vender antes de qualquer escrita. Uma leitura comum não é uma reserva. Uma atualização condicional atômica, ou um protocolo com SELECT FOR UPDATE dentro de transação, protege a regra adequadamente desenhada."
+        },
+        {
+          "title": "Escopo do lock",
+          "text": "InnoDB adquire locks sobre registros e, dependendo do isolamento e acesso, intervalos de índices. Não reduza tudo à frase lock de linha. Índices e predicados influenciam o conjunto bloqueado e o custo da concorrência."
+        },
+        {
+          "title": "Duração curta",
+          "text": "O lock de uma transação termina com COMMIT ou ROLLBACK. Não espere confirmação humana mantendo-o aberto. NOWAIT e SKIP LOCKED atendem cenários específicos; SKIP LOCKED pode produzir uma visão incompleta e não serve para qualquer relatório financeiro."
+        }
+      ],
+      "code": "DROP TABLE IF EXISTS l26_estoque;\nCREATE TABLE l26_estoque(id INT PRIMARY KEY,quantidade INT NOT NULL CHECK(quantidade>=0)) ENGINE=InnoDB;\nINSERT INTO l26_estoque VALUES(1,1);\nSTART TRANSACTION;\nUPDATE l26_estoque SET quantidade=quantidade-1 WHERE id=1 AND quantidade>=1;\nSELECT ROW_COUNT() AS reservado;\nUPDATE l26_estoque SET quantidade=quantidade-1 WHERE id=1 AND quantidade>=1;\nSELECT ROW_COUNT() AS segunda_reserva;\nCOMMIT;\nSELECT quantidade FROM l26_estoque WHERE id=1;\nDROP TABLE l26_estoque;\n",
+      "filename": "aula_26.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_26.sql\"",
+      "expected": "reservado=1,segunda_reserva=0 e quantidade final0. O exemplo demonstra a condição atômica; o exercício acrescenta concorrência real.",
+      "quiz": {
+        "question": "Por que WHERE quantidade>=1 participa da segurança da reserva?",
+        "options": [
+          "Ela elimina todo lock do InnoDB.",
+          "Ela cria automaticamente uma réplica.",
+          "A checagem e a subtração pertencem à mesma instrução de escrita.",
+          "Ela torna a tabela temporária."
+        ],
+        "answer": 2,
+        "explanation": "Evita basear a decisão apenas em uma leitura anterior desprotegida."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Última unidade",
+          "prompt": "Em duas sessões, execute a atualização condicional sobre uma unidade; A mantém a transação aberta e B tenta reservar.",
+          "hint": "Adie o DROP e confirmeA para liberar o lock.",
+          "solution": "B esperaA; após o COMMIT deA, a condição não encontra estoque e não altera linha. Registre contagem 0 deB e saldo 0.",
+          "criteria": [
+            "Registra a espera.",
+            "Apenas uma reserva confirmada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Leitura com lock",
+          "prompt": "Recrie estoque 1; A faz START e SELECT ... FOR UPDATE; B tenta UPDATE no mesmo ID.",
+          "hint": "O lock só faz sentido dentro da fronteira transacional.",
+          "solution": "B espera até A concluir; teste também NOWAIT em outra sessão e registre o erro imediato quando o lock conflitante existir.",
+          "criteria": [
+            "Mostra bloqueio real.",
+            "Finaliza ambas as transações."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Fila e SKIP LOCKED",
+          "prompt": "Explique por que pular linhas bloqueadas pode servir a workers, mas não a saldo bancário completo.",
+          "hint": "O resultado ignora itens ocupados.",
+          "solution": "Workers podem buscar outros itens pendentes; um relatório de saldo não pode omitir linhas e chamar o total de completo.",
+          "criteria": [
+            "Dá os dois cenários.",
+            "Explica visão incompleta."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html",
+      "caution": "Os testes concorrentes exigem duas conexões e tabela comum; o script completo em uma única conexão não mede bloqueio entre clientes.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 27,
+      "level": 9,
+      "title": "Deadlocks e retentativas idempotentes",
+      "goal": "Reconhecer ciclos de espera e repetir a unidade correta.",
+      "theory": [
+        {
+          "title": "Ciclo de espera",
+          "text": "Um deadlock surge quando transações mantêm recursos que as outras aguardam num ciclo. Não é a mesma coisa que uma espera longa. InnoDB pode escolher uma vítima e reverter sua transação; a aplicação deve estar preparada para tratar esse resultado."
+        },
+        {
+          "title": "Ordem consistente",
+          "text": "Acessar recursos em uma ordem comum, manter transações curtas e usar bons índices reduz conflitos. Isso não elimina toda possibilidade de deadlock. O exemplo usa a ordem ID1→ID2; o laboratório de duas sessões introduz a ordem inversa para observar o problema."
+        },
+        {
+          "title": "Retentativa",
+          "text": "Após erro de deadlock, repita a unidade completa com limite e espera adequada, preservando idempotência de efeitos externos. Um timeout de lock pode ter semântica de rollback diferente conforme configuração: descarte ou finalize a unidade conscientemente antes de tentar novamente."
+        }
+      ],
+      "code": "DROP TABLE IF EXISTS l27_conta;\nCREATE TABLE l27_conta(id INT PRIMARY KEY,saldo INT NOT NULL) ENGINE=InnoDB;\nINSERT INTO l27_conta VALUES(1,100),(2,100);\nSTART TRANSACTION;\nSELECT id FROM l27_conta WHERE id=1 FOR UPDATE;\nSELECT id FROM l27_conta WHERE id=2 FOR UPDATE;\nUPDATE l27_conta SET saldo=saldo-10 WHERE id=1;\nUPDATE l27_conta SET saldo=saldo+10 WHERE id=2;\nCOMMIT;\nSELECT id,saldo FROM l27_conta ORDER BY id;\nDROP TABLE l27_conta;\n",
+      "filename": "aula_27.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_27.sql\"",
+      "expected": "O caminho sem concorrência produz 1 |90 e 2 |110. Ele não produz deadlock sozinho; o exercício de duas sessões gera o ciclo de espera.",
+      "quiz": {
+        "question": "Após um deadlock que reverte a transação, qual unidade deve ser considerada para retentativa?",
+        "options": [
+          "Só a última palavra do SQL.",
+          "Apenas COMMIT sem refazer as escritas.",
+          "Um INSERT duplicado fora de qualquer controle.",
+          "Toda a transação de negócio, com limite e tratamento de efeitos externos."
+        ],
+        "answer": 3,
+        "explanation": "Repetir apenas o fragmento final pode quebrar a unidade de negócio."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Ciclo observado",
+          "prompt": "Adie o DROP: A bloqueia ID 1; B bloqueia ID 2; A tenta ID 2; B tenta ID 1.",
+          "hint": "Use duas conexões com START TRANSACTION antes dos locks.",
+          "solution": "Com detecção habilitada, uma sessão recebe erro 1213 de deadlock e sua transação é revertida; a outra pode continuar. Registre a vítima sem assumir qual será e finalize ambas.",
+          "criteria": [
+            "Demonstra o cicloA/B.",
+            "Registra erro e limpeza."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ordem comum",
+          "prompt": "Repita usando ordem ID 1→ID2 nas duas sessões.",
+          "hint": "Uma sessão pode esperar sem formar ciclo.",
+          "solution": "A segunda espera o primeiro lock; após a primeira concluir, continua. O ensaio não forma o mesmo ciclo porque nenhuma sessão segura ID 2 enquanto espera ID 1.",
+          "criteria": [
+            "Distingue espera de deadlock.",
+            "Preserva soma dos saldos."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Efeito externo",
+          "prompt": "Projete uma retentativa quando a transferência também envia notificação.",
+          "hint": "Notificação externa não sofre rollback do InnoDB.",
+          "solution": "Registre evento de saída na mesma transação e processe depois com chave idempotente; limite retentativas e não envie notificações duplicadas a cada tentativa.",
+          "criteria": [
+            "Descreve unidade transacional.",
+            "Inclui chave e limite de tentativas."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks-handling.html",
+      "caution": "Somente o roteiro de duas sessões demonstra deadlock. Depois do ensaio, execute ROLLBACK em sessões remanescentes e remova l27_conta.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 28,
+      "level": 10,
+      "title": "Contas, roles e menor privilégio",
+      "goal": "Separar permissões de aplicação e administração e verificar concessões.",
+      "theory": [
+        {
+          "title": "Conta e origem",
+          "text": "Uma conta MySQL inclui usuário e host de origem. localhost e 127.0.0.1 também podem levar a transportes e correspondências distintos. Não trate o usuário de desenvolvimento como credencial da aplicação; dê à aplicação apenas os privilégios necessários no seu schema."
+        },
+        {
+          "title": "Conjunto de privilégios",
+          "text": "Uma role agrupa privilégios e pode ser concedida a contas. No MySQL, role concedida e role ativa não são automaticamente a mesma coisa: SET ROLE e SET DEFAULT ROLE participam dessa configuração. A sintaxe e os detalhes diferem dos do MariaDB."
+        },
+        {
+          "title": "Teste positivo e negativo",
+          "text": "SHOW GRANTS revela concessões, mas um teste com a conta limitada comprova o comportamento usado pela aplicação. Este exemplo administra uma role temporária sem criar conta com senha literal. Use a conta administrativa local escolhida na instalação, nunca uma credencial de produção."
+        }
+      ],
+      "code": "DROP TABLE IF EXISTS l28_dado;\nCREATE TABLE l28_dado(id INT PRIMARY KEY,valor INT NOT NULL);\nINSERT INTO l28_dado VALUES(1,42);\nCREATE ROLE 'forge_mysql_l28_leitura';\nGRANT SELECT ON forge_mysql.* TO 'forge_mysql_l28_leitura';\nSHOW GRANTS FOR 'forge_mysql_l28_leitura';\nREVOKE SELECT ON forge_mysql.* FROM 'forge_mysql_l28_leitura';\nDROP ROLE 'forge_mysql_l28_leitura';\n",
+      "filename": "aula_28.sql",
+      "language": "sql",
+      "run": "Conecte com sua conta administrativa local (substitua ADMIN_LOCAL): mysql -h 127.0.0.1 -u ADMIN_LOCAL -p forge_mysql. No cliente: source aula_28.sql;",
+      "expected": "Cria l28_dado com a linha (1,42), concede e mostra SELECT na role, depois revoga SELECT e remove a role. A tabela fica disponível até a limpeza do exercício. Para testar a conta de leitura, pause antes de REVOKE/DROP ROLE conforme as instruções.",
+      "quiz": {
+        "question": "Conceder uma role garante que ela esteja ativa em toda nova sessão por padrão?",
+        "options": [
+          "Não; configure e verifique a ativação e as roles padrão.",
+          "Sim, a concessão sempre ativa tudo.",
+          "Sim, a senha da conta vira o nome da role.",
+          "Somente se o banco possuir JSON."
+        ],
+        "answer": 0,
+        "explanation": "O MySQL diferencia atribuição e ativação de roles."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Conta limitada",
+          "prompt": "Adie REVOKE e DROP ROLE até concluir os testes. Com a role ainda contendo SELECT e l28_dado preparada, crie uma conta com senha aleatória gerada pelo servidor, conceda a role e defina-a como padrão.",
+          "hint": "CREATE USER ... IDENTIFIED BY RANDOM PASSWORD evita senha fixa nos materiais.",
+          "solution": "Como administrador: CREATE USER 'forge_mysql_l28_leitor'@'localhost' IDENTIFIED BY RANDOM PASSWORD; GRANT 'forge_mysql_l28_leitura' TO 'forge_mysql_l28_leitor'@'localhost'; SET DEFAULT ROLE 'forge_mysql_l28_leitura' TO 'forge_mysql_l28_leitor'@'localhost'; guarde a senha gerada só localmente. Adie REVOKE e DROP ROLE até terminar os testes. Se já executou o arquivo completo, recrie a role e conceda SELECT antes de associá-la à conta.",
+          "criteria": [
+            "Conta criada sem senha fixa.",
+            "Role padrão explicitada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Permissão exercida",
+          "prompt": "Conecte como a conta limitada e tente SELECT e CREATE TABLE.",
+          "hint": "A role só recebe SELECT.",
+          "solution": "Conecte à mesma instância e a forge_mysql como forge_mysql_l28_leitor; SELECT id,valor FROM l28_dado; retorna (1,42). CREATE TABLE l28_negado(id INT); deve falhar por falta de privilégio. Confira CURRENT_ROLE() e SHOW GRANTS; não revogue SELECT antes desta verificação.",
+          "criteria": [
+            "Leitura válida demonstrada.",
+            "Escrita/DDL rejeitada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Remoção do laboratório",
+          "prompt": "Remova a conta de teste e a role sem afetar o usuário normal de estudos.",
+          "hint": "Faça a limpeza com a conta administrativa.",
+          "solution": "Como administrador do laboratório, após encerrar as sessões da conta de teste: DROP USER 'forge_mysql_l28_leitor'@'localhost'; REVOKE SELECT ON forge_mysql.* FROM 'forge_mysql_l28_leitura'; DROP ROLE 'forge_mysql_l28_leitura'; DROP TABLE l28_dado;. Não remova forge_aluno. Se a limpeza da role já foi executada no exemplo, não repita DROP sem conferir o estado.",
+          "criteria": [
+            "Só nomes l28 removidos.",
+            "Não mantém credenciais geradas no README."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/roles.html",
+      "caution": "Exige administração local de roles. Se a role de nome l28 já existir, interrompa o teste e use um nome novo; não altere uma role desconhecida. Para os exercícios 1 e 2, execute inicialmente só até SHOW GRANTS e adie REVOKE e DROP ROLE; caso execute o arquivo inteiro, refaça apenas CREATE ROLE e GRANT antes dos exercícios. A tabela l28_dado permanece até a limpeza do exercício 3.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 29,
+      "level": 10,
+      "title": "Parâmetros e prevenção de SQL injection",
+      "goal": "Separar valores de entrada da estrutura de uma consulta.",
+      "theory": [
+        {
+          "title": "Dados não são sintaxe",
+          "text": "SQL injection surge quando uma entrada passa a controlar a estrutura do comando. Um placeholder de valor mantém o texto recebido como dado, inclusive aspas e palavras SQL. Validação de domínio continua necessária, mas não substitui parametrização."
+        },
+        {
+          "title": "Identificadores",
+          "text": "Placeholders não substituem nomes de tabela, colunas ou direção de ordenação. Para escolhas estruturais, mapeie opções permitidas a trechos fixos de SQL. Escapar manualmente toda string é frágil e pode variar com charset, modo e biblioteca."
+        },
+        {
+          "title": "Cliente e driver",
+          "text": "O PREPARE SQL abaixo mostra a separação de valores no próprio MySQL. Aplicações devem usar a API de parâmetros do driver escolhido, conhecendo seu contrato. Um pool também precisa preservar conexões durante transações e fechar recursos preparados quando não forem mais necessários."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l29_usuario;\nCREATE TEMPORARY TABLE l29_usuario(id INT PRIMARY KEY,nome VARCHAR(80) NOT NULL);\nINSERT INTO l29_usuario VALUES(1,'Ana'),(2,'Beto');\nPREPARE busca_l29 FROM 'SELECT id,nome FROM l29_usuario WHERE nome=? ORDER BY id';\nSET @nome='Ana';\nEXECUTE busca_l29 USING @nome;\nSET @nome=CONCAT(CHAR(39),' OR 1=1 -- ');\nEXECUTE busca_l29 USING @nome;\nDEALLOCATE PREPARE busca_l29;\n",
+      "filename": "aula_29.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_29.sql\"",
+      "expected": "O primeiro EXECUTE retorna 1 |Ana. O segundo retorna zero linhas; a entrada com aparência de SQL é comparada como texto, sem alterar a estrutura.",
+      "quiz": {
+        "question": "Um placeholder de valor pode substituir automaticamente o nome da coluna em ORDER BY?",
+        "options": [
+          "Sim, qualquer ? substitui qualquer token.",
+          "Não; nomes e estrutura exigem uma escolha controlada, como um mapeamento permitido.",
+          "Sim, ORDER BY é sempre imune a erros.",
+          "Somente se o usuário enviar uma senha."
+        ],
+        "answer": 1,
+        "explanation": "Parâmetros representam valores, não identificadores arbitrários."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Apóstrofo como dado",
+          "prompt": "Insira O'Brien usando parâmetro e busque o mesmo valor.",
+          "hint": "PREPARE um INSERT com ? e use variável de sessão.",
+          "solution": "SET @nome=CONCAT('O',CHAR(39),'Brien'); prepare INSERT INTO l29_usuario VALUES(3,?); execute com @nome e use a busca parametrizada.",
+          "criteria": [
+            "Armazena o apóstrofo integral.",
+            "Busca retorna somente o registro correspondente."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ordenação permitida",
+          "prompt": "Mapeie as opções nome e id da interface para duas consultas fixas.",
+          "hint": "Não concatene um campo livre enviado pelo usuário.",
+          "solution": "Use um dicionário de opções permitidas: nome→ORDER BY nome,id; id→ORDER BY id. Rejeite qualquer outra opção. Valores de filtros continuam parametrizados.",
+          "criteria": [
+            "Apenas duas opções aceitas.",
+            "Entrada desconhecida é rejeitada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Parametrização no projeto",
+          "prompt": "Escolha o driver de uma linguagem já estudada e escreva sua chamada parametrizada para buscar id.",
+          "hint": "Consulte a documentação oficial do driver para o marcador correto.",
+          "solution": "Em Connector/Python, cursor.execute('SELECT id,nome FROM usuario WHERE id=%s',(id_recebido,)) envia o valor pela API; não aplique interpolação % do Python à string.",
+          "criteria": [
+            "Usa API do driver.",
+            "Distingue marcador de interpolação textual."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/sql-prepared-statements.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 30,
+      "level": 10,
+      "title": "TLS, segredos e fronteiras de rede",
+      "goal": "Verificar o transporte e definir um contrato de conexão seguro.",
+      "theory": [
+        {
+          "title": "Criptografia e identidade",
+          "text": "TLS protege o transporte, mas exigir criptografia não é igual a validar a identidade do servidor. No cliente mysql, VERIFY_CA valida a cadeia e VERIFY_IDENTITY também verifica o nome do host. O certificado precisa corresponder ao nome utilizado na conexão."
+        },
+        {
+          "title": "Segredo fora do código",
+          "text": "Use prompt de senha no estudo; não escreva -pSENHA nem inclua credenciais em commits. Em aplicações, use um mecanismo de segredos apropriado ao ambiente. Logs e dumps também podem conter dados sensíveis; acesso e retenção fazem parte da operação."
+        },
+        {
+          "title": "Verificação local",
+          "text": "A variável Ssl_cipher da sessão mostra se a conexão atual usa uma cifra TLS. Um valor vazio em uma sessão local não comprova TLS. Este exemplo observa a sessão sem alterar a configuração; o exercício exige uma instância de laboratório com certificados configurados."
+        }
+      ],
+      "code": "SHOW SESSION STATUS LIKE 'Ssl_cipher';\nSHOW SESSION STATUS LIKE 'Ssl_version';\nSELECT @@GLOBAL.require_secure_transport AS transporte_exigido,\n CURRENT_USER() AS conta_autorizada;\n",
+      "filename": "aula_30.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_30.sql\"",
+      "expected": "As duas primeiras consultas mostram cifra e versão TLS usadas, ou valores vazios quando a sessão não usa TLS. transporte_exigido e conta_autorizada refletem a configuração real; nenhum valor é inventado como sucesso.",
+      "quiz": {
+        "question": "Qual opção do cliente também verifica o nome do servidor no certificado?",
+        "options": [
+          "--ssl-mode=DISABLED.",
+          "--password escrito em um arquivo público.",
+          "--ssl-mode=VERIFY_IDENTITY, com CA e nome de host adequados.",
+          "--default-character-set=utf8mb4."
+        ],
+        "answer": 2,
+        "explanation": "Verificar o nome evita confundir apenas criptografia com identidade validada."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Sessão observada",
+          "prompt": "Registre Ssl_cipher e Ssl_version e diga se há evidência de TLS na sessão.",
+          "hint": "Vazio não representa uma cifra ativa.",
+          "solution": "Valores não vazios de cifra e versão indicam o TLS negociado; se vazios, registre que essa sessão não provou TLS e revise o transporte usado.",
+          "criteria": [
+            "Inclui os valores observados.",
+            "Não marca sucesso se estão vazios."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Identidade testada",
+          "prompt": "Em laboratório com CA configurada, conecte com VERIFY_IDENTITY e depois teste um nome incompatível com o certificado.",
+          "hint": "Use --ssl-ca=caminho/ca.pem e um host coberto pelo certificado.",
+          "solution": "A conexão com host correto deve validar; a incompatível deve falhar. Exemplo de comando: mysql -h HOST_CERTIFICADO -u forge_aluno -p --ssl-mode=VERIFY_IDENTITY --ssl-ca=ca.pem forge_mysql.",
+          "criteria": [
+            "Teste positivo e negativo documentados.",
+            "Não desativa validação para esconder a falha."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Revisão de segredo",
+          "prompt": "Revise o README do seu projeto procurando senhas literais em comandos e URLs.",
+          "hint": "Use placeholders e prompts.",
+          "solution": "Troque senhas escritas por -p sem valor e variáveis documentadas. Se uma credencial real já foi publicada, revogue-a; remover o texto do último commit não desfaz exposição anterior.",
+          "criteria": [
+            "Nenhuma senha real no material.",
+            "Documenta configuração sem revelar segredo."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/using-encrypted-connections.html",
+      "caution": "A verificação de certificado exige configuração local de CA/servidor; o SQL desta aula apenas diagnostica a sessão existente.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 31,
+      "level": 11,
+      "title": "Backup lógico e restauração verificada",
+      "goal": "Gerar um dump e recuperar dados em outro banco de laboratório.",
+      "theory": [
+        {
+          "title": "Backup útil é restaurável",
+          "text": "mysqldump produz uma representação lógica do schema e dos dados selecionados. O arquivo existir não basta: restaure em destino isolado e confira definições, contagens e invariantes. Uma réplica também pode receber uma exclusão acidental; não substitui uma política de backup."
+        },
+        {
+          "title": "Consistência e abrangência",
+          "text": "--single-transaction é adequado para uma visão consistente de tabelas transacionais como InnoDB, com os cuidados de DDL concorrente. O exemplo evita tabelas de outros mecanismos. Rotinas e eventos exigem opções e permissões próprias; um dump de uma tabela não promete recuperar toda a instância."
+        },
+        {
+          "title": "Shell separado de SQL",
+          "text": "O código desta aula é um script Bash, não SQL. Ele usa dois bancos dedicados preparados no início e pede a senha a cada ferramenta. Os caminhos são arquivos locais. Use Bash no Linux/macOS ou WSL/Git Bash com clientes compatíveis; a plataforma não executa o script."
+        }
+      ],
+      "code": "#!/usr/bin/env bash\nset -euo pipefail\nmysql -h 127.0.0.1 -u forge_aluno -p forge_mysql --execute=\"DROP TABLE IF EXISTS l31_backup; CREATE TABLE l31_backup(id INT PRIMARY KEY,valor INT NOT NULL) ENGINE=InnoDB; INSERT INTO l31_backup VALUES(1,42);\"\nmysqldump -h 127.0.0.1 -u forge_aluno -p --single-transaction --no-tablespaces --set-gtid-purged=OFF forge_mysql l31_backup > l31_backup.sql\nmysql -h 127.0.0.1 -u forge_aluno -p forge_mysql_restore < l31_backup.sql\nmysql -h 127.0.0.1 -u forge_aluno -p --batch --skip-column-names forge_mysql_restore --execute=\"SELECT id,valor FROM l31_backup ORDER BY id;\"\n",
+      "filename": "aula_31.sh",
+      "language": "bash",
+      "run": "No Bash, na pasta desta aula com mysql e mysqldump no PATH: bash aula_31.sh. Os bancos forge_mysql e forge_mysql_restore já devem estar preparados.",
+      "expected": "Após prompts de senha, a última consulta imprime1 e42 separados por tabulação. l31_backup.sql é o dump local; fonte e destino mantêm l31_backup para inspeção. O script retorna erro se uma etapa falhar.",
+      "quiz": {
+        "question": "Como comprovar que o dump serve para o objetivo do laboratório?",
+        "options": [
+          "Ver somente se o nome termina com .sql.",
+          "Copiar a saída de SELECT para uma imagem.",
+          "Confiar que toda réplica é backup histórico.",
+          "Restaurá-lo em um destino isolado e verificar dados e definição."
+        ],
+        "answer": 3,
+        "explanation": "A restauração testa ferramentas, permissões e conteúdo de fato."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compare fonte e destino",
+          "prompt": "Consulte COUNT(*),SUM(valor) e SHOW CREATE TABLE nas duas cópias.",
+          "hint": "Execute consultas em bancos separados.",
+          "solution": "Ambas devem ter contagem 1,soma 42 e a mesma definição de l31_backup; registre o charset/engine e o comando de restauração.",
+          "criteria": [
+            "Compara conteúdo e definição.",
+            "Identifica claramente os dois destinos."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Erro detectado",
+          "prompt": "Em uma pasta de teste, tente restaurar um nome de arquivo inexistente e registre a falha.",
+          "hint": "Não sobrescreva o dump válido.",
+          "solution": "O shell falha ao abrir o arquivo; set -e interrompe o script antes de declarar sucesso. Verifique código de saída e mensagem.",
+          "criteria": [
+            "Não marca restauração bem-sucedida.",
+            "Mantém o dump válido preservado."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Escopo ampliado",
+          "prompt": "Planeje um dump do schema com procedures e eventos e descreva os cuidados.",
+          "hint": "Consulte opções --routines e --events e as permissões necessárias.",
+          "solution": "Use essas opções quando tais objetos fizerem parte do requisito; planeje definidores, contas, permissões, configurações e DDL concorrente. Teste a recuperação completa em instância isolada, pois contas não estão incluídas por um dump comum de schema.",
+          "criteria": [
+            "Inclui objetos além de tabelas.",
+            "Explica o que o dump de schema não cobre."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/mysqldump.html",
+      "caution": "O script sobrescreve l31_backup.sql e as tabelas l31_backup apenas nos bancos dedicados de estudo. Não use nomes de bancos reais. O alvo forge_mysql_restore deve existir e estar autorizado.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 32,
+      "level": 11,
+      "title": "Binary log e recuperação até um ponto",
+      "goal": "Distinguir inspeção de logs de um ensaio completo de recuperação.",
+      "theory": [
+        {
+          "title": "Histórico de mudanças",
+          "text": "O binary log registra eventos relevantes para replicação e recuperação. Ele não é o mesmo que o redo log interno do InnoDB. Uma estratégia de recuperação até um ponto combina backup-base consistente e uma cadeia preservada dos logs posteriores."
+        },
+        {
+          "title": "Ponto de parada",
+          "text": "Para recuperar antes de uma operação acidental, determine o limite correto dos eventos e transações. Horário ajuda a investigar, mas posições e fronteiras de transação dão precisão ao replay. Não pule arbitrariamente eventos necessários à consistência."
+        },
+        {
+          "title": "Ensaio isolado",
+          "text": "As consultas do exemplo apenas inspecionam estado e não recuperam dados. O laboratório adicional requer arquivo de backup, logs copiados e uma instância de destino independente. Nunca envie replay para a fonte de produção; registre ponto inicial, final e invariantes restaurados."
+        }
+      ],
+      "code": "SELECT @@GLOBAL.log_bin AS binlog_ativo,\n @@GLOBAL.binlog_format AS formato,\n @@GLOBAL.binlog_expire_logs_seconds AS retencao_segundos;\nSHOW BINARY LOGS;\nSHOW BINARY LOG STATUS;\n",
+      "filename": "aula_32.sql",
+      "language": "sql",
+      "run": "Com sua conta administrativa local autorizada: mysql -h 127.0.0.1 -u ADMIN_LOCAL -p forge_mysql --execute=\"source aula_32.sql\". Substitua ADMIN_LOCAL pelo usuário da instalação.",
+      "expected": "O resultado informa se binlog está ativo, formato, retenção e arquivos/posição atuais. Valores dependem da instalação. Se o log estiver desabilitado ou faltarem privilégios, a etapa deve ser corrigida no laboratório; isso não constitui uma recuperação executada.",
+      "quiz": {
+        "question": "O que uma recuperação até um ponto normalmente precisa além do backup-base?",
+        "options": [
+          "Os binary logs necessários após o ponto consistente do backup, preservados e aplicados até o limite escolhido.",
+          "Somente um SELECT VERSION().",
+          "A senha em texto no repositório.",
+          "Qualquer log do navegador."
+        ],
+        "answer": 0,
+        "explanation": "O histórico posterior permite reconstruir mudanças entre o backup e o ponto desejado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Retenção e objetivo",
+          "prompt": "Compare a retenção configurada com um requisito de recuperar mudanças de três dias.",
+          "hint": "Considere também a cópia externa dos logs.",
+          "solution": "Converta três dias em 259200 segundos, mas não confie só no parâmetro: confirme cobertura real, backups compatíveis e cópias dos logs.",
+          "criteria": [
+            "Calcula 259200.",
+            "Verifica cobertura real, não só configuração."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Inspecione antes de aplicar",
+          "prompt": "Em uma cópia local de um binlog autorizado, produza uma leitura para investigação.",
+          "hint": "mysqlbinlog --base64-output=DECODE-ROWS --verbose ajuda a ler eventos de linhas.",
+          "solution": "Rode mysqlbinlog --base64-output=DECODE-ROWS --verbose caminho/binlog.000001 > eventos.txt. Essa saída de inspeção não deve ser usada como replay substituindo os eventos binários apropriados.",
+          "criteria": [
+            "Usa arquivo local de laboratório.",
+            "Distingue inspeção e replay."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Recuperação ensaiada",
+          "prompt": "Planeje e execute em uma instância descartável: backup-base, mudança válida e depois exclusão acidental.",
+          "hint": "Registre posições e identifique o início da transação indesejada.",
+          "solution": "Restaure o backup-base no destino isolado; use mysqlbinlog com --start-position e --stop-position obtidos de seu próprio ensaio, preservando transações, e aplique com mysql no destino. Verifique que a mudança válida existe e a exclusão não foi aplicada. Não reutilize posições de outra execução.",
+          "criteria": [
+            "Registra arquivos e posições reais.",
+            "Demonstra as duas invariantes no destino."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-binlog.html",
+      "caution": "Requer REPLICATION CLIENT para as consultas administrativas. Esta aula mostra inspeção; só marque o exercício de recuperação após executar e validar um destino independente.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 33,
+      "level": 11,
+      "title": "Replicação, GTID e limites de disponibilidade",
+      "goal": "Descrever uma topologia e verificar sua saúde sem confundir replicação e backup.",
+      "theory": [
+        {
+          "title": "Fonte e réplica",
+          "text": "Replicação copia mudanças de uma fonte para réplicas conforme a configuração. A replicação assíncrona pode atrasar; ler uma réplica logo após uma escrita não garante observar imediatamente essa escrita. Defina quais operações exigem leitura consistente com a confirmação."
+        },
+        {
+          "title": "Identidade de transação",
+          "text": "GTIDs identificam transações no mecanismo de replicação do MySQL. Eles ajudam a acompanhar execução e posicionamento, mas não tornam um failover seguro por si só. O GTID do MariaDB é diferente e não deve ser tratado como intercambiável."
+        },
+        {
+          "title": "Operação observável",
+          "text": "Um SELECT em uma única instância não demonstra alta disponibilidade. O exemplo é diagnóstico: pode retornar vazio sem uma réplica configurada. Um ensaio real exige duas instâncias identificadas, snapshot inicial coerente, canais protegidos e observação de erros e atraso antes de promover qualquer destino."
+        }
+      ],
+      "code": "SELECT @@GLOBAL.server_id AS servidor,\n @@GLOBAL.server_uuid AS uuid,\n @@GLOBAL.gtid_mode AS modo_gtid,\n @@GLOBAL.gtid_executed AS executados;\nSHOW REPLICA STATUS;\n",
+      "filename": "aula_33.sql",
+      "language": "sql",
+      "run": "Com conta local que possua REPLICATION CLIENT: mysql -h 127.0.0.1 -u ADMIN_LOCAL -p forge_mysql --execute=\"source aula_33.sql\". Substitua ADMIN_LOCAL pelo usuário autorizado.",
+      "expected": "Os valores identificam a instância e seu modo GTID. SHOW REPLICA STATUS retorna zero linhas se nenhum canal de réplica existe; numa réplica configurada, mostra estado dos threads/canais e eventuais erros. Zero linhas não significa alta disponibilidade.",
+      "quiz": {
+        "question": "Uma réplica assíncrona garante que toda leitura veja a escrita recém-confirmada na fonte?",
+        "options": [
+          "Sim, assíncrono significa instantâneo.",
+          "Não; pode haver atraso entre confirmação na fonte e aplicação na réplica.",
+          "Sim, GTID elimina qualquer atraso de rede.",
+          "Somente se o banco tiver menos de dez tabelas."
+        ],
+        "answer": 1,
+        "explanation": "A aplicação deve definir requisitos de leitura após escrita."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Topologia identificada",
+          "prompt": "Desenhe fonte e réplica com UUIDs, portas, direção e canal.",
+          "hint": "Cada instância precisa de identidade distinta.",
+          "solution": "Registre as duas identidades e o fluxo fonte→réplica; evite escrever nas duas sem um desenho específico de conflitos.",
+          "criteria": [
+            "Identidades distintas.",
+            "Direção e acesso documentados."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Canal sob observação",
+          "prompt": "Em duas instâncias descartáveis configuradas pelo roteiro oficial de GTID, insira um marcador na fonte e consulte a réplica até aplicá-lo.",
+          "hint": "Registre estado do canal e erros; não invente latência zero.",
+          "solution": "Observe que o marcador aparece depois de aplicado; salve estado de receiver/applier e Last_IO_Error/Last_SQL_Error conforme a saída. Sem segunda instância, registre o laboratório como pendente.",
+          "criteria": [
+            "Marcador conferido nas duas.",
+            "Evidência de canal e erro/ausência de erro."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Exclusão replicada",
+          "prompt": "Explique por que uma réplica pode reproduzir DELETE acidental.",
+          "hint": "Ela segue mudanças, não uma linha do tempo imutável.",
+          "solution": "O DELETE válido no protocolo pode ser aplicado na réplica; recuperação histórica exige backup e logs com política própria.",
+          "criteria": [
+            "Distingue cópia corrente e histórico.",
+            "Não chama replicação de backup suficiente."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/replication.html",
+      "caution": "Diagnóstico local apenas. A configuração real de replicação requer duas instâncias e o roteiro oficial compatível com a versão; GTID de MySQL e MariaDB não são equivalentes.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 34,
+      "level": 12,
+      "title": "Performance Schema e investigação de carga",
+      "goal": "Priorizar consultas a partir de frequência, custo total e evidências.",
+      "theory": [
+        {
+          "title": "Medição agregada",
+          "text": "Performance Schema pode coletar eventos de execução e resumir instruções por digest. Um digest agrupa estruturas semelhantes sem preservar cada valor literal. A instrumentação e os consumers ativos determinam o que existe para observar; resultado vazio não prova ausência de carga."
+        },
+        {
+          "title": "Unidades e janela",
+          "text": "Tempos agregados do Performance Schema são apresentados em picossegundos nessas tabelas. Converter para segundos ajuda a leitura. COUNT_STAR, soma e média têm sentidos diferentes: uma consulta barata muito frequente pode consumir mais tempo total que uma consulta rara mais lenta."
+        },
+        {
+          "title": "Diagnóstico com contexto",
+          "text": "Registre janela de observação, resets, concorrência e distribuição. Não conclua causa só pela maior média; combine plano, locks, I/O e métricas do serviço. O exemplo lê dados administrativos e não zera contadores nem muda instrumentação global."
+        }
+      ],
+      "code": "SELECT SCHEMA_NAME,DIGEST_TEXT,COUNT_STAR,\n ROUND(SUM_TIMER_WAIT/1000000000000,6) AS total_segundos,\n ROUND(AVG_TIMER_WAIT/1000000000000,6) AS media_segundos\nFROM performance_schema.events_statements_summary_by_digest\nWHERE SCHEMA_NAME='forge_mysql' AND DIGEST IS NOT NULL\nORDER BY SUM_TIMER_WAIT DESC LIMIT 5;\n",
+      "filename": "aula_34.sql",
+      "language": "sql",
+      "run": "Conecte com sua conta local autorizada a ler Performance Schema e execute source aula_34.sql; no cliente mysql, mantendo forge_mysql como banco padrão.",
+      "expected": "Até cinco digests do laboratório ordenados por tempo total acumulado, se a instrumentação e os privilégios permitirem. Contagens e tempos são reais e variáveis; uma tabela vazia deve ser investigada, não preenchida com números inventados.",
+      "quiz": {
+        "question": "Para priorizar impacto agregado, por que observar soma e frequência além da média?",
+        "options": [
+          "Porque a média sempre significa soma.",
+          "Porque COUNT_STAR mede bytes de disco.",
+          "Uma consulta muito frequente pode dominar o tempo total mesmo com média baixa.",
+          "Porque qualquer consulta rara é a maior causa."
+        ],
+        "answer": 2,
+        "explanation": "Impacto agregado depende também do número de execuções."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Três medidas",
+          "prompt": "Escolha um digest e registre contagem, soma e média com a janela do teste.",
+          "hint": "Não compare execuções de janelas desconhecidas.",
+          "solution": "Anote valores observados e o momento da coleta; explique que soma/contagem se relaciona à média, respeitando unidades e arredondamento.",
+          "criteria": [
+            "Identifica a janela.",
+            "Distingue as três medidas."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Carga repetida",
+          "prompt": "Execute uma consulta simples do laboratório dez vezes e observe como o digest pode mudar.",
+          "hint": "Instrumentação deve estar ativa.",
+          "solution": "Compare snapshots antes/depois; a contagem do digest correspondente deve refletir as execuções observadas, considerando outras sessões. Não trunque tabelas globais para facilitar o experimento.",
+          "criteria": [
+            "Registra antes/depois.",
+            "Não mistura carga de outros schemas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Plano da prioridade",
+          "prompt": "Selecione uma consulta de alto custo total e prepare EXPLAIN sobre dados fictícios equivalentes.",
+          "hint": "Não publique valores sensíveis de uma consulta real.",
+          "solution": "Associe o digest à consulta conhecida, confira semântica e plano e só então proponha índice ou reescrita com medição posterior.",
+          "criteria": [
+            "Liga evidência e hipótese.",
+            "Confirma resultados após a mudança."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/performance-schema-statement-summary-tables.html",
+      "caution": "Exige acesso de leitura apropriado ao Performance Schema; use conta de observação limitada ou administrador local. Não publique digests de ambientes reais.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 35,
+      "level": 12,
+      "title": "Migrações, DDL atômico e compatibilidade",
+      "goal": "Planejar evolução de schema em etapas verificáveis.",
+      "theory": [
+        {
+          "title": "Atomicidade não é rollback comum",
+          "text": "DDL atômico do MySQL oferece coerência da operação suportada diante de falhas, mas não transforma ALTER TABLE em uma mudança que o usuário possa desfazer com ROLLBACK. DDL pode causar commit implícito; planeje uma nova migração ou recuperação de acordo com o caso."
+        },
+        {
+          "title": "Expandir e contrair",
+          "text": "Uma evolução compatível pode adicionar coluna opcional, publicar código que entende os dois formatos, preencher dados em lotes, validar e só depois impor novas restrições ou remover o formato antigo. O intervalo entre etapas exige compatibilidade com versões de aplicação ainda ativas."
+        },
+        {
+          "title": "Trabalho operacional",
+          "text": "ALGORITHM e LOCK dependem da operação, engine e versão. INSTANT reduz trabalho para operações suportadas, mas não garante que toda mudança seja instantânea nem elimina metadata locks. Solicitar um algoritmo incompatível deve falhar claramente em vez de aceitar uma cópia longa inesperada."
+        }
+      ],
+      "code": "DROP TABLE IF EXISTS l35_cliente;\nCREATE TABLE l35_cliente(id INT PRIMARY KEY,nome VARCHAR(40) NOT NULL) ENGINE=InnoDB;\nINSERT INTO l35_cliente VALUES(1,'Ana'),(2,'Beto');\nALTER TABLE l35_cliente ADD COLUMN apelido VARCHAR(40) NULL,ALGORITHM=INSTANT;\nUPDATE l35_cliente SET apelido=nome WHERE apelido IS NULL;\nSELECT COUNT(*) AS faltantes FROM l35_cliente WHERE apelido IS NULL;\nSELECT id,nome,apelido FROM l35_cliente ORDER BY id;\nDROP TABLE l35_cliente;\n",
+      "filename": "aula_35.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_35.sql\"",
+      "expected": "faltantes=0; linhas1 |Ana|Ana e 2 |Beto|Beto. A adição solicitada usa INSTANT numa tabela InnoDB nova compatível; outras alterações exigem avaliação própria.",
+      "quiz": {
+        "question": "DDL atômico significa poder desfazer qualquer ALTER com ROLLBACK?",
+        "options": [
+          "Sim, todo DROP pode ser desfeito sem backup.",
+          "Sim, DDL nunca causa commit implícito.",
+          "Somente se a tabela tiver menos de cem linhas.",
+          "Não; atomicidade de DDL e rollback de transação de usuário são contratos diferentes."
+        ],
+        "answer": 3,
+        "explanation": "Recuperação e migração reversa precisam de planejamento próprio."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compatibilidade intermediária",
+          "prompt": "Descreva como o código antigo e novo convivem enquanto apelido pode ser NULL.",
+          "hint": "A leitura pode usar COALESCE(apelido,nome).",
+          "solution": "Mantenha nome enquanto versões antigas dependem dele; o código novo usa fallback e só exige apelido após o backfill validado.",
+          "criteria": [
+            "Explica duas versões coexistindo.",
+            "Não remove nome antes da hora."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Backfill em lotes",
+          "prompt": "Proponha um preenchimento por faixa de ID para milhões de linhas.",
+          "hint": "Evite uma transação gigante sem controle.",
+          "solution": "Percorra faixas de chave com UPDATE ... WHERE id>=inicio AND id<fim AND apelido IS NULL; confirme lotes, registre progresso e repita de forma idempotente.",
+          "criteria": [
+            "Critério por chave definido.",
+            "Reexecução não sobrescreve valor existente."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Metadata lock",
+          "prompt": "Em cópia de laboratório, mantenha uma transação de leitura aberta e observe uma tentativa de ALTER em outra sessão.",
+          "hint": "Finalize sessões ao terminar; não faça o teste em produção.",
+          "solution": "A mudança pode aguardar metadata lock mesmo quando a operação é elegível a algoritmo rápido. Registre a espera e libere com COMMIT/ROLLBACK da sessão anterior.",
+          "criteria": [
+            "Distingue trabalho do ALTER e espera.",
+            "Encerra as duas sessões."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html",
+      "caution": "Cria e remove l35_cliente no laboratório. Nunca valide reversibilidade de DDL apagando dados reais.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 36,
+      "level": 12,
+      "title": "Projeto integrado: pedidos idempotentes e operação",
+      "goal": "Integrar invariantes, recuperação e evidência de desempenho em um banco de pedidos.",
+      "theory": [
+        {
+          "title": "Invariante de negócio",
+          "text": "Um mesmo pedido recebido duas vezes precisa de uma regra de idempotência. Uma chave de requisição única no banco pode impedir duplicidade, mas o retorno precisa distinguir repetição válida de conteúdo conflitante. A transação deve incluir pedido e reserva de estoque quando essa for a regra do domínio."
+        },
+        {
+          "title": "Evidência de conclusão",
+          "text": "O projeto final exige schema versionado, dados fictícios, testes positivos e negativos, ensaio de concorrência, plano de consulta e restauração. Quizzes verificam conceitos; marcar uma caixa na plataforma não executa esses laboratórios nem prova que um serviço real está disponível."
+        },
+        {
+          "title": "Decisão documentada",
+          "text": "Registre versão do MySQL, charset, isolamento, permissões e objetivos de recuperação. Compare MySQL e MariaDB pelos recursos usados, especialmente JSON, extensões RETURNING, roles e replicação/GTID. Documente dependências em vez de prometer que todo SQL roda em qualquer produto."
+        }
+      ],
+      "code": "DROP TEMPORARY TABLE IF EXISTS l36_pedido;\nCREATE TEMPORARY TABLE l36_pedido(\n id INT AUTO_INCREMENT PRIMARY KEY,\n chave VARCHAR(40) NOT NULL UNIQUE,\n total DECIMAL(10,2) NOT NULL CHECK(total>0)\n) ENGINE=InnoDB;\nINSERT INTO l36_pedido(chave,total) VALUES('req-001',25.00)\nON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id);\nSELECT LAST_INSERT_ID() AS pedido;\nINSERT INTO l36_pedido(chave,total) VALUES('req-001',25.00)\nON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id);\nSELECT LAST_INSERT_ID() AS mesmo_pedido;\nSELECT COUNT(*) AS quantidade,SUM(total) AS total FROM l36_pedido;\n",
+      "filename": "aula_36.sql",
+      "language": "sql",
+      "run": "mysql -h 127.0.0.1 -P 3306 -u forge_aluno -p --default-character-set=utf8mb4 forge_mysql --execute=\"source aula_36.sql\"",
+      "expected": "pedido=1,mesmo_pedido=1,quantidade=1 e total=25.00. O exemplo demonstra deduplicação da mesma chave; comparar conteúdo e reservar estoque são requisitos adicionais do projeto, não efeitos implícitos deste SQL.",
+      "quiz": {
+        "question": "A chave idempotente UNIQUE sozinha prova que dois conteúdos distintos com a mesma chave são equivalentes?",
+        "options": [
+          "Não; a aplicação precisa comparar o conteúdo/contrato e rejeitar conflito.",
+          "Sim, UNIQUE compara qualquer corpo HTTP.",
+          "Sim, LAST_INSERT_ID guarda o JSON inteiro.",
+          "Somente se total for decimal."
+        ],
+        "answer": 0,
+        "explanation": "Deduplicação e equivalência de conteúdo são decisões complementares."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Conflito de conteúdo",
+          "prompt": "Repita req-001 com total 99 e explique o limite do exemplo.",
+          "hint": "A cláusula atual não compara total.",
+          "solution": "A linha continua 25 e o ID é reaproveitado, mas o conflito ficou oculto. O contrato completo deve buscar/comparar o conteúdo normalizado ou hash definido e rejeitar a reutilização incompatível.",
+          "criteria": [
+            "Demonstra total preservado 25.",
+            "Propõe rejeição explícita do conflito."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Estoque e pedido",
+          "prompt": "Projete uma transação que reserva uma unidade e cria o pedido sem duplicá-lo em retentativa.",
+          "hint": "Defina a ordem dos locks e a chave única.",
+          "solution": "Trate a chave de requisição no início, valide conteúdo e realize a atualização condicional de estoque dentro da mesma unidade; se falhar, faça rollback. Em deadlock, repita a unidade completa com limite e idempotência.",
+          "criteria": [
+            "Inclui falha sem pedido parcial.",
+            "Trata concorrência e retentativa."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Demonstração final",
+          "prompt": "Entregue schema, carga fictícia, testes de duplicidade/conflito/estoque, EXPLAIN e restauração verificada.",
+          "hint": "Use uma pasta por evidência e um README reproduzível.",
+          "solution": "O README deve mostrar comandos, resultados observados e limitações: pelo menos um caso normal, um duplicado, um conflito, uma corrida pela última unidade e uma restauração em destino separado.",
+          "criteria": [
+            "Cinco cenários documentados.",
+            "Comandos reproduzíveis sem segredos."
+          ]
+        }
+      ],
+      "source": "https://dev.mysql.com/doc/refman/8.4/en/insert-on-duplicate.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    }
+  ]
+}

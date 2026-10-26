@@ -1,0 +1,451 @@
+{
+  "courseId": "sqlserver",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Pedidos e relatórios em T-SQL",
+      "scenario": "Um banco SQL Server 2022 recebe nomes com acentos, cria pedidos com itens e precisa listar clientes sem movimento. A saída da escrita deve identificar a operação correta.",
+      "requiredLessons": [
+        2,
+        4,
+        5,
+        6,
+        8,
+        9
+      ],
+      "skills": [
+        "Unicode e domínio",
+        "FK e OUTPUT",
+        "Junção e contagem"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "O cadastro precisa preservar nomes Unicode e rejeitar quantidade não positiva. Qual escolha atende aos dois requisitos?",
+          "options": [
+            "Apenas usar literal sem considerar o tipo da coluna e remover CHECK.",
+            "Converter todo nome em ID numérico para evitar validação.",
+            "Afirmar que a escolha de nvarchar valida qualquer quantidade.",
+            "Representação Unicode adequada e constraints explícitas de presença/intervalo."
+          ],
+          "answer": 3,
+          "explanation": "Tipo textual e regra numérica resolvem problemas distintos. O esquema deve registrar ambos os contratos.",
+          "reviewLessons": [
+            2,
+            4
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Um pedido recém-inserido precisa ser associado a itens e ter o ID devolvido ao cliente. Qual defesa combina identidade e integridade?",
+          "options": [
+            "Obter o ID da própria escrita por OUTPUT/API apropriada e usar FK nos itens.",
+            "Consultar MAX(id) global e remover a FK porque o número parece correto.",
+            "Copiar o primeiro ID mostrado no SSMS.",
+            "Guardar somente o nome do cliente em cada item sem referência."
+          ],
+          "answer": 0,
+          "explanation": "O retorno precisa corresponder à escrita atual e a relação deve ser protegida. Uma consulta global não identifica a operação da sessão.",
+          "reviewLessons": [
+            5,
+            6
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Depois de LEFT JOIN, cliente sem pedido tem COUNT(*)=1. O relatório exige zero pedidos e preservar esse cliente. O que mudar?",
+          "options": [
+            "Trocar para INNER JOIN para fazer o zero aparecer.",
+            "Contar a chave do pedido e agrupar na granularidade do cliente.",
+            "Somar o saldo do cliente em cada item relacionado.",
+            "Aplicar HAVING COUNT(*)>0 e afirmar que os ausentes continuam presentes."
+          ],
+          "answer": 1,
+          "explanation": "A linha preservada é uma linha de resultado, não um pedido real. A coluna direita nula permite contar correspondências de fato.",
+          "reviewLessons": [
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Carga de documentos e auditoria por conjunto",
+      "scenario": "Uma rotina importa itens JSON e atualiza várias linhas. O relatório precisa de acumulados por pedido e a equipe investiga uma consulta de busca.",
+      "requiredLessons": [
+        11,
+        12,
+        14,
+        15,
+        16,
+        17
+      ],
+      "skills": [
+        "OPENJSON e janela",
+        "Rotinas e triggers",
+        "Índice e plano"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "OPENJSON expande três itens de um pedido e a tela deve manter os três detalhes com um total acumulado ordenado. Qual estrutura corresponde?",
+          "options": [
+            "Usar GROUP BY apenas no pedido e esperar conservar os três detalhes.",
+            "Somar a string JSON bruta como total.",
+            "Projetar os itens com tipos definidos e usar janela com ordem/frame adequados, sem agrupá-los numa única linha.",
+            "Presumir que OPENJSON cria uma ordem de negócio estável automaticamente."
+          ],
+          "answer": 2,
+          "explanation": "A expansão define as linhas de item; a janela acrescenta uma medida sem reduzir a granularidade. Tipos e ordem precisam ser explícitos.",
+          "reviewLessons": [
+            11,
+            12
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Uma procedure faz UPDATE de duas linhas e o trigger usa apenas uma variável escalar retirada de inserted. Qual correção é necessária?",
+          "options": [
+            "Chamar a procedure uma vez a mais para compensar a linha perdida.",
+            "Assumir que todo trigger SQL Server recebe uma linha por execução.",
+            "Desativar o trigger em qualquer atualização múltipla.",
+            "Tratar inserted/deleted como conjuntos e registrar todas as correspondências conforme a chave."
+          ],
+          "answer": 3,
+          "explanation": "Procedures podem afetar várias linhas por instrução. O trigger deve operar sobre o conjunto, sem perder dados por escolha escalar arbitrária.",
+          "reviewLessons": [
+            14,
+            15
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Foi criado um índice com INCLUDE para cobrir a consulta. O plano mostra menos leituras num ensaio. Que evidência ainda deve ser preservada?",
+          "options": [
+            "Resultado equivalente, dados/carga do ensaio e medidas comparáveis de leituras/tempo, com permissões necessárias para coletar planos.",
+            "Somente uma captura do nome do índice.",
+            "A promessa de que INCLUDE ordena qualquer coluna automaticamente.",
+            "Nenhum teste funcional porque um plano real sempre prova a regra do negócio."
+          ],
+          "answer": 0,
+          "explanation": "Cobertura e estratégia de acesso devem ser avaliadas com o mesmo trabalho. Plano real não substitui conferir a resposta da consulta.",
+          "reviewLessons": [
+            16,
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Transações e autorização em disputa",
+      "scenario": "O serviço faz alterações concorrentes, executa SQL dinâmico com valores do usuário e aplica isolamento de linhas por identidade. É preciso tratar erros sem ampliar privilégios.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "skills": [
+        "Falha transacional",
+        "Autorização e parâmetros",
+        "Isolamento"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Uma transação sofre erro/deadlock após parte das alterações. Qual caminho deve ser validado antes de repetir?",
+          "options": [
+            "Repetir apenas a última linha de UPDATE e ignorar efeitos anteriores.",
+            "Inspecionar o estado transacional, desfazer quando necessário e refazer a unidade com limite, preservando a identidade da operação.",
+            "Anunciar sucesso porque BEGIN TRAN foi executado.",
+            "Deixar a transação aberta para que o próximo usuário a resolva."
+          ],
+          "answer": 1,
+          "explanation": "TRY/CATCH, XACT_STATE e o contrato do erro ajudam a fechar corretamente a unidade. Retry sem estado conhecido pode criar efeitos duplicados ou pendentes.",
+          "reviewLessons": [
+            19,
+            21
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "A consulta usa sp_executesql com parâmetros, mas o usuário tenta consultar o dono de outra linha. Qual proteção ainda precisa ser testada?",
+          "options": [
+            "Apenas que a string SQL não contém aspas.",
+            "Que a aplicação conecta sempre como administrador para ver tudo.",
+            "A política de linha sob identidade/contexto confiáveis; parâmetros não substituem autorização.",
+            "Que o nome do parâmetro contém tenant."
+          ],
+          "answer": 2,
+          "explanation": "Binding protege valores e estrutura. RLS depende de política e contexto corretos para restringir as linhas acessíveis.",
+          "reviewLessons": [
+            23,
+            24
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Uma role só tem SELECT. O cliente muda para READ UNCOMMITTED e tenta UPDATE. A mudança de isolamento deve conceder escrita?",
+          "options": [
+            "Sim, READ UNCOMMITTED concede qualquer comando.",
+            "Sim, toda role de leitura pode alterar uma linha não bloqueada.",
+            "Não, porque esse nível elimina a conexão.",
+            "Não; isolamento altera visibilidade/coordenação, enquanto as permissões de escrita continuam precisando ser autorizadas."
+          ],
+          "answer": 3,
+          "explanation": "Permissão e isolamento são dimensões distintas. Testes devem confirmar operações recusadas, não apenas leitura bem-sucedida.",
+          "reviewLessons": [
+            20,
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Restore, regressão e mudança compatível",
+      "scenario": "O serviço possui backup-base e logs, Query Store e migrations. Uma atualização de cliente usa versão otimista; o procedimento operacional precisa separar dados recuperados e desempenho.",
+      "requiredLessons": [
+        25,
+        26,
+        27,
+        28,
+        31,
+        35
+      ],
+      "skills": [
+        "Cadeia de recuperação",
+        "Evidência funcional e plano",
+        "Versão de esquema e de linha"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "O requisito é recuperar até antes de um DELETE. Qual conjunto permite planejar esse ensaio em vez de só conferir um .bak?",
+          "options": [
+            "Modelo de recuperação apropriado, backup-base válido e cadeia de logs necessária, aplicados até o alvo num destino de teste.",
+            "Qualquer arquivo com extensão .trn, sem base ou ordem conhecida.",
+            "Somente mudar SIMPLE para FULL depois da falha e presumir logs anteriores.",
+            "Executar VERIFYONLY e afirmar que a linha já voltou."
+          ],
+          "answer": 0,
+          "explanation": "Recuperação por ponto depende de configuração e cadeia coerentes. Validar mídia não executa a restauração do estado escolhido.",
+          "reviewLessons": [
+            25,
+            27
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "O destino restaurado contém os marcadores corretos, mas uma consulta ficou lenta após migration. Que investigação complementa a prova de dados?",
+          "options": [
+            "Declarar restore inválido apenas porque um plano mudou.",
+            "Usar evidências de Query Store/planos e carga para a regressão, mantendo separada a validação funcional do restore.",
+            "Reaplicar o backup repetidamente sem investigar consultas.",
+            "Afirmar que recuperar linhas garante latência idêntica em qualquer ambiente."
+          ],
+          "answer": 1,
+          "explanation": "Recuperação funcional e comportamento de desempenho têm evidências diferentes. A regressão precisa de medições e contexto de execução.",
+          "reviewLessons": [
+            26,
+            28
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Uma migration altera o esquema e a API usa uma coluna versao para concorrência otimista. Os dois números podem ser tratados como a mesma versão?",
+          "options": [
+            "Sim, aumentar a versão do esquema autoriza qualquer UPDATE obsoleto.",
+            "Sim, a linha muda de tabela a cada conflito.",
+            "Não; versão de migration controla o contrato do esquema e versão da linha detecta atualização concorrente de um registro.",
+            "Não, porque SQL Server não aceita números de versão na aplicação."
+          ],
+          "answer": 2,
+          "explanation": "A evolução do esquema e o controle de disputa têm escopos distintos. Ambos precisam de protocolo e verificação próprios.",
+          "reviewLessons": [
+            31,
+            35
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Pedidos com outbox e recuperação no SQL Server",
+    "scenario": "Implemente um banco de pedidos e estoque em SQL Server 2022 Developer para ensaio local. Uma mudança de pedido deve poder registrar seu evento na mesma unidade de trabalho, sem depender de envio externo dentro da transação.",
+    "requirements": [
+      "Modelo e entrada: constraints, referências, Unicode e valores de domínio são validados no esquema e nos procedimentos.",
+      "Unidade transacional: pedido, baixa e outbox são coordenados com TRY/CATCH e encerramento correto após falha.",
+      "Concorrência e repetição: atualização otimista ou lock protege estoque e retries idempotentes não duplicam efeitos.",
+      "Leitura e acesso: consultas preservam granularidade, parâmetros separam valores e roles/RLS são testadas para permitidos e recusados.",
+      "Evolução e investigação: migration versionada, plano/Query Store e diagnóstico de bloqueios acompanham a entrega.",
+      "Recuperação: backup completo e restauração em destino separado são verificados; recuperação no tempo só é declarada após ensaio real com a cadeia correta."
+    ],
+    "deliverables": [
+      "DDL, procedimentos, outbox, fixtures e migrations.",
+      "Cliente parametrizado com contratos de conflito e repetição.",
+      "Testes funcionais, concorrentes e de autorização; evidências de planos/Query Store.",
+      "Runbook operacional com caminhos do servidor, permissões, cópias e verificação do destino."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Modelo e entrada",
+        "description": "Modelo e entrada: constraints, referências, Unicode e valores de domínio são validados no esquema e nos procedimentos.",
+        "reviewLessons": [
+          2,
+          4,
+          5,
+          14
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Unidade transacional",
+        "description": "Unidade transacional: pedido, baixa e outbox são coordenados com TRY/CATCH e encerramento correto após falha.",
+        "reviewLessons": [
+          19,
+          34,
+          36
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Concorrência e repetição",
+        "description": "Concorrência e repetição: atualização otimista ou lock protege estoque e retries idempotentes não duplicam efeitos.",
+        "reviewLessons": [
+          20,
+          21,
+          35
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Leitura e acesso",
+        "description": "Leitura e acesso: consultas preservam granularidade, parâmetros separam valores e roles/RLS são testadas para permitidos e recusados.",
+        "reviewLessons": [
+          8,
+          9,
+          22,
+          23,
+          24
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Evolução e investigação",
+        "description": "Evolução e investigação: migration versionada, plano/Query Store e diagnóstico de bloqueios acompanham a entrega.",
+        "reviewLessons": [
+          16,
+          17,
+          28,
+          29,
+          31
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Recuperação",
+        "description": "Recuperação: backup completo e restauração em destino separado são verificados; recuperação no tempo só é declarada após ensaio real com a cadeia correta.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Falha entre pedido e evento",
+        "setup": "Fixture de estoque e nenhuma operação de teste aplicada.",
+        "input": "Provocar erro após alteração de pedido, antes de concluir a outbox.",
+        "expected": "A unidade é desfeita; pedido, estoque e evento permanecem coerentes, sem transação aberta.",
+        "reviewLessons": [
+          19,
+          34,
+          36
+        ]
+      },
+      {
+        "title": "Atualização obsoleta",
+        "setup": "Duas leituras da mesma linha com a mesma versão inicial.",
+        "input": "Aplicar a primeira atualização e tentar a segunda com a versão antiga.",
+        "expected": "A segunda não altera a linha e a API trata conflito; não anuncia sucesso silencioso.",
+        "reviewLessons": [
+          20,
+          35,
+          36
+        ]
+      },
+      {
+        "title": "Restore em destino distinto",
+        "setup": "Backup-base real e diretórios/nomes lógicos verificados no servidor.",
+        "input": "Restaurar em banco exclusivo e consultar marcadores, contagens e regras conhecidas.",
+        "expected": "Destino fica acessível e contém o ponto esperado; VERIFYONLY sozinho não é tratado como esse resultado.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "prompt": "A outbox contém um evento, mas o pedido que o gerou foi revertido. Qual propriedade precisa ser corrigida?",
+        "options": [
+          "A cor do dashboard.",
+          "O nome do login no SSMS.",
+          "A ordem de campos do JSON apenas.",
+          "A atomicidade local entre mudança de negócio e registro do evento."
+        ],
+        "answer": 3,
+        "explanation": "Outbox só atende ao objetivo quando participa da mesma unidade de confirmação do estado de negócio.",
+        "reviewLessons": [
+          19,
+          34,
+          36
+        ]
+      },
+      {
+        "id": "q2",
+        "prompt": "Um cliente reenvia uma operação após perder a resposta e o sistema cria novo pedido. Qual aspecto falta além do tratamento de deadlock?",
+        "options": [
+          "Identidade da operação e protocolo idempotente coordenado aos efeitos.",
+          "Apenas um timeout maior.",
+          "Uma segunda conexão administrativa para repetir qualquer comando.",
+          "Desligar a chave única para evitar erro."
+        ],
+        "answer": 0,
+        "explanation": "Resultado incerto e conflito de lock não são o mesmo problema. Repetição precisa reconhecer efeitos já confirmados.",
+        "reviewLessons": [
+          21,
+          34,
+          35
+        ]
+      },
+      {
+        "id": "q3",
+        "prompt": "A restauração passou, mas uma role de leitura consegue alterar qualquer linha e a API usa SQL concatenado. Que conclusão vale?",
+        "options": [
+          "O restore aprova automaticamente toda a segurança.",
+          "A recuperação é uma evidência parcial; autorização e parametrização ainda não atendem aos critérios.",
+          "Somente o arquivo .bak precisa ser renomeado.",
+          "Não existe diferença entre permissões e backup."
+        ],
+        "answer": 1,
+        "explanation": "Os critérios do projeto são independentes e cada um exige sua própria comprovação.",
+        "reviewLessons": [
+          22,
+          23,
+          26
+        ]
+      }
+    ]
+  }
+}

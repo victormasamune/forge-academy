@@ -1,0 +1,479 @@
+{
+  "courseId": "kubernetes",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Reconciliar e localizar o serviço",
+      "scenario": "Um Deployment roda duas réplicas no namespace treino. Um Service deve alcançá-las por labels e consumidores de outro namespace precisam usar o endereço correto.",
+      "requiredLessons": [
+        2,
+        3,
+        4,
+        5,
+        7,
+        8
+      ],
+      "skills": [
+        "Reconciliação",
+        "Labels e endpoints",
+        "DNS por namespace"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Corrigir a correspondência de labels/selector no manifesto adequado e verificar os endpoints resultantes.",
+            "Entrar em cada Pod e alterar seu /etc/hosts manualmente.",
+            "Mudar somente o nome visível do namespace.",
+            "Aumentar réplicas sem corrigir o selector."
+          ],
+          "answer": 0,
+          "prompt": "Os Pods estão Running, mas o Service não tem endpoints porque seu selector usa app=portal e os Pods possuem app=reservas. Qual reparo atende ao modelo declarativo?",
+          "explanation": "O Service seleciona Pods por labels. Running não garante associação ao Service; corrija a fonte declarativa e confira as relações observadas.",
+          "reviewLessons": [
+            2,
+            3,
+            5,
+            7
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Usar localhost para alcançar qualquer namespace.",
+            "Usar um nome qualificado pelo namespace, como portal.treino.svc, e verificar o DNS e a porta do Service.",
+            "Trocar a label do cliente por uma senha.",
+            "Assumir que nomes curtos sempre procuram todos os namespaces."
+          ],
+          "answer": 1,
+          "prompt": "Um cliente no namespace relatorios usa portal e encontra um serviço diferente do existente em treino. Qual endereço expressa o destino pretendido?",
+          "explanation": "A resolução de nomes curtos depende do namespace do cliente. DNS e Service descrevem descoberta, não um atalho para o processo local.",
+          "reviewLessons": [
+            3,
+            7,
+            8
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "O cluster restaurou automaticamente um backup completo do banco.",
+            "Apagar o Pod deve remover para sempre o Deployment.",
+            "É a reconciliação mantendo o estado desejado; confira controlador, réplicas e labels, sem depender do nome efêmero do Pod.",
+            "O nome novo prova que o Service ganhou um endereço público."
+          ],
+          "answer": 2,
+          "prompt": "Um Pod gerenciado pelo Deployment foi apagado e outro apareceu com nome diferente. Como interpretar e verificar isso?",
+          "explanation": "Pods são unidades substituíveis e o controlador mantém o número pretendido. Disponibilidade e dados persistentes precisam de verificações próprias.",
+          "reviewLessons": [
+            2,
+            4,
+            5,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Prontidão, configuração e dados",
+      "scenario": "Uma API lê configuração e credencial por mecanismos separados, usa PVC para seu estado e não deve receber tráfego enquanto inicializa. O cluster tem recursos limitados.",
+      "requiredLessons": [
+        10,
+        11,
+        12,
+        13,
+        17,
+        18
+      ],
+      "skills": [
+        "Configuração e segredo",
+        "Probes",
+        "PVC e recursos"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Usar readiness como prova de que o PVC tem backup.",
+            "Publicar o Secret na imagem para iniciar mais rápido.",
+            "Eliminar todos os requests para que a liveness espere.",
+            "Usar startup probe para a fase inicial e readiness para indicar quando a API pode receber tráfego, com liveness adequada ao comportamento posterior."
+          ],
+          "answer": 3,
+          "prompt": "A API demora quarenta segundos para iniciar, mas a liveness começa agressivamente e reinicia o Pod antes disso. Qual desenho preserva inicialização e controle de tráfego?",
+          "explanation": "Inicialização, prontidão e recuperação do processo são funções diferentes. Os parâmetros precisam corresponder ao tempo de boot observado e ao estado útil da aplicação.",
+          "reviewLessons": [
+            10,
+            12,
+            13
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Montar efetivamente o claim no caminho usado pela aplicação e testar dados conhecidos após a substituição.",
+            "Apenas dar ao Pod um nome de StatefulSet sem montar o volume.",
+            "Adicionar os arquivos ao Secret.",
+            "Afirmar que existir um PVC prova que qualquer arquivo será persistido."
+          ],
+          "answer": 0,
+          "prompt": "Um Pod substituído perdeu arquivos porque a aplicação gravava em diretório efêmero, embora exista um PVC no namespace. Qual evidência e ajuste são necessários?",
+          "explanation": "A existência do claim não conecta automaticamente o caminho de escrita. Estado persistente depende de montagem, driver, política e do ciclo de vida efetivo.",
+          "reviewLessons": [
+            17,
+            18
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Manter a senha no ConfigMap e mudar apenas seu nome para secreto.",
+            "Mover a credencial para mecanismo de segredo e limitar acesso; reconhecer que Secret não cifra automaticamente todo caminho nem elimina gestão de credenciais.",
+            "Usar base64 como prova de sigilo completo.",
+            "Montar o PVC no navegador para esconder a senha."
+          ],
+          "answer": 1,
+          "prompt": "A senha foi guardada em ConfigMap e os manifests são compartilhados. Qual separação é apropriada sem atribuir proteção inexistente ao Secret?",
+          "explanation": "ConfigMap é configuração não secreta. Secret tem uso e permissões próprios, mas exposição de manifests, RBAC e proteção em repouso/transporte continuam relevantes.",
+          "reviewLessons": [
+            10,
+            11,
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Isolamento verificável e mudança declarativa",
+      "scenario": "A equipe limita privilégios de uma aplicação, define NetworkPolicy e promove mudanças por uma fonte declarativa. Uma conexão proibida ainda funciona no kind.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        22,
+        24,
+        27
+      ],
+      "skills": [
+        "RBAC",
+        "Segurança do Pod",
+        "Política de rede e drift"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "A existência do YAML basta para declarar tráfego bloqueado.",
+            "RBAC sempre bloqueia automaticamente todo pacote de rede.",
+            "A política declarada não comprovou isolamento; configure um provedor que a implemente e execute testes permitidos e recusados.",
+            "Um Pod sem root torna qualquer conexão impossível."
+          ],
+          "answer": 2,
+          "prompt": "A NetworkPolicy está criada, porém o CNI do laboratório não a aplica. O tráfego proibido continuou funcionando. Que conclusão é correta?",
+          "explanation": "NetworkPolicy depende de implementação no dataplane. Teste o comportamento real e mantenha a etapa como pendente se o laboratório não possui suporte.",
+          "reviewLessons": [
+            19,
+            20,
+            21,
+            24
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Colocar o token de administrador dentro da imagem.",
+            "Substituir o Service por ClusterIP e concluir que privilégios acabaram.",
+            "Remover o usuário do sistema Linux e manter o token de administrador.",
+            "Uma identidade própria com Role/RoleBinding limitados e testes de autorização para ações permitidas e recusadas."
+          ],
+          "answer": 3,
+          "prompt": "A aplicação só precisa ler um ConfigMap do seu namespace, mas usa uma ServiceAccount com poderes de administrador do cluster. Qual desenho deve ser demonstrado?",
+          "explanation": "Identidade Kubernetes e usuário do processo são camadas diferentes. Mínimo privilégio exige verificar permissões efetivas, não só o nome da conta.",
+          "reviewLessons": [
+            19,
+            20,
+            24
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Atualizar a fonte declarativa autorizada, revisar a promoção e verificar a convergência dos objetos.",
+            "Repetir edições manuais indefinidamente sem alterar a fonte.",
+            "Mudar somente o nome do Pod.",
+            "Tratar o retorno do estado como prova de falha do DNS sem investigar o manifesto."
+          ],
+          "answer": 0,
+          "prompt": "Um operador corrigiu manualmente o Service, mas a reconciliação GitOps voltou ao selector incorreto. Qual ação corrige a causa duradoura?",
+          "explanation": "Um reconciliador tenta restabelecer a fonte desejada. A correção precisa estar nesse fluxo e ser comprovada nos seletores/endpoints observados.",
+          "reviewLessons": [
+            22,
+            24,
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Escalar, drenar e recuperar",
+      "scenario": "O portal recebe carga variável. A equipe prepara HPA, rollout e manutenção de nós, e precisa demonstrar uma recuperação sem confundir réplicas com backup.",
+      "requiredLessons": [
+        28,
+        29,
+        30,
+        31,
+        33,
+        36
+      ],
+      "skills": [
+        "Métricas e HPA",
+        "Rollout e manutenção",
+        "Recuperação"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Aumentar maxReplicas e afirmar que qualquer falta de métrica será resolvida.",
+            "Confirmar coleta de métricas, requests coerentes e o comportamento do alvo sob uma carga definida.",
+            "Criar mais labels sem instalar o pipeline de métricas necessário.",
+            "Declarar que HPA substitui um teste de carga."
+          ],
+          "answer": 1,
+          "prompt": "O HPA por CPU não apresenta uma utilização válida e a API não tem requests de CPU. Qual conjunto de evidências deve vir antes de prometer escala automática?",
+          "explanation": "HPA depende do sinal observado e do denominador quando a métrica usa utilização relativa. Configurar máximos não prova o ciclo de escala.",
+          "reviewLessons": [
+            28,
+            29,
+            36
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Remover todo PDB por padrão e chamar isso de manutenção sem impacto.",
+            "Apagar o volume de dados para liberar a drenagem.",
+            "Conferir réplicas saudáveis, disponibilidade mínima e capacidade de reassentamento antes de modificar o plano de manutenção.",
+            "Assumir que cordon move todos os Pods imediatamente."
+          ],
+          "answer": 2,
+          "prompt": "Um drain é bloqueado pelo orçamento de interrupção. Qual resposta preserva a intenção do PDB e permite investigar manutenção?",
+          "explanation": "Cordon impede novos agendamentos e drain evacua conforme regras aplicáveis. PDB e capacidade precisam ser considerados junto da disponibilidade real.",
+          "reviewLessons": [
+            30,
+            31,
+            36
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Sim, três réplicas guardam qualquer versão histórica para sempre.",
+            "Sim, rollout undo sempre restaura todos os dados.",
+            "Não, porque métricas são proibidas em recuperação.",
+            "Não; deve restaurar o estado necessário em destino isolado e validar dados e comportamento, com escopo e tempo registrados."
+          ],
+          "answer": 3,
+          "prompt": "Há três réplicas da API, mas nenhuma restauração do estado foi aberta. A equipe pode declarar recuperação de desastre comprovada?",
+          "explanation": "Réplicas e rollout não substituem cópias recuperáveis. Um ensaio precisa conferir o estado restaurado e explicitar se abrange aplicação, volumes ou controle do cluster.",
+          "reviewLessons": [
+            28,
+            30,
+            33,
+            36
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Portal de reservas em cluster local com operação demonstrada",
+    "scenario": "Entregue um portal HTTP de reservas no kind, com manifests versionados, dados fictícios e procedimentos de operação. Separe o que foi realmente ensaiado no laboratório do que apenas foi projetado para outro ambiente.",
+    "requirements": [
+      "Declarar namespace, Deployment e Service com selectors coerentes e referência de imagem identificável.",
+      "Separar ConfigMaps e Secrets, usar ServiceAccount própria e permissões compatíveis com a função da aplicação.",
+      "Configurar probes, requests/limits e demonstrar agendamento e prontidão sob uma carga conhecida.",
+      "Persistir o estado necessário usando armazenamento compatível com o laboratório e documentar suas limitações.",
+      "Produzir uma mudança de versão, observar rollout e demonstrar reversão compatível, além de planejar manutenção com PDB quando aplicável.",
+      "Restaurar cópia do estado num destino de teste e validar dados e serviço; comprovar NetworkPolicy somente se o CNI a aplicar."
+    ],
+    "deliverables": [
+      "Manifests base e overlays/values escolhidos, sem credenciais reais, com versões e pré-requisitos do kind.",
+      "README com comandos de criação, acesso, diagnóstico, atualização e limpeza do laboratório.",
+      "Relatório de testes de serviço, probes, recursos, permissões e rede com saídas reais.",
+      "Runbook de mudança, manutenção e restauração com escopo, resultados, tempo e limitações."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Objetos reconciliáveis",
+        "description": "Labels, selectors, namespace e controladores correspondem ao desenho e à fonte versionada.",
+        "reviewLessons": [
+          2,
+          3,
+          4,
+          5,
+          7,
+          25,
+          27
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Configuração e acesso",
+        "description": "Identidades e dados de configuração estão separados; ações recusadas são verificadas.",
+        "reviewLessons": [
+          10,
+          11,
+          19,
+          20
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Prontidão e capacidade",
+        "description": "Probes e recursos foram conferidos no comportamento observado, sem prometer escala não testada.",
+        "reviewLessons": [
+          12,
+          13,
+          14,
+          15,
+          28,
+          29
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Estado persistente",
+        "description": "A montagem e o ciclo de vida dos dados foram testados; PVC não é tratado como backup.",
+        "reviewLessons": [
+          16,
+          17,
+          18
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Diagnóstico e isolamento",
+        "description": "Falhas de serviço e políticas foram investigadas com evidência e pré-requisitos reais.",
+        "reviewLessons": [
+          21,
+          22,
+          23,
+          24
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Mudança e recuperação",
+        "description": "Rollout/reversão e destino restaurado têm evidências distintas, com limites de manutenção e compatibilidade.",
+        "reviewLessons": [
+          30,
+          31,
+          32,
+          33,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Descoberta e prontidão",
+        "setup": "Crie o cluster e o namespace com a aplicação e seu Service.",
+        "input": "Consulte endpoints e faça requisições durante a inicialização e após readiness.",
+        "expected": "O Service aponta para os Pods esperados; tráfego útil só é encaminhado conforme prontidão e a consulta retorna um marcador conhecido.",
+        "reviewLessons": [
+          5,
+          7,
+          8,
+          12
+        ]
+      },
+      {
+        "title": "Privilégio e rede",
+        "setup": "Use uma ServiceAccount restrita e um CNI capaz de aplicar NetworkPolicy, se esse ensaio fizer parte da entrega.",
+        "input": "Execute uma ação autorizada e outra negada; teste conexão permitida e proibida.",
+        "expected": "Resultados correspondem às regras; se o CNI não aplicar políticas, registre a etapa de rede como não comprovada em vez de aprovada.",
+        "reviewLessons": [
+          19,
+          20,
+          21,
+          24
+        ]
+      },
+      {
+        "title": "Reabrir estado e versão",
+        "setup": "Crie reservas fictícias e preserve a cópia de recuperação antes da mudança.",
+        "input": "Substitua Pod, faça uma mudança/reversão controlada e restaure os dados num destino separado.",
+        "expected": "Persistência após substituição e recuperação independente são verificadas separadamente; as reservas e a versão esperada funcionam no destino.",
+        "reviewLessons": [
+          17,
+          18,
+          30,
+          33,
+          36
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "options": [
+          "Isolamento de rede efetivo, que exige suporte do dataplane e teste do comportamento.",
+          "A existência do namespace está automaticamente refutada.",
+          "Todo o backup está necessariamente corrompido.",
+          "Nada falta, pois YAML é prova de execução."
+        ],
+        "answer": 0,
+        "prompt": "O projeto apresenta YAML de NetworkPolicy e Pods saudáveis, mas não informa CNI nem conexão negada. Que critério permanece sem evidência?",
+        "explanation": "O relatório precisa distinguir intenção declarativa de efeito aplicado. Complete o ensaio ou marque explicitamente essa limitação.",
+        "reviewLessons": [
+          2,
+          21,
+          24
+        ]
+      },
+      {
+        "id": "q2",
+        "options": [
+          "Somente o nome visual do Deployment.",
+          "Compatibilidade de aplicação e dados, com plano de mudança e recuperação que trate os dois estados.",
+          "Aumentar HPA como substituto de compatibilidade.",
+          "Assumir que rollback restaura volumes automaticamente."
+        ],
+        "answer": 1,
+        "prompt": "Depois de rollout undo, a API antiga falha ao ler dados migrados pela versão nova. Qual ponto consolidado deve ser revisto?",
+        "explanation": "Reversão de Pod e recuperação de dados são caminhos diferentes. Planeje janelas compatíveis e demonstre qual estado cada etapa recupera.",
+        "reviewLessons": [
+          18,
+          30,
+          32,
+          33
+        ]
+      },
+      {
+        "id": "q3",
+        "options": [
+          "Há agora disponibilidade geográfica comprovada.",
+          "Toda manutenção de nós futuros será sem impacto.",
+          "O procedimento local e os dados foram verificados; tolerância à perda da máquina inteira ainda exige outro desenho e ensaio.",
+          "O local dos arquivos deixa de importar."
+        ],
+        "answer": 2,
+        "prompt": "A restauração de reservas passou numa segunda instância no mesmo notebook. Qual conclusão corresponde ao escopo do ensaio?",
+        "explanation": "Um teste local é útil, mas não cria independência de infraestrutura. Relate precisamente destino, falha simulada e tempo observado.",
+        "reviewLessons": [
+          17,
+          18,
+          31,
+          33,
+          36
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,472 @@
+{
+  "courseId": "cpp",
+  "combos": [
+    {
+      "title": "Catálogo sem referências inválidas",
+      "scenario": "Uma CLI mantém produtos em vector e map, remove itens e permite consultas por código. O algoritmo precisa conservar posições válidas e não criar produto só por consultar ausência.",
+      "requiredLessons": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "skills": [
+        "Referências",
+        "Iteradores",
+        "Busca e presença"
+      ],
+      "questions": [
+        {
+          "prompt": "Um iterador aponta para um elemento do vector. push_back provoca realocação e o código depois usa esse iterador. Como corrigir o acesso?",
+          "options": [
+            "Reconhecer a invalidação e obter uma posição válida novamente, evitando manter referências/iteradores além de operações que possam invalidá-los.",
+            "Assumir que todo iterador continua válido porque o conteúdo parece igual.",
+            "Usar o iterador antigo depois de um sleep.",
+            "Transformar o iterador em const para impedir realocação do vector."
+          ],
+          "answer": 0,
+          "explanation": "A duração da coleção não garante a validade das posições internas. Operações de crescimento podem realocar seu armazenamento.",
+          "reviewLessons": [
+            5,
+            6,
+            7
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Consultar estoque[sku] num std::map fez aparecer um SKU inexistente com zero. Qual acesso corresponde a uma consulta sem inserção?",
+          "options": [
+            "operator[] porque leitura de map nunca altera a coleção.",
+            "find ou contains para distinguir ausência, usando o valor somente quando a chave existir.",
+            "Inserir todo SKU desconhecido antes da validação.",
+            "Usar o tamanho do map como saldo do produto."
+          ],
+          "answer": 1,
+          "explanation": "operator[] pode inserir um valor padrão quando a chave não existe. Consulta, ausência e criação deliberada precisam de contratos distintos.",
+          "reviewLessons": [
+            4,
+            8,
+            9
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "Uma função retorna const std::string& para uma variável local criada dentro dela. O chamador lê o título depois do retorno. Qual contrato evita a referência pendente?",
+          "options": [
+            "Adicionar const torna a variável local eterna.",
+            "Usar a referência apenas uma vez, pois a primeira leitura é sempre válida.",
+            "Retornar um valor proprietário, ou referenciar apenas um objeto cuja duração seja garantida pelo contrato do chamador.",
+            "Guardar a referência num map sem mudar o tempo de vida."
+          ],
+          "answer": 2,
+          "explanation": "Referência não estende automaticamente a vida de uma variável local destruída. Propriedade e duração precisam fazer parte do contrato da função.",
+          "reviewLessons": [
+            4,
+            5,
+            6
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-1"
+    },
+    {
+      "title": "Recursos e alteração sem estado parcial",
+      "scenario": "Uma operação carrega um lote de reservas usando objetos com recursos exclusivos. Dados inválidos e exceções não podem vazar o recurso nem substituir parcialmente o catálogo válido.",
+      "requiredLessons": [
+        11,
+        13,
+        14,
+        15,
+        17,
+        18
+      ],
+      "skills": [
+        "RAII",
+        "Propriedade",
+        "Exceções e testes"
+      ],
+      "questions": [
+        {
+          "prompt": "Um recurso é adquirido e a validação lança exceção antes da liberação manual. Qual desenho garante limpeza pelo ciclo de vida?",
+          "options": [
+            "Adicionar delete apenas no último return e ignorar exceções.",
+            "Copiar o ponteiro proprietário para várias variáveis e chamar delete em todas.",
+            "Usar sleep para esperar que o sistema adivinhe a posse.",
+            "Encapsular o recurso num objeto RAII com dono claro, cuja destruição libere o recurso nos caminhos normais e de exceção."
+          ],
+          "answer": 3,
+          "explanation": "RAII associa a liberação ao tempo de vida do objeto. A limpeza não deve depender de alcançar uma linha final de execução.",
+          "reviewLessons": [
+            13,
+            14,
+            17
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Dois objetos mantêm shared_ptr um para o outro e nunca são liberados. Qual relação deve ser revista?",
+          "options": [
+            "A relação de propriedade compartilhada; uma referência observadora pode usar weak_ptr quando não deve prolongar a vida do outro objeto.",
+            "Trocar o nome dos ponteiros para observador sem mudar o tipo.",
+            "Criar mais uma referência shared_ptr para forçar liberação.",
+            "Assumir que shared_ptr coleta ciclos como um coletor de lixo."
+          ],
+          "answer": 0,
+          "explanation": "Contagem de referências não resolve ciclos de propriedade. weak_ptr expressa observação sem adicionar posse forte.",
+          "reviewLessons": [
+            13,
+            14,
+            15
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A importação altera o catálogo linha por linha e falha na última. Como oferecer a garantia de manter o estado anterior quando a validação falha?",
+          "options": [
+            "Capturar qualquer exceção e manter silenciosamente as primeiras alterações.",
+            "Construir e validar um estado candidato independente e só efetivar a troca quando todo o lote estiver válido.",
+            "Usar assert como única proteção de entrada no executável de entrega.",
+            "Apagar o catálogo original antes de tentar ler o lote."
+          ],
+          "answer": 1,
+          "explanation": "Uma mudança candidata permite rejeitar o lote sem efeito parcial. O teste precisa verificar o estado anterior, além da exceção.",
+          "reviewLessons": [
+            11,
+            17,
+            18
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-2"
+    },
+    {
+      "title": "Views, parsing e snapshot validado",
+      "scenario": "Um relatório usa ranges e janelas de leitura; um snapshot textual versionado é carregado para restaurar o catálogo. O parser precisa consumir campos inteiros e a restauração não pode depender de memória destruída.",
+      "requiredLessons": [
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "skills": [
+        "Contratos genéricos",
+        "Lifetime",
+        "Parsing e recuperação"
+      ],
+      "questions": [
+        {
+          "prompt": "Uma função cria std::string local e retorna string_view apontando para ela. O relatório guarda a view. Qual é o problema?",
+          "options": [
+            "string_view sempre copia toda a string e não há problema.",
+            "const na view torna a string local permanente.",
+            "A view não possui os bytes e passa a apontar para armazenamento destruído; o dono precisa sobreviver ao uso ou o resultado deve possuir os dados.",
+            "O problema se resolve apenas ordenando a view."
+          ],
+          "answer": 2,
+          "explanation": "Janelas de leitura não transferem propriedade. Seu contrato deve declarar a duração do armazenamento referenciado.",
+          "reviewLessons": [
+            23,
+            24,
+            25
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "from_chars conseguiu converter o prefixo \"12\" de \"12abc\" sem erro numérico. A quantidade pode ser aceita como 12?",
+          "options": [
+            "Sim, ausência de erro numérico prova formato completo.",
+            "Sim, qualquer sufixo deve ser ignorado silenciosamente.",
+            "Não, porque from_chars nunca retorna uma posição.",
+            "Não sem conferir consumo completo do campo e a regra do domínio; o ponteiro final precisa alcançar o fim esperado."
+          ],
+          "answer": 3,
+          "explanation": "Sucesso parcial de conversão e validade completa do campo são coisas distintas. Consumo, faixa e significado precisam ser testados.",
+          "reviewLessons": [
+            26,
+            27
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "O snapshot tem versão desconhecida e alguns registros válidos. Qual ação preserva o catálogo em uso?",
+          "options": [
+            "Recusar ou migrar por um caminho explícito para a versão, mantendo um estado candidato sem substituir o original enquanto o documento inteiro não for validado.",
+            "Aceitar as primeiras linhas e ignorar a versão.",
+            "Apagar o catálogo antes de validar o cabeçalho.",
+            "Guardar views para o buffer local e liberar o buffer ao terminar."
+          ],
+          "answer": 0,
+          "explanation": "Formato versionado é um contrato. Validação global e propriedade dos dados são necessárias antes da troca do estado.",
+          "reviewLessons": [
+            24,
+            25,
+            26,
+            27
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-3"
+    },
+    {
+      "title": "Confirmação concorrente e operação observável",
+      "scenario": "Duas threads podem confirmar uma ordem e uma CLI salva snapshots. O invariante liga a verificação de estoque, a baixa e o registro da operação; diagnóstico deve separar correção de velocidade.",
+      "requiredLessons": [
+        28,
+        29,
+        30,
+        31,
+        35,
+        36
+      ],
+      "skills": [
+        "Threads e locks",
+        "Idempotência",
+        "Medição e entrega"
+      ],
+      "questions": [
+        {
+          "prompt": "O saldo é atomic<int>, mas o código faz if(saldo>=qtd) seguido de saldo-=qtd em operações separadas. Isso basta para impedir duas confirmações sobre a última unidade?",
+          "options": [
+            "Sim, qualquer acesso atomic torna toda a operação de domínio uma transação.",
+            "Não; a verificação e a alteração do invariante precisam de uma coordenação conjunta adequada, como região crítica que também inclui a decisão da ordem.",
+            "Sim, jthread elimina intercalamento.",
+            "Não, porque atomic não pode armazenar inteiros."
+          ],
+          "answer": 1,
+          "explanation": "Atomicidade de operações isoladas não transforma uma sequência em indivisível. O lock deve proteger a decisão e o efeito relacionados.",
+          "reviewLessons": [
+            28,
+            29,
+            30,
+            35
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "O teste lê o resultado produzido por uma jthread antes de ela terminar e sem sincronização apropriada. O que precisa mudar?",
+          "options": [
+            "Confiar que a thread é rápida nesta máquina.",
+            "Esperar dez milissegundos e remover qualquer outra sincronização.",
+            "Definir o ponto de espera/sincronização antes da leitura, conservando também a proteção das variáveis compartilhadas durante o trabalho.",
+            "Aumentar o número de threads para uma delas terminar antes."
+          ],
+          "answer": 2,
+          "explanation": "Ciclo de vida e acesso compartilhado são contratos separados. Esperar deliberadamente o trabalho evita ler um resultado ainda em produção.",
+          "reviewLessons": [
+            28,
+            29,
+            31
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "O mesmo ID de confirmação chega duas vezes. O programa registra o ID, mas a baixa ocorre fora do lock. Qual risco permanece?",
+          "options": [
+            "Nenhum, pois ter um set em qualquer ponto prova idempotência concorrente.",
+            "Só um problema de cor no terminal.",
+            "O risco desaparece se usar o mesmo nome de arquivo.",
+            "Outra execução pode observar um estado intermediário; deduplicação e alteração de estoque precisam compartilhar a coordenação que preserva o invariante."
+          ],
+          "answer": 3,
+          "explanation": "Reconhecer uma operação e aplicar seu efeito são partes da mesma decisão. Coordenação parcial pode permitir efeitos duplicados ou resultado inconsistente.",
+          "reviewLessons": [
+            29,
+            30,
+            35
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-4"
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Controle local de reservas em C++",
+    "scenario": "Construa uma CLI C++20 para reservar materiais, consultar disponibilidade e salvar/restaurar um snapshot versionado. A aplicação deve proteger propriedade, duração e alterações compostas sob erro e concorrência.",
+    "requirements": [
+      "Definir estados nomeados, quantidades válidas e APIs que não exponham mutação arbitrária de estoque.",
+      "Usar RAII e propriedade apropriada; não conservar views, referências ou iteradores além de sua validade.",
+      "Verificar parsing completo, versão e dados do snapshot num estado candidato antes de substituir o estado válido.",
+      "Proteger reserva, saldo e identidade da operação como um invariante; documentar o limite durável da idempotência.",
+      "Testar vazio, ausência, fronteira, erro de parsing, rollback lógico, repetição e disputa sem depender apenas de assert.",
+      "Documentar compilação C++20, ferramentas de diagnóstico, comandos CLI, um experimento de desempenho e restauração conferida."
+    ],
+    "deliverables": [
+      "Fontes da CLI com modelo, casos de uso e armazenamento separados.",
+      "Executável de testes e fixtures de snapshot válido/inválido.",
+      "README de compilação, execução, propriedade e contratos.",
+      "Relatório de concorrência, diagnóstico e reabertura de snapshot."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Tipos e invariantes",
+        "description": "Definir estados nomeados, quantidades válidas e APIs que não exponham mutação arbitrária de estoque.",
+        "reviewLessons": [
+          4,
+          10,
+          11,
+          16
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Propriedade e lifetime",
+        "description": "Usar RAII e propriedade apropriada; não conservar views, referências ou iteradores além de sua validade.",
+        "reviewLessons": [
+          6,
+          7,
+          13,
+          14,
+          15,
+          24
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Entrada e recuperação",
+        "description": "Verificar parsing completo, versão e dados do snapshot num estado candidato antes de substituir o estado válido.",
+        "reviewLessons": [
+          17,
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Concorrência e repetição",
+        "description": "Proteger reserva, saldo e identidade da operação como um invariante; documentar o limite durável da idempotência.",
+        "reviewLessons": [
+          28,
+          29,
+          30,
+          35
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Evidências de comportamento",
+        "description": "Testar vazio, ausência, fronteira, erro de parsing, rollback lógico, repetição e disputa sem depender apenas de assert.",
+        "reviewLessons": [
+          16,
+          17,
+          18,
+          29,
+          35
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Entrega diagnosticável",
+        "description": "Documentar compilação C++20, ferramentas de diagnóstico, comandos CLI, um experimento de desempenho e restauração conferida.",
+        "reviewLessons": [
+          31,
+          32,
+          33,
+          34,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Reserva e repetição",
+        "setup": "SKU A possui 5 unidades; operação o-1 não foi aplicada.",
+        "input": "Confirmar 2 unidades e repetir o-1 com o mesmo conteúdo.",
+        "expected": "Saldo 3 e um efeito de confirmação, dentro do limite de persistência documentado.",
+        "reviewLessons": [
+          11,
+          29,
+          35
+        ]
+      },
+      {
+        "title": "Snapshot recusado",
+        "setup": "Catálogo em memória válido com saldo 5.",
+        "input": "Carregar arquivo de versão desconhecida ou quantidade \"12abc\".",
+        "expected": "Erro contextualizado; catálogo original continua com saldo 5 e nenhum registro parcialmente substituído.",
+        "reviewLessons": [
+          17,
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "title": "Última unidade concorrente",
+        "setup": "Saldo 1 e duas threads com operações distintas.",
+        "input": "Ambas tentam reservar uma unidade; espere o término antes de verificar.",
+        "expected": "Uma confirma e outra é recusada; saldo 0 e estruturas internas permanecem consistentes.",
+        "reviewLessons": [
+          18,
+          28,
+          29,
+          30
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "O projeto usa smart pointers, mas retorna string_view para uma string local. A gestão de lifetime está resolvida?",
+        "options": [
+          "Não; smart pointers em outras partes não corrigem uma view cujo armazenamento já foi destruído.",
+          "Sim, usar qualquer unique_ptr resolve todas as referências.",
+          "Sim, string_view guarda cópia automática.",
+          "Não, porque referências nunca podem ser usadas."
+        ],
+        "answer": 0,
+        "explanation": "Cada janela de leitura precisa de um dono vivo; a escolha de propriedade é local a cada contrato.",
+        "reviewLessons": [
+          13,
+          14,
+          24
+        ],
+        "id": "q1"
+      },
+      {
+        "prompt": "Um teste negativo passa com assert, mas essa verificação pode ser removida no build de entrega. Como manter proteção de entrada?",
+        "options": [
+          "Depender somente de assert e renomear o executável.",
+          "Validar entradas no fluxo normal com resultado/erro explícito e usar testes para comprovar rejeição e estado preservado.",
+          "Aceitar qualquer snapshot no build Release.",
+          "Substituir toda validação por comentários."
+        ],
+        "answer": 1,
+        "explanation": "Assert não deve ser a única implementação de uma regra exigida em execução.",
+        "reviewLessons": [
+          16,
+          17,
+          18,
+          26
+        ],
+        "id": "q2"
+      },
+      {
+        "prompt": "A CLI reabre o snapshot, mas IDs de operações não foram persistidos. Pode prometer deduplicação após reinício?",
+        "options": [
+          "Sim, porque o nome do arquivo é estável.",
+          "Sim, std::set recria seus elementos automaticamente.",
+          "Não; deve persistir a informação necessária de maneira consistente ou declarar que a garantia se limita ao processo.",
+          "Não, porque C++ não permite persistir dados."
+        ],
+        "answer": 2,
+        "explanation": "A recuperação precisa conservar todos os dados envolvidos na garantia anunciada.",
+        "reviewLessons": [
+          25,
+          27,
+          35,
+          36
+        ],
+        "id": "q3"
+      }
+    ]
+  }
+}

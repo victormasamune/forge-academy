@@ -1,0 +1,488 @@
+{
+  "courseId": "markdown",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Procedimento com exemplos literais",
+      "scenario": "Uma página ensina a executar um comando dentro de uma etapa numerada e precisa mostrar a sintaxe de um bloco cercado sem encerrar o próprio exemplo.",
+      "requiredLessons": [
+        2,
+        4,
+        5,
+        7,
+        8,
+        9
+      ],
+      "skills": [
+        "Hierarquia",
+        "Listas e blocos",
+        "Cercas e quebras"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Ajustar linhas em branco e indentação do bloco segundo o conteúdo do item e conferir a lista no renderizador declarado.",
+            "Acrescentar espaços aleatórios só no título da página.",
+            "Trocar toda a lista por parágrafos separados por vírgulas.",
+            "Assumir que qualquer bloco após uma lista pertence automaticamente ao último item."
+          ],
+          "answer": 0,
+          "prompt": "O comando deve pertencer ao passo 2 de uma lista, mas o bloco de código aparece fora dela. Qual revisão atende à estrutura pretendida?",
+          "explanation": "Listas combinam marcadores, indentação e limites de blocos. Verifique a estrutura renderizada, não apenas a aparência do texto no editor.",
+          "reviewLessons": [
+            4,
+            5,
+            7
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Usar a mesma cerca externa de três crases e esperar que as internas nunca sejam interpretadas.",
+            "Usar uma cerca externa de quatro crases e manter as três crases do exemplo dentro dela.",
+            "Remover uma crase do conteúdo sem avisar que o exemplo foi alterado.",
+            "Colocar somente um ponto e vírgula após a cerca interna."
+          ],
+          "answer": 1,
+          "prompt": "Um trecho precisa exibir literalmente três crases que abrem e fecham um exemplo Markdown. Qual estratégia evita fechar a cerca externa cedo?",
+          "explanation": "A cerca externa deve superar a sequência interna que poderia fechá-la. Confira também o resultado após copiar o exemplo.",
+          "reviewLessons": [
+            7,
+            8,
+            9
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Porque uma quebra simples sempre cria um item numerado automaticamente.",
+            "Porque títulos substituem todos os passos de um procedimento.",
+            "Porque expressa etapas e ordem de maneira estrutural, sem depender de como quebras suaves são apresentadas.",
+            "Porque espaços finais são obrigatórios em toda linha de qualquer documento."
+          ],
+          "answer": 2,
+          "prompt": "O autor separou três ações de um procedimento apenas por uma quebra simples de linha. Por que uma lista numerada pode representar melhor a intenção?",
+          "explanation": "Quebras de linha têm contratos próprios. Use estrutura de lista para uma sequência de ações e confira os blocos de cada passo.",
+          "reviewLessons": [
+            2,
+            4,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Navegação, imagens e dialeto",
+      "scenario": "Um guia contém links internos, uma imagem que explica uma decisão e uma tabela de compatibilidade. Ele será lido no repositório e numa prévia local.",
+      "requiredLessons": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        18
+      ],
+      "skills": [
+        "Links descritivos",
+        "Texto alternativo",
+        "Dialeto declarado"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Apenas a cor do link, porque ela determina o caminho.",
+            "Trocar todos os rótulos por clique aqui e preservar o destino quebrado.",
+            "Assumir que caminho iniciado por / sempre significa a pasta do arquivo atual.",
+            "A base de resolução do destino e o uso de caminho relativo adequado ao contexto, mantendo rótulo que explique a ação."
+          ],
+          "answer": 3,
+          "prompt": "O README usa /docs/instalar.md, mas o site é publicado sob um subcaminho e o link quebra. O que revisar junto do rótulo do link?",
+          "explanation": "Caminho de raiz e caminho relativo não são equivalentes. Repositório, site e exportação podem resolver destinos de maneiras distintas.",
+          "reviewLessons": [
+            10,
+            11,
+            12
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Descrever a informação relevante e fornecer explicação textual equivalente quando a relação for complexa.",
+            "Copiar apenas o tamanho do arquivo para o texto alternativo.",
+            "Remover toda descrição porque o nome do arquivo já é suficiente em qualquer caso.",
+            "Usar um emoji como substituto obrigatório de toda explicação."
+          ],
+          "answer": 0,
+          "prompt": "Uma imagem mostra a relação entre três componentes e seu texto alternativo é somente imagem.png. Como tornar a informação recuperável?",
+          "explanation": "O leitor precisa do significado da imagem, não só do nome do recurso. Uma legenda ou descrição longa pode complementar o texto alternativo.",
+          "reviewLessons": [
+            13,
+            14
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Afirmar que todo renderizador aceita qualquer extensão sem configuração.",
+            "Declarar GFM ou adaptar os recursos para a base prometida e conferir as duas prévias previstas.",
+            "Usar um link por referência para ativar GFM automaticamente.",
+            "Mudar a extensão do arquivo para .md e concluir que compatibilidade está provada."
+          ],
+          "answer": 1,
+          "prompt": "O documento depende de autolink e texto riscado de GFM, mas a entrega promete CommonMark puro. Qual revisão é necessária?",
+          "explanation": "A extensão do arquivo não define sozinha o dialeto. O contrato precisa corresponder aos recursos utilizados e aos destinos realmente testados.",
+          "reviewLessons": [
+            10,
+            14,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "README, tutorial e fronteira de HTML",
+      "scenario": "Uma equipe organiza a documentação de um serviço. Parte do texto possui HTML e seções recolhíveis, e contribuições de outras pessoas passam por publicação sanitizada.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "skills": [
+        "Objetivo de cada documento",
+        "HTML e sanitização",
+        "Conteúdo essencial"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Colocar todos os campos dentro de um único título sem índice.",
+            "Apagar os pré-requisitos para encurtar o README.",
+            "Manter orientação inicial no README, criar tutorial com começo/fim e colocar contratos de campos numa referência própria.",
+            "Usar details como substituto de qualquer organização por finalidade."
+          ],
+          "answer": 2,
+          "prompt": "O README é uma referência extensa de todos os campos e não mostra como iniciar uma tarefa. Como repartir o conteúdo por objetivo?",
+          "explanation": "Primeiro contato, tarefa guiada e consulta de contrato têm necessidades diferentes. A separação melhora a navegação sem descartar informação.",
+          "reviewLessons": [
+            22,
+            23,
+            24
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Todo HTML num .md executará da mesma forma em qualquer destino.",
+            "Desabilitar a sanitização de conteúdo de terceiros é sempre a solução correta.",
+            "A presença de details concede permissão para executar scripts arbitrários.",
+            "O resultado depende da política do renderizador; é preciso adaptar ou fornecer alternativa e testar a publicação real."
+          ],
+          "answer": 3,
+          "prompt": "Um bloco HTML funciona na prévia local, mas a publicação sanitizada remove parte dele. O que o autor pode afirmar com segurança?",
+          "explanation": "Markdown com HTML possui limites de processamento e segurança. Não confunda suporte sintático com autorização para publicar conteúdo ativo.",
+          "reviewLessons": [
+            19,
+            20,
+            21
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Manter a orientação essencial visível no fluxo principal e usar a seção recolhível para detalhes complementares, com alternativa conforme o destino.",
+            "Ocultar também o título do tutorial.",
+            "Assumir que todo leitor abrirá qualquer seção recolhível antes de executar.",
+            "Mover os pré-requisitos para um atributo HTML invisível."
+          ],
+          "answer": 0,
+          "prompt": "Um aviso indispensável ficou somente dentro de details fechado no tutorial. Qual mudança preserva orientação e portabilidade?",
+          "explanation": "A tarefa deve continuar compreensível quando o recurso recolhível muda ou não é apresentado. Informação essencial precisa de posição clara.",
+          "reviewLessons": [
+            20,
+            21,
+            22,
+            23
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Documentação que evolui sem perder leitores",
+      "scenario": "O manual passa a ter vários arquivos, um diagrama Mermaid e metadados de gerador. Uma decisão muda a navegação e precisa ser registrada sem prometer suporte universal.",
+      "requiredLessons": [
+        25,
+        26,
+        28,
+        29,
+        31,
+        35
+      ],
+      "skills": [
+        "Navegação estável",
+        "Extensões e fallback",
+        "Decisões e compatibilidade"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Assumir que fragmentos são idênticos e imutáveis em todos os sistemas.",
+            "Revisar os links/âncoras segundo o renderizador, preservar destinos estáveis quando suportados e registrar a mudança relevante.",
+            "Trocar somente o nome do arquivo de imagem.",
+            "Adicionar front matter e concluir que qualquer âncora será preservada."
+          ],
+          "answer": 1,
+          "prompt": "Um título usado como destino foi renomeado e links antigos deixaram de funcionar. Qual ação combina manutenção e estabilidade?",
+          "explanation": "Âncoras geradas dependem do título e do destino de publicação. Teste links internos após mudanças de estrutura.",
+          "reviewLessons": [
+            25,
+            26,
+            31,
+            35
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Afirmar que cerca mermaid é HTML universal.",
+            "Remover a explicação textual porque o diagrama é mais curto.",
+            "Fornecer uma alternativa textual da ordem e declarar onde Mermaid é renderizado na matriz de compatibilidade.",
+            "Usar front matter como garantia de execução do diagrama."
+          ],
+          "answer": 2,
+          "prompt": "O diagrama Mermaid comunica uma ordem operacional, mas um destino exibe só o código cercado. Qual entrega mantém a informação acessível?",
+          "explanation": "Mermaid é uma extensão. O conteúdo necessário precisa sobreviver em destinos sem esse renderizador.",
+          "reviewLessons": [
+            25,
+            28,
+            35
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Dizer que todo Markdown reconhece os mesmos metadados nativamente.",
+            "Colocar senhas nos metadados porque eles nunca ficam visíveis.",
+            "Escolher campos aleatórios sem explicar seu consumidor.",
+            "Registrar o gerador e os campos esperados, as consequências de portabilidade e a alternativa para destinos sem essa extensão."
+          ],
+          "answer": 3,
+          "prompt": "O gerador interpreta front matter, enquanto outro visualizador mostra suas linhas como conteúdo. Como documentar a decisão de usá-lo?",
+          "explanation": "Metadados só têm significado para um consumidor definido. Registre contexto e consequências para não tratar uma convenção de ferramenta como regra universal.",
+          "reviewLessons": [
+            29,
+            31,
+            35
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Manual portável de um serviço de biblioteca",
+    "scenario": "Entregue a documentação de um serviço fictício de cadastro e empréstimos. Outra pessoa deve conseguir entender a finalidade, seguir uma tarefa e consultar o contrato, inclusive num destino com menos extensões.",
+    "requirements": [
+      "Criar README com finalidade, pré-requisitos, início rápido, limites e navegação para os demais documentos.",
+      "Escrever um tutorial de tarefa com entradas, passos, resultado esperado e caminho para investigar divergências.",
+      "Documentar campos, estados, erros e exemplos numa referência consistente com o tutorial.",
+      "Organizar caminhos, imagens e âncoras, com rótulos descritivos e informação alternativa para conteúdo visual.",
+      "Declarar dialetos e extensões usados e publicar uma matriz de compatibilidade com alternativa para diagramas ou recursos opcionais.",
+      "Manter registro de decisão, histórico de mudanças e checklist de revisão, sem credenciais ou afirmações de teste não executado."
+    ],
+    "deliverables": [
+      "README.md, docs/tutorial.md e docs/referencia.md com conteúdo completo e fictício.",
+      "Assets e navegação relativos, com exemplos copiados e conferidos na revisão.",
+      "Registro de decisão, changelog e guia/checklist de contribuição.",
+      "Matriz de destinos e relatório de inspeção das renderizações e dos links."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Estrutura e leitura",
+        "description": "Hierarquia, listas e blocos representam o conteúdo sem depender de espaços acidentais.",
+        "reviewLessons": [
+          2,
+          4,
+          5,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Tarefa reproduzível",
+        "description": "O tutorial informa estado inicial, ação e resultado, com evidências compatíveis com o escopo.",
+        "reviewLessons": [
+          14,
+          15,
+          22,
+          23
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Contrato consistente",
+        "description": "Referência e exemplos usam os mesmos nomes, tipos e estados do tutorial.",
+        "reviewLessons": [
+          16,
+          17,
+          24,
+          27
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Navegação e alternativas",
+        "description": "Links, fragmentos e imagens têm destinos conferidos e informação compreensível.",
+        "reviewLessons": [
+          10,
+          11,
+          12,
+          13,
+          25,
+          26
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Publicação consciente",
+        "description": "HTML e extensões possuem contrato declarado, sanitização respeitada e fallback.",
+        "reviewLessons": [
+          18,
+          19,
+          20,
+          21,
+          28,
+          29,
+          30,
+          35
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Manutenção verificável",
+        "description": "Decisões, mudanças e revisão registram o que foi efetivamente observado e o que falta.",
+        "reviewLessons": [
+          15,
+          31,
+          32,
+          33,
+          34,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Tarefa por leitor novo",
+        "setup": "Prepare os arquivos e uma instância fictícia ou descrição reproduzível do ambiente do tutorial.",
+        "input": "Peça a um revisor seguir somente o README e o tutorial, registrando dúvidas e resultados.",
+        "expected": "O caminho inicial, comandos/entradas e resultado são encontráveis; divergências são registradas e corrigidas no texto, sem presumir sucesso.",
+        "reviewLessons": [
+          14,
+          15,
+          22,
+          23,
+          24
+        ]
+      },
+      {
+        "title": "Dois destinos declarados",
+        "setup": "Escolha uma base CommonMark e um destino GFM ou outro visualizador explicitamente nomeado.",
+        "input": "Abra os documentos nos dois e confira listas, cercas, links, tabelas, HTML e alternativas de diagrama.",
+        "expected": "A matriz descreve diferenças reais e os conteúdos essenciais continuam compreensíveis; recursos não suportados não são declarados como funcionais.",
+        "reviewLessons": [
+          7,
+          8,
+          18,
+          19,
+          21,
+          28,
+          35
+        ]
+      },
+      {
+        "title": "Mudança e navegação",
+        "setup": "Registre uma decisão que altera uma seção referenciada.",
+        "input": "Atualize título/destino, revise links relativos e registre a mudança e as consequências.",
+        "expected": "Links usados pelo leitor continuam válidos ou a mudança é tratada conscientemente; decisões e changelog concordam com a versão entregue.",
+        "reviewLessons": [
+          25,
+          26,
+          31,
+          32,
+          33
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "options": [
+          "Portabilidade e alternativa textual da informação necessária à tarefa.",
+          "A largura obrigatória da imagem em milímetros.",
+          "A criação de um backend para cada página.",
+          "Nada, pois todo bloco cercado executa a linguagem indicada."
+        ],
+        "answer": 0,
+        "prompt": "O manual declara CommonMark, mas uma instrução essencial só aparece num diagrama Mermaid sem descrição. Qual requisito está incompleto?",
+        "explanation": "Uma cerca identifica conteúdo; o renderizador de uma extensão é outro mecanismo. A tarefa deve ser recuperável no contrato de publicação prometido.",
+        "reviewLessons": [
+          7,
+          14,
+          28,
+          35
+        ]
+      },
+      {
+        "id": "q2",
+        "options": [
+          "Sim, aparência substitui consistência técnica.",
+          "Não; o contrato e o exemplo precisam usar uma regra coerente e ter o resultado revisado.",
+          "Sim, nomes diferentes sempre significam o mesmo sem explicação.",
+          "Não, porque referências não podem conter estados."
+        ],
+        "answer": 1,
+        "prompt": "Um exemplo do tutorial usa estado concluido, mas a referência só aceita finalizado. O preview está bonito. O projeto está consistente?",
+        "explanation": "Documentação é uma interface de uso. Revise vocabulário, entradas e saídas entre tarefa e referência, além da renderização.",
+        "reviewLessons": [
+          15,
+          23,
+          24,
+          27
+        ]
+      },
+      {
+        "id": "q3",
+        "options": [
+          "Manter a afirmação porque o arquivo termina em .md.",
+          "Usar a quantidade de commits como prova de todos os links.",
+          "Separar revisão textual das verificações executadas e realizar ou marcar como pendentes os testes de destino.",
+          "Apagar os links para não precisar revisar a navegação."
+        ],
+        "answer": 2,
+        "prompt": "O relatório marca todos os links como conferidos, mas ninguém abriu os documentos no destino publicado. Qual correção de evidência é necessária?",
+        "explanation": "A conclusão deve corresponder ao que foi observado. Publique resultados e limites de revisão com o mesmo cuidado aplicado ao conteúdo técnico.",
+        "reviewLessons": [
+          12,
+          15,
+          26,
+          33,
+          34,
+          35
+        ]
+      }
+    ]
+  }
+}

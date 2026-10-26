@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101323">
+  <meta name="description" content="20 trilhas em português de programação, web, containers e bancos de dados. Aprenda SQL, PostgreSQL, SQLite, MySQL, MariaDB, SQL Server, Oracle, MongoDB e Redis com exercícios, projetos e gamificação.">
+  <title>Forge Academy — Trilhas de tecnologia</title>
+  <link rel="icon" href="/learn/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/learn/style.css">
+  <link rel="stylesheet" href="/learn/rpg.css">
+  <link rel="stylesheet" href="/learn/academy.css">
+  <link rel="stylesheet" href="/learn/multi.css">
+  <script src="/learn/course.js" defer></script>
+  <script src="/learn/courses/docker.js" defer></script>
+  <script src="/learn/courses/kubernetes.js" defer></script>
+  <script src="/learn/courses/java.js" defer></script>
+  <script src="/learn/courses/javascript.js" defer></script>
+  <script src="/learn/courses/python.js" defer></script>
+  <script src="/learn/courses/logica.js" defer></script>
+  <script src="/learn/courses/cpp.js" defer></script>
+  <script src="/learn/courses/csharp.js" defer></script>
+  <script src="/learn/courses/css.js" defer></script>
+  <script src="/learn/courses/markdown.js" defer></script>
+  <script src="/learn/courses/bancos.js" defer></script>
+  <script src="/learn/courses/sqlite.js" defer></script>
+  <script src="/learn/courses/postgresql.js" defer></script>
+  <script src="/learn/courses/mysql.js" defer></script>
+  <script src="/learn/courses/mariadb.js" defer></script>
+  <script src="/learn/courses/sqlserver.js" defer></script>
+  <script src="/learn/courses/oracle.js" defer></script>
+  <script src="/learn/courses/mongodb.js" defer></script>
+  <script src="/learn/courses/redis.js" defer></script>
+  <script src="/learn/learning.js" defer></script>
+  <script src="/learn/rpg-data.js" defer></script>
+  <script src="/learn/classes.js" defer></script>
+  <script src="/learn/academy.js" defer></script>
+  <script src="/learn/assessments.js" defer></script>
+  <script src="/learn/rpg.js" defer></script>
+  <script src="/learn/rpg-ui.js" defer></script>
+  <script src="/learn/account.js" defer></script>
+  <script src="/learn/advanced-ui.js" defer></script>
+  <script src="/learn/app.js" defer></script>
+</head>
+<body class="account-checking signed-out">
+  <noscript>Ative JavaScript para usar as aulas e salvar seu progresso. O cronograma também está disponível em cronograma-go-forge.md.</noscript>
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+  <div class="mobile-shade" id="shade" hidden></div>
+  <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+    <a class="brand" href="#inicio" aria-label="Forge Academy, início"><span class="brand-symbol">f<span>.</span></span><span>Forge Academy<small id="academy-subtitle">TRILHAS · SUA EVOLUÇÃO</small></span></a>
+    <div class="course-switcher"><label for="course-picker">CURSO ATUAL</label><select id="course-picker" aria-label="Selecionar curso"></select></div>
+    <p class="nav-label">SEUS ESTUDOS</p>
+    <nav id="nav"></nav>
+    <div class="sidebar-bottom">
+      <a class="sidebar-hero" href="#personagem"><span class="eyebrow">MEU PERFIL</span><div><strong id="hero-sidebar-name">Aluno</strong><b id="hero-sidebar-level">NV. 1</b></div><span id="hero-sidebar-class">Artífice</span><div class="xp-track"><span id="hero-sidebar-xpbar" style="width:0%"></span></div><small id="hero-sidebar-xp">0 XP</small></a>
+      <div class="course-progress"><div class="flex between"><span>Progresso das aulas</span><strong id="side-percent">0%</strong></div><div class="progress-track"><span id="side-bar"></span></div><small id="side-count">0 de 36 aulas concluídas</small></div>
+      <a class="sidebar-note" href="#cronograma"><span class="mini-icon">✧</span><div>Continue no seu ritmo.<small>Organize sua rotina de estudo.</small></div></a>
+    </div>
+  </aside>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="flex gap12"><button class="icon-button mobile-toggle" id="menu-button" aria-label="Abrir navegação" aria-expanded="false" aria-controls="sidebar">☰</button><div class="breadcrumb"><span>FORGE ACADEMY <span class="breadcrumb-star">✧</span> <b id="course-context-name">Go</b></span><strong id="crumb">Todos os cursos</strong></div></div>
+      <div class="flex gap16"><span id="cloud-status" class="cloud-status" role="status" aria-live="polite"></span><a class="account-top-link" href="#conta">Conta</a><form id="search-form" class="search-form" role="search"><label for="search" class="sr-only">Buscar aulas</label><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Buscar aulas..." autocomplete="off"><kbd>/</kbd></form><a class="header-level" id="header-level" href="#personagem">NV. 1</a><a class="pace-chip" href="#cronograma"><span class="small-dot"></span><span id="pace">8 h / semana</span></a></div>
+    </header>
+    <main id="conteudo" tabindex="-1"></main>
+    <footer class="footer"><span>Forge Academy <span class="muted">·</span> Aprender. Praticar. Evoluir.</span><a href="#referencias">Referências oficiais ↗</a></footer>
+  </div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="levelup-dialog" class="levelup-dialog"><form method="dialog"><span class="eyebrow">VOCÊ EVOLUIU</span><div class="levelup-symbol">✧</div><h2>Nível <span id="levelup-number">2</span></h2><p id="levelup-message">Seu estudo está rendendo experiência.</p><button class="button primary" value="continue">Continuar estudando</button></form></dialog>
+  <dialog id="confirm-dialog"><form method="dialog"><span class="eyebrow">SEU PROGRESSO</span><h2 id="dialog-title">Substituir backup?</h2><p id="dialog-text"></p><div class="button-row"><button class="button secondary" value="cancel">Cancelar</button><button class="button primary" value="confirm">Substituir</button></div></form></dialog>
+  <input type="file" id="backup-file" accept="application/json,.json" hidden>
+</body>
+</html>

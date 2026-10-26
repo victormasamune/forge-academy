@@ -1,0 +1,451 @@
+{
+  "courseId": "postgresql",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Pedidos e relatório sem distorção",
+      "scenario": "Um serviço PostgreSQL cadastra pedidos e itens, devolve o resultado das escritas e lista clientes com receita, inclusive os que ainda não têm pedidos.",
+      "requiredLessons": [
+        3,
+        4,
+        6,
+        7,
+        8,
+        9
+      ],
+      "skills": [
+        "Constraints e RETURNING",
+        "Cardinalidade",
+        "CTE e existência"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "O INSERT de item precisa rejeitar quantidade ausente ou não positiva e devolver o ID criado. Qual combinação atende?",
+          "options": [
+            "Apenas CHECK, presumindo que ele rejeita NULL em todo caso.",
+            "SELECT do maior ID antes de inserir, sem constraint.",
+            "NOT NULL e CHECK(quantidade>0), com RETURNING id na escrita.",
+            "Um alias quantidade_valida, que passa a validar o domínio."
+          ],
+          "answer": 2,
+          "explanation": "A obrigatoriedade e o intervalo são regras distintas. RETURNING associa o resultado à própria escrita, sem disputa pelo maior ID.",
+          "reviewLessons": [
+            3,
+            4
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "A junção cliente→pedido→item repete o saldo cadastral do cliente por item. O relatório precisa de receita dos itens e incluir cliente sem venda. Qual caminho é correto?",
+          "options": [
+            "Somar o saldo repetido e aplicar DISTINCT apenas no nome.",
+            "Usar INNER JOIN e afirmar que todos os clientes continuam presentes.",
+            "Multiplicar qualquer medida pelo número de linhas da junção.",
+            "Definir a granularidade das medidas, agregar os itens no nível adequado e preservar clientes com LEFT JOIN/COALESCE quando necessário."
+          ],
+          "answer": 3,
+          "explanation": "O efeito da cardinalidade precisa ser previsto antes da soma. Preservar o pai e definir a unidade da receita resolve perguntas diferentes do relatório.",
+          "reviewLessons": [
+            6,
+            7
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Uma CTE reúne pedidos válidos; a tela precisa de clientes que não tenham nenhum desses pedidos. Como expressar a ausência sem multiplicar clientes?",
+          "options": [
+            "Usar NOT EXISTS correlacionado à identidade do cliente sobre a CTE.",
+            "Usar EXISTS sem referência ao cliente externo.",
+            "Comparar o nome da CTE com NULL.",
+            "Transformar a CTE em texto e usar LIKE no ID."
+          ],
+          "answer": 0,
+          "explanation": "A CTE dá nome ao conjunto válido; a correlação faz a pergunta para cada cliente. Sem ela, o teste vira uma condição global.",
+          "reviewLessons": [
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Concorrência e investigação de consulta",
+      "scenario": "Reservas de estoque disputam a mesma linha. Um relatório apresenta acumulados e a equipe avalia um índice para a busca frequente.",
+      "requiredLessons": [
+        10,
+        13,
+        14,
+        15,
+        16,
+        18
+      ],
+      "skills": [
+        "Atomicidade e locks",
+        "MVCC e janelas",
+        "EXPLAIN com evidências"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Uma reserva bloqueia o estoque e faz duas alterações obrigatórias. Qual limite evita liberar o lock antes de registrar a reserva?",
+          "options": [
+            "Confirmar logo após SELECT FOR UPDATE e depois gravar a reserva em outra transação.",
+            "Manter leitura bloqueante e efeitos na mesma transação, com commit ou rollback da unidade.",
+            "Usar tabela temporária distinta em cada sessão e afirmar que ambas disputam a mesma linha.",
+            "Trocar o lock por ORDER BY e dispensar a transação."
+          ],
+          "answer": 1,
+          "explanation": "FOR UPDATE protege dentro de seu limite transacional. Separar os efeitos abre uma janela que pode invalidar a decisão de negócio.",
+          "reviewLessons": [
+            13,
+            15
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Um relatório usa janela acumulada e uma transação de leitura com snapshot. Novas vendas surgem em outra sessão. O que deve ser definido para um resultado interpretável?",
+          "options": [
+            "Apenas o nome da coluna acumulado.",
+            "Que toda janela mostra obrigatoriamente escritas futuras.",
+            "O ponto de visibilidade da transação e a ordem/frame da janela, sem supor que a janela cria um snapshot por si só.",
+            "Que MVCC elimina qualquer necessidade de ordenar valores empatados."
+          ],
+          "answer": 2,
+          "explanation": "MVCC governa a visibilidade; a janela governa o cálculo entre linhas visíveis. São contratos complementares.",
+          "reviewLessons": [
+            10,
+            14
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "EXPLAIN ANALYZE de uma consulta com índice mostrou tempo menor numa execução isolada. O que sustenta uma conclusão de ganho?",
+          "options": [
+            "Somente o nome B-tree no plano.",
+            "Um custo estimado tratado como milissegundos exatos.",
+            "Rodar EXPLAIN ANALYZE em qualquer escrita real sem avaliar seus efeitos.",
+            "Resultados equivalentes, carga e distribuição representativas, repetições comparáveis e atenção ao fato de ANALYZE executar a consulta."
+          ],
+          "answer": 3,
+          "explanation": "O índice é uma hipótese de acesso; o ensaio precisa medir o mesmo trabalho. ANALYZE executa a instrução e exige cuidado com operações que modificam dados.",
+          "reviewLessons": [
+            16,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Contrato de documento e isolamento entre clientes",
+      "scenario": "O catálogo possui JSONB e busca textual. Uma API aplica regras em PL/pgSQL, audita mudanças e precisa impedir que um tenant leia os registros de outro.",
+      "requiredLessons": [
+        19,
+        20,
+        23,
+        24,
+        26,
+        27
+      ],
+      "skills": [
+        "JSONB e busca",
+        "Auditoria transacional",
+        "RLS e binding"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "O documento JSONB possui título textual e campos opcionais; a busca exige termos normalizados. Qual desenho combina representação e acesso sem supor que JSONB já é um motor de busca?",
+          "options": [
+            "Validar o contrato dos campos e criar a representação/configuração de busca textual e seu índice conforme a consulta.",
+            "Usar qualquer índice JSONB e prometer a mesma semântica de full-text.",
+            "Converter todos os campos ausentes em zero, inclusive título.",
+            "Guardar um documento sem regras e deixar o índice validar qualquer significado."
+          ],
+          "answer": 0,
+          "explanation": "JSONB organiza documentos; busca textual tem configuração, operadores e estratégia próprios. Contrato do dado e acesso precisam ser projetados juntos.",
+          "reviewLessons": [
+            19,
+            20
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Uma função modifica preço e o trigger grava auditoria; depois a unidade sofre rollback. Qual resultado corresponde a auditoria transacional normal?",
+          "options": [
+            "O trigger confirma sua própria linha automaticamente em toda execução.",
+            "A mudança de preço e a linha de auditoria da mesma transação são desfeitas.",
+            "Somente a auditoria permanece, sem regra adicional.",
+            "A função deixa de usar transação por estar escrita em PL/pgSQL."
+          ],
+          "answer": 1,
+          "explanation": "Função e trigger participam do contexto transacional do chamador. Auditoria independente ou externa seria outro desenho, com outros requisitos.",
+          "reviewLessons": [
+            23,
+            24
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "A API concatena o tenant enviado pelo usuário num SQL e acredita que ter RLS basta. Qual fronteira precisa ser corrigida?",
+          "options": [
+            "Aceitar qualquer tenant do corpo e confiar no nome da tabela.",
+            "Usar o proprietário com poderes de bypass para provar o isolamento de todos os consumidores.",
+            "Usar contexto de tenant confiável e vincular valores, verificando a política sob uma role que não a contorne.",
+            "Remover a política porque placeholders substituem autorização."
+          ],
+          "answer": 2,
+          "explanation": "Binding protege a estrutura SQL, mas não prova autorização. RLS também depende de role, contexto e política corretos.",
+          "reviewLessons": [
+            26,
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Mudança de esquema e recuperação por ponto",
+      "scenario": "O volume cresceu e há partições por data, migrações em etapas e transações longas. O serviço precisa provar recuperação e limitar operações lentas.",
+      "requiredLessons": [
+        28,
+        29,
+        30,
+        31,
+        32,
+        35
+      ],
+      "skills": [
+        "Particionamento e compatibilidade",
+        "Manutenção",
+        "Dump e PITR"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Uma migração adiciona nova restrição numa tabela particionada com dados antigos. O que precisa ser verificado antes de restringir consumidores?",
+          "options": [
+            "Que o nome da partição contém o ano atual.",
+            "Que ADD CONSTRAINT torna qualquer histórico válido por definição.",
+            "Que remover a coluna antiga primeiro evita todo bloqueio.",
+            "Cobertura das partições e dados existentes, compatibilidade das etapas e validação da regra antes da contração."
+          ],
+          "answer": 3,
+          "explanation": "Particionamento não substitui integridade nem planejamento de evolução. A migração deve considerar todas as linhas e versões que ainda usam o contrato anterior.",
+          "reviewLessons": [
+            28,
+            30
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Uma transação de leitura fica aberta por horas e o banco acumula versões antigas. Qual ação trata a causa sem matar qualquer processo indiscriminadamente?",
+          "options": [
+            "Identificar a transação e seu uso, limitar duração com timeouts adequados e revisar a interação com VACUUM.",
+            "Apenas criar mais índices para apagar versões antigas.",
+            "Desligar VACUUM permanentemente.",
+            "Supor que cancelar uma consulta sempre encerra toda transação automaticamente."
+          ],
+          "answer": 0,
+          "explanation": "Transações antigas podem reter versões necessárias ao snapshot. Diagnóstico e limites de sessão/transação precisam ser coerentes com o fluxo da aplicação.",
+          "reviewLessons": [
+            29,
+            35
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "O dump foi restaurado com sucesso, mas o requisito é voltar a um instante entre backups. O que ainda é necessário?",
+          "options": [
+            "Afirmar que qualquer pg_dump já contém todos os WAL futuros.",
+            "Um procedimento PITR com backup-base apropriado, WAL arquivado preservado e alvo de recuperação efetivamente testado.",
+            "Usar uma réplica sem retenção como cópia histórica garantida.",
+            "Trocar a extensão do dump para wal."
+          ],
+          "answer": 1,
+          "explanation": "Restauração lógica e recuperação por ponto têm requisitos e alcances diferentes. O alvo recuperado precisa ser demonstrado, não inferido do comando de backup.",
+          "reviewLessons": [
+            31,
+            32
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Serviço de pedidos com isolamento e recuperação",
+    "scenario": "Entregue o banco PostgreSQL de um serviço de pedidos para dois tenants fictícios. O cliente pode ser local; a API deve documentar quem pode executar cada operação e como o serviço se recupera.",
+    "requirements": [
+      "Integridade de pedidos: chaves, nulabilidade, quantidades e valores válidos; totais e estados têm regras documentadas.",
+      "Reserva concorrente: duas sessões disputam estoque sem permitir saldo negativo ou pedido parcialmente confirmado.",
+      "Consultas justificadas: relatório sem duplicação de medidas, janela com frame e busca/documentos com contrato explícito.",
+      "Isolamento e parâmetros: roles limitadas, RLS verificada para dois tenants e valores vinculados pela API do cliente.",
+      "Evolução e observação: migration compatível, índice justificado, diagnóstico de bloqueio e limites de duração/conexão.",
+      "Recuperação comprovada: dump restaurado e conferido; PITR/replicação têm requisitos e estado de ensaio explicitamente registrados."
+    ],
+    "deliverables": [
+      "Schema, migrations, fixture de dois tenants e dicionário de regras.",
+      "Cliente parametrizado e operações de reserva/cancelamento.",
+      "Testes de concorrência, autorização e relatórios com resultados de referência.",
+      "Runbook de observação e restore, com evidência do destino e cenários ainda não executados."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Integridade de pedidos",
+        "description": "Integridade de pedidos: chaves, nulabilidade, quantidades e valores válidos; totais e estados têm regras documentadas.",
+        "reviewLessons": [
+          3,
+          4,
+          6,
+          7
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Reserva concorrente",
+        "description": "Reserva concorrente: duas sessões disputam estoque sem permitir saldo negativo ou pedido parcialmente confirmado.",
+        "reviewLessons": [
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Consultas justificadas",
+        "description": "Consultas justificadas: relatório sem duplicação de medidas, janela com frame e busca/documentos com contrato explícito.",
+        "reviewLessons": [
+          10,
+          18,
+          19,
+          20
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Isolamento e parâmetros",
+        "description": "Isolamento e parâmetros: roles limitadas, RLS verificada para dois tenants e valores vinculados pela API do cliente.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Evolução e observação",
+        "description": "Evolução e observação: migration compatível, índice justificado, diagnóstico de bloqueio e limites de duração/conexão.",
+        "reviewLessons": [
+          16,
+          29,
+          30,
+          34,
+          35
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Recuperação comprovada",
+        "description": "Recuperação comprovada: dump restaurado e conferido; PITR/replicação têm requisitos e estado de ensaio explicitamente registrados.",
+        "reviewLessons": [
+          31,
+          32,
+          33,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Última unidade em disputa",
+        "setup": "Estoque 1 e dois clientes em sessões distintas.",
+        "input": "Reservar simultaneamente uma unidade para pedidos diferentes.",
+        "expected": "No máximo uma reserva confirma; a outra recebe recusa ou conflito tratado, sem saldo negativo nem pedido parcial.",
+        "reviewLessons": [
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "title": "Tenant incorreto",
+        "setup": "Dados diferentes para tenants A e B, role de aplicação sem bypass e contexto confiável.",
+        "input": "Consultar como A e tentar alcançar explicitamente o ID pertencente a B.",
+        "expected": "B não é devolvido a A; a recusa não depende só de filtro montado na interface.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "title": "Dump e destino novo",
+        "setup": "Fixture conhecida, arquivo pg_dump e banco de destino vazio autorizado.",
+        "input": "Restaurar com ferramentas compatíveis e conferir contagens, chaves e resultados de negócio.",
+        "expected": "Destino abre e preserva dados/regras; logs e resultados são registrados. PITR só é marcado ensaiado após recuperação real de seu alvo.",
+        "reviewLessons": [
+          30,
+          31,
+          32
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "prompt": "A aplicação usa parâmetros, mas executa como role que contorna RLS. O isolamento entre tenants foi provado?",
+        "options": [
+          "Sim, placeholders são políticas de acesso.",
+          "Sim, o proprietário sempre representa qualquer role limitada.",
+          "Não; precisa testar autorização com a identidade e o contexto reais do consumidor.",
+          "Não, porque RLS impede qualquer parâmetro."
+        ],
+        "answer": 2,
+        "explanation": "Estrutura SQL segura e autorização são fronteiras distintas. A identidade usada no ensaio faz parte da evidência.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "id": "q2",
+        "prompt": "A reserva tem lock correto, mas mantém transação aberta enquanto aguarda confirmação humana. Qual ponto revisar?",
+        "options": [
+          "Aumentar indefinidamente todos os timeouts.",
+          "Abrir mais sessões para manter os mesmos locks.",
+          "Trocar o nome do trigger.",
+          "Encurtar o limite transacional e revalidar a decisão ao escrever, com timeouts e tratamento de conflito."
+        ],
+        "answer": 3,
+        "explanation": "Locks necessários não justificam segurar recursos durante interação longa. A decisão deve ser revalidada dentro de uma unidade curta.",
+        "reviewLessons": [
+          13,
+          15,
+          35
+        ]
+      },
+      {
+        "id": "q3",
+        "prompt": "A réplica recebe escritas e exclusões, mas não há cópia histórica restaurada. Qual conclusão operacional é correta?",
+        "options": [
+          "Replicação observada não prova recuperação de exclusão acidental; precisa de backup e ensaio do ponto recuperado.",
+          "A réplica conserva todas as versões para sempre automaticamente.",
+          "Receber uma linha prova qualquer PITR.",
+          "O arquivo de configuração da réplica substitui o dump."
+        ],
+        "answer": 0,
+        "explanation": "Disponibilidade, propagação e recuperação histórica possuem garantias diferentes.",
+        "reviewLessons": [
+          31,
+          32,
+          33
+        ]
+      }
+    ]
+  }
+}

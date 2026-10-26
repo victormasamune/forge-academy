@@ -1,0 +1,451 @@
+{
+  "courseId": "mysql",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Cadastro e movimentação InnoDB",
+      "scenario": "Um checkout cria pedido e itens em MySQL 8.4 LTS. Os valores precisam ser exatos, referências válidas e qualquer falha deve deixar o estado anterior.",
+      "requiredLessons": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "skills": [
+        "Domínio exato",
+        "Identidade e FK",
+        "Transação de escrita"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "O total financeiro usa DECIMAL, mas quantidade permite NULL e preço negativo. Qual ajuste completa o domínio?",
+          "options": [
+            "Confiar que DECIMAL valida qualquer regra de negócio.",
+            "Declarar obrigatoriedade e CHECKs apropriados, além de usar representação numérica exata.",
+            "Mudar tudo para FLOAT e arredondar apenas na tela.",
+            "Retirar as constraints para evitar erro no cliente."
+          ],
+          "answer": 1,
+          "explanation": "Escolha do tipo, presença e intervalo atendem regras diferentes. Valor exato não torna válido um preço proibido pelo domínio.",
+          "reviewLessons": [
+            4,
+            5
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "O pedido recebe AUTO_INCREMENT e seus itens precisam referenciá-lo. Como evitar associar itens ao pedido de outro cliente concorrente?",
+          "options": [
+            "Consultar MAX(id) global antes de inserir os itens.",
+            "Escolher qualquer ID que apareceu no relatório.",
+            "Obter o identificador da própria inserção pela conexão/API apropriada e protegê-lo com a FK do item.",
+            "Guardar somente o nome do comprador no item, sem referência."
+          ],
+          "answer": 2,
+          "explanation": "O ID gerado deve pertencer à escrita corrente; a FK protege a referência. MAX global não identifica a operação da sessão.",
+          "reviewLessons": [
+            6,
+            7
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "O UPDATE de estoque passou, mas a inclusão de um item obrigatório falhou. Qual ação preserva o checkout como unidade?",
+          "options": [
+            "Executar COMMIT para salvar a parte que funcionou.",
+            "Repetir o UPDATE em outra conexão sem reavaliar o estado.",
+            "Usar DELETE sem WHERE para remover a falha.",
+            "Reverter a transação completa, conferindo efeitos e evitando confirmar só a baixa."
+          ],
+          "answer": 3,
+          "explanation": "InnoDB permite agrupar os efeitos obrigatórios. O cliente precisa fechar a transação corretamente em cada caminho de erro.",
+          "reviewLessons": [
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Relatórios e navegação do catálogo",
+      "scenario": "A tela mostra clientes sem pedidos, uma página estável e indicadores extraídos de documentos JSON nativos. As consultas precisam responder à granularidade definida.",
+      "requiredLessons": [
+        10,
+        11,
+        12,
+        13,
+        15,
+        18
+      ],
+      "skills": [
+        "NULL e multiplicidade",
+        "Cursor determinístico",
+        "JSON e CTE"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Um cliente sem pedidos desapareceu depois de aplicar WHERE pedido.status=pago a um LEFT JOIN. Como preservar o cliente e contar só pedidos pagos?",
+          "options": [
+            "Restringir a correspondência em ON e contar uma chave não nula do pedido por cliente.",
+            "Trocar o WHERE por ORDER BY e manter COUNT(*) como número de pedidos.",
+            "Usar INNER JOIN para preservar ausência.",
+            "Transformar NULL em um ID de pedido real."
+          ],
+          "answer": 0,
+          "explanation": "O filtro na parte direita pode eliminar a linha preservada. COUNT da chave direita separa ausência de filho de uma linha de pedido.",
+          "reviewLessons": [
+            10,
+            12,
+            13
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "A página ordena por criado_em,id e existem horários empatados. O próximo cursor guarda apenas criado_em. O que falta?",
+          "options": [
+            "Retirar ORDER BY para que o banco decida.",
+            "Incluir id no cursor e reproduzir os dois critérios no predicado, tratando ausência conforme o contrato.",
+            "Assumir que LIMIT resolve os empates sozinho.",
+            "Usar apenas o número de linhas da página como identidade permanente."
+          ],
+          "answer": 1,
+          "explanation": "O cursor representa a posição completa na ordem. Empates e valores ausentes precisam de uma regra consistente de navegação.",
+          "reviewLessons": [
+            10,
+            11
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Uma CTE prepara eventos cujo JSON possui total, e a etapa seguinte soma por tipo. Qual é o contrato necessário para a medida?",
+          "options": [
+            "Somar o texto JSON bruto e supor conversão válida de qualquer conteúdo.",
+            "Contar caracteres do documento como receita.",
+            "Extrair e converter total para o tipo numérico esperado, tratar ausência e declarar a granularidade da CTE/agregação.",
+            "Presumir que declarar uma CTE valida todos os campos JSON."
+          ],
+          "answer": 2,
+          "explanation": "JSON nativo valida a representação do documento, não o significado de cada medida. A decomposição da consulta deve conservar o conjunto e a unidade corretos.",
+          "reviewLessons": [
+            15,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Índices, auditoria e estoque disputado",
+      "scenario": "O catálogo indexa campos JSON, o histórico registra mudanças e duas operações concorrentes reservam produtos. A equipe precisa distinguir plano, efeito e falha.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        23,
+        26,
+        27
+      ],
+      "skills": [
+        "Acesso por índice",
+        "Efeitos da escrita",
+        "Locks e retry"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Um índice composto foi criado para filtrar cliente e ordenar por data. Qual evidência deve acompanhar EXPLAIN/ANALYZE?",
+          "options": [
+            "Somente o nome do índice no texto.",
+            "Uma promessa de tempo deduzida do custo estimado.",
+            "Nenhum dado, porque todo índice é sempre melhor.",
+            "Mesmo resultado, dados representativos e medição comparável; ANALYZE executa o trabalho analisado."
+          ],
+          "answer": 3,
+          "explanation": "O índice é uma hipótese que o plano e a carga ajudam a avaliar. Resultado funcional e efeitos da instrução não podem ser ignorados.",
+          "reviewLessons": [
+            19,
+            20
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Um campo JSON indexado por coluna gerada mudou e o trigger audita todo UPDATE. Qual teste verifica o comportamento completo?",
+          "options": [
+            "Conferir o valor/indexabilidade da coluna gerada e se a auditoria registra apenas a mudança de domínio pretendida, inclusive no UPDATE sem mudança.",
+            "Conferir só o nome da tabela no cliente.",
+            "Assumir que JSON atualizado não altera colunas geradas.",
+            "Contar triggers como prova de correção de qualquer índice."
+          ],
+          "answer": 0,
+          "explanation": "Coluna gerada e auditoria respondem a aspectos diferentes da escrita. O teste precisa observar a representação consultável e o evento que o domínio deseja registrar.",
+          "reviewLessons": [
+            21,
+            23
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Duas transações bloqueiam produtos em ordem inversa e uma vira vítima de deadlock. Qual estratégia é adequada?",
+          "options": [
+            "Repetir somente o último UPDATE sem reconstruir a decisão.",
+            "Tratar a falha, refazer a unidade de negócio com limite e idempotência e reduzir o ciclo usando ordem consistente de locks quando aplicável.",
+            "Ignorar o erro e anunciar confirmação.",
+            "Afirmar que SELECT FOR UPDATE elimina todo deadlock possível."
+          ],
+          "answer": 1,
+          "explanation": "Locks protegem invariantes, mas podem formar ciclos. A vítima precisa de protocolo de recuperação, e o retry não pode duplicar efeitos.",
+          "reviewLessons": [
+            26,
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Permissões, evolução e recuperação",
+      "scenario": "O serviço possui conta limitada, consultas parametrizadas, dump lógico e binary logs. A implantação altera o esquema enquanto ainda existem consumidores antigos e réplicas.",
+      "requiredLessons": [
+        28,
+        29,
+        31,
+        32,
+        33,
+        35
+      ],
+      "skills": [
+        "Menor privilégio",
+        "Dump e PITR",
+        "Compatibilidade operacional"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "A consulta usa parâmetros, mas a conta da aplicação tem privilégios administrativos globais. O teste de segurança está completo?",
+          "options": [
+            "Sim, binding limita automaticamente a conta a SELECT.",
+            "Sim, senha em prompt elimina qualquer necessidade de roles.",
+            "Não; reduza privilégios e teste também comandos que devem ser recusados.",
+            "Não, porque parâmetros são incompatíveis com roles."
+          ],
+          "answer": 2,
+          "explanation": "Binding separa valores da sintaxe, enquanto grants limitam capacidades da identidade. Os dois controles são complementares.",
+          "reviewLessons": [
+            28,
+            29
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "O dump foi aberto num destino novo, mas é preciso recuperar uma exclusão ocorrida depois da cópia. O que falta ao plano?",
+          "options": [
+            "Renomear o dump e assumir que contém operações futuras.",
+            "Usar a mesma instância de origem como destino sobrescrito sem conferência.",
+            "Concluir que SHOW BINARY LOG STATUS já realizou a recuperação.",
+            "Preservar o backup-base e os binlogs necessários e ensaiar a recuperação até o ponto escolhido."
+          ],
+          "answer": 3,
+          "explanation": "Dump e binlogs têm papéis distintos. Inspecionar posição não aplica os logs nem prova que o alvo foi recuperado.",
+          "reviewLessons": [
+            31,
+            32
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "A coluna antiga ainda é usada por uma versão da aplicação e por leitura na réplica. Como executar a migração com menos ruptura?",
+          "options": [
+            "Expandir e manter compatibilidade, migrar consumidores/dados e só contrair após verificar a transição e o estado da replicação.",
+            "Remover a coluna primeiro e esperar que a réplica recrie sozinha.",
+            "Assumir que GTID converte automaticamente qualquer contrato da aplicação.",
+            "Desligar testes porque DDL atômico equivale a rollback de qualquer implantação."
+          ],
+          "answer": 0,
+          "explanation": "Atomicidade de uma operação DDL não resolve compatibilidade entre versões nem atraso operacional. A mudança precisa de etapas e verificação dos consumidores.",
+          "reviewLessons": [
+            33,
+            35
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Checkout idempotente e operável no MySQL",
+    "scenario": "Implemente o banco de uma loja fictícia com catálogo, pedidos e estoque. Use MySQL 8.4 LTS/InnoDB e clientes locais; dados e credenciais reais não fazem parte da entrega.",
+    "requirements": [
+      "Integridade exata: tipos monetários, chaves, referências, nulabilidade e limites são protegidos pelo esquema.",
+      "Checkout atômico: reserva de estoque e pedido confirmam juntos e erro intermediário não deixa efeitos parciais.",
+      "Repetição controlada: chave idempotente, comparação de conteúdo e retorno estável; deadlock tem retry limitado da unidade.",
+      "Consultas medidas: relatório sem multiplicação, paginação por chave e índice justificado com resultado funcional conferido.",
+      "Acesso e evolução: conta limitada, binding, fronteira TLS documentada e migration compatível com consumidores existentes.",
+      "Recuperação verificável: dump restaurado em banco exclusivo, marcadores conferidos e estratégia de binlog/replicação sem prometer ensaio não realizado."
+    ],
+    "deliverables": [
+      "DDL, fixtures e migrations com versão e pré-requisitos.",
+      "Cliente com operações parametrizadas e contrato de repetição.",
+      "Testes de concorrência, relatórios e planos com resultados documentados.",
+      "Runbook de dump/restore e recuperação por ponto com evidências e limites."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Integridade exata",
+        "description": "Integridade exata: tipos monetários, chaves, referências, nulabilidade e limites são protegidos pelo esquema.",
+        "reviewLessons": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Checkout atômico",
+        "description": "Checkout atômico: reserva de estoque e pedido confirmam juntos e erro intermediário não deixa efeitos parciais.",
+        "reviewLessons": [
+          8,
+          9,
+          26
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Repetição controlada",
+        "description": "Repetição controlada: chave idempotente, comparação de conteúdo e retorno estável; deadlock tem retry limitado da unidade.",
+        "reviewLessons": [
+          7,
+          27,
+          36
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Consultas medidas",
+        "description": "Consultas medidas: relatório sem multiplicação, paginação por chave e índice justificado com resultado funcional conferido.",
+        "reviewLessons": [
+          11,
+          12,
+          13,
+          19,
+          20
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Acesso e evolução",
+        "description": "Acesso e evolução: conta limitada, binding, fronteira TLS documentada e migration compatível com consumidores existentes.",
+        "reviewLessons": [
+          28,
+          29,
+          30,
+          35
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Recuperação verificável",
+        "description": "Recuperação verificável: dump restaurado em banco exclusivo, marcadores conferidos e estratégia de binlog/replicação sem prometer ensaio não realizado.",
+        "reviewLessons": [
+          31,
+          32,
+          33
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Requisição repetida",
+        "setup": "Um produto com estoque 2 e nenhuma req-1 registrada.",
+        "input": "Criar pedido de uma unidade e reenviar a mesma req-1; depois reutilizar a chave com conteúdo diferente.",
+        "expected": "A repetição idêntica mantém um pedido/uma baixa; a divergente recebe conflito definido.",
+        "reviewLessons": [
+          7,
+          9,
+          27,
+          36
+        ]
+      },
+      {
+        "title": "Disputa e deadlock",
+        "setup": "Duas conexões sobre tabelas persistentes de laboratório com dois produtos.",
+        "input": "Executar reserva concorrente e a intercalação que forma um ciclo de espera.",
+        "expected": "A falha é identificada e a unidade é refeita com limite sem pedido parcial ou débito duplicado.",
+        "reviewLessons": [
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "title": "Destino restaurado",
+        "setup": "Dump da fixture conhecida e banco de restore vazio autorizado.",
+        "input": "Importar e conferir contagens, totais e tentativas inválidas no destino.",
+        "expected": "Dados e regras conferem; arquivos/logs são preservados conforme o roteiro. PITR depende de ensaio adicional com logs válidos.",
+        "reviewLessons": [
+          5,
+          31,
+          32
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "prompt": "A chave idempotente repetida retorna o mesmo ID, mas uma segunda baixa de estoque ocorreu. Qual requisito falhou?",
+        "options": [
+          "Somente o texto da resposta.",
+          "A coordenação entre deduplicação e efeitos na mesma unidade de negócio.",
+          "A escolha da fonte do editor.",
+          "O nome AUTO_INCREMENT, que impede transações."
+        ],
+        "answer": 1,
+        "explanation": "Retorno estável sem efeitos estáveis não é idempotência da operação completa.",
+        "reviewLessons": [
+          9,
+          27,
+          36
+        ]
+      },
+      {
+        "id": "q2",
+        "prompt": "O backup restaurou linhas, mas a conta leitora ainda consegue criar objetos e a API concatena filtros. O projeto está completo?",
+        "options": [
+          "Sim, restore cobre todas as propriedades da aplicação.",
+          "Sim, JSON nativo evita injection em qualquer consulta.",
+          "Não; faltam correções e testes de privilégio e parametrização, além da recuperação já verificada.",
+          "Não, porque backups nunca são úteis."
+        ],
+        "answer": 2,
+        "explanation": "Recuperação, autorização e estrutura segura de consulta são critérios independentes.",
+        "reviewLessons": [
+          28,
+          29,
+          31
+        ]
+      },
+      {
+        "id": "q3",
+        "prompt": "Uma réplica passou a mostrar a exclusão acidental da origem. Isso contradiz o funcionamento esperado da replicação?",
+        "options": [
+          "Sim, toda réplica deve bloquear DELETE automaticamente.",
+          "Sim, GTID guarda todas as versões como uma lixeira ilimitada.",
+          "Não, porque nenhum banco pode recuperar dados.",
+          "Não; ela pode propagar a exclusão, e recuperação histórica requer cópias/logs apropriados."
+        ],
+        "answer": 3,
+        "explanation": "Replicar efeitos e recuperar um ponto anterior são capacidades diferentes que devem ser planejadas e testadas.",
+        "reviewLessons": [
+          31,
+          32,
+          33
+        ]
+      }
+    ]
+  }
+}

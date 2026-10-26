@@ -1,0 +1,3574 @@
+{
+  "id": "kubernetes",
+  "name": "Kubernetes",
+  "title": "Kubernetes Forge",
+  "updated": "2026-10-23",
+  "hours": 216,
+  "description": "Do primeiro cluster local à entrega declarativa de aplicações confiáveis, com operação, segurança e extensibilidade.",
+  "prerequisites": [
+    "Docker: imagens, containers, volumes e redes.",
+    "Terminal Bash (no Windows, WSL2), Git, YAML e HTTP básicos.",
+    "Computador com virtualização habilitada e recursos livres para um cluster local; comece com um nó."
+  ],
+  "outcome": "Entregar uma aplicação em kind com manifests versionados, configuração, probes, recursos, persistência, revisão de segurança e procedimentos de atualização e recuperação.",
+  "extension": "sh",
+  "codeLanguage": "bash",
+  "setup": [
+    {
+      "title": "Prepare o ambiente local",
+      "text": "Use Bash no Linux/macOS ou WSL2 no Windows. Instale kubectl e kind pelas instruções oficiais; deixe Docker Desktop com integração WSL2 ou um provedor compatível funcionando. Não há serviço de nuvem nem assinatura exigidos pelos laboratórios."
+    },
+    {
+      "title": "Isole o laboratório",
+      "text": "A aula 1 cria o cluster forge. Os exemplos usam explicitamente o contexto kind-forge e o namespace forge; não alteram seu contexto padrão. Salve cada roteiro como aula-NN.sh e execute com Bash. Não execute contra clusters do trabalho."
+    },
+    {
+      "title": "Versões e limites",
+      "text": "Use versões de kind, imagem de nó e kubectl compatíveis segundo a documentação oficial. As tags de imagens dos exemplos facilitam o laboratório; na entrega final, registre digests reais. O site não executa kubectl, não cria clusters e não valida automaticamente seus manifests."
+    }
+  ],
+  "references": [
+    {
+      "title": "Conceitos e componentes",
+      "description": "API declarativa, control plane, nós e objetos.",
+      "url": "https://kubernetes.io/docs/concepts/overview/components/"
+    },
+    {
+      "title": "kind: laboratório local",
+      "description": "Criação, versões e requisitos do cluster local.",
+      "url": "https://kind.sigs.k8s.io/docs/user/quick-start/"
+    },
+    {
+      "title": "Workloads e Pods",
+      "description": "Ciclo de vida e controladores de aplicações.",
+      "url": "https://kubernetes.io/docs/concepts/workloads/"
+    },
+    {
+      "title": "Rede de serviços",
+      "description": "Services, DNS e caminhos de acesso.",
+      "url": "https://kubernetes.io/docs/concepts/services-networking/"
+    },
+    {
+      "title": "Gateway API",
+      "description": "Tipos adicionais e implementações compatíveis.",
+      "url": "https://kubernetes.io/docs/concepts/services-networking/gateway/"
+    },
+    {
+      "title": "NetworkPolicy",
+      "description": "Modelo, limitações e dependência de implementação.",
+      "url": "https://kubernetes.io/docs/concepts/services-networking/network-policies/"
+    },
+    {
+      "title": "Cilium em kind",
+      "description": "Guia de CNI compatível para laboratório separado de políticas.",
+      "url": "https://docs.cilium.io/en/stable/installation/kind/"
+    },
+    {
+      "title": "Segurança de Pods",
+      "description": "Controles dos padrões Baseline e Restricted.",
+      "url": "https://kubernetes.io/docs/concepts/security/pod-security-standards/"
+    },
+    {
+      "title": "Armazenamento persistente",
+      "description": "PVC, PV, classes e retenção.",
+      "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/"
+    },
+    {
+      "title": "Kustomize",
+      "description": "Bases, overlays e renderização com kubectl.",
+      "url": "https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/"
+    },
+    {
+      "title": "Helm",
+      "description": "Charts, values e releases.",
+      "url": "https://helm.sh/docs/intro/using_helm/"
+    },
+    {
+      "title": "OpenGitOps",
+      "description": "Princípios de estado versionado e reconciliação contínua.",
+      "url": "https://opengitops.dev/"
+    },
+    {
+      "title": "Version skew",
+      "description": "Compatibilidade entre componentes Kubernetes.",
+      "url": "https://kubernetes.io/releases/version-skew-policy/"
+    },
+    {
+      "title": "CRDs e operators",
+      "description": "Extensão da API e automação de reconciliação.",
+      "url": "https://kubernetes.io/docs/concepts/extend-kubernetes/custom-resources/"
+    }
+  ],
+  "levels": [
+    {
+      "id": 1,
+      "title": "Fundamentos e cluster local",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Entenda a API, a reconciliação e os limites de um cluster de estudo.",
+      "skills": [
+        "Cluster local",
+        "Objetos e YAML",
+        "Namespaces"
+      ],
+      "project": "Laboratório reproduzível em kind",
+      "deliverables": [
+        "Roteiro de criação do cluster forge e namespace de estudo.",
+        "Manifesto versionado com labels e documentação de cada campo.",
+        "Diagrama que separa control plane, nós e runtime."
+      ],
+      "rubric": [
+        "Outro aluno consegue recriar o ambiente sem cloud.",
+        "Todos os comandos apontam explicitamente para kind-forge.",
+        "Você explica spec, status e o que um namespace não isola."
+      ],
+      "challenge": [
+        {
+          "question": "Seu notebook desligou e o cluster kind parou. Qual conclusão é correta?",
+          "options": [
+            "O namespace protege contra falta de energia",
+            "O laboratório não oferece independência da máquina hospedeira",
+            "Kubernetes sempre exige três nuvens",
+            "Um Service deveria manter o notebook ligado"
+          ],
+          "answer": 1,
+          "explanation": "kind depende dos recursos locais; alta disponibilidade exige desenho e operação próprios."
+        },
+        {
+          "question": "Um apply foi aceito, mas as réplicas ainda não ficaram prontas. Isso é incoerente?",
+          "options": [
+            "Não; aceitar a intenção e alcançar o estado desejado são etapas distintas",
+            "Sim; apply sempre espera toda a aplicação ficar saudável",
+            "Sim; YAML executa cada linha em ordem",
+            "Não há maneira de observar status"
+          ],
+          "answer": 0,
+          "explanation": "A API registra a intenção; controllers e kubelets convergem de forma assíncrona."
+        },
+        {
+          "question": "Você criou namespaces dev e teste; usuários de dev ainda leem teste. O que faltou?",
+          "options": [
+            "Dar uma cor diferente aos namespaces",
+            "Adicionar mais labels aos Services apenas",
+            "Reiniciar o navegador",
+            "Definir autorização, por exemplo RBAC, para as identidades"
+          ],
+          "answer": 3,
+          "explanation": "Namespaces não concedem nem restringem sozinhos todas as permissões da API."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Pods e workloads",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Escolha o controlador certo para serviços contínuos e tarefas finitas.",
+      "skills": [
+        "Pods",
+        "Deployments",
+        "Jobs"
+      ],
+      "project": "Serviço e tarefa de verificação",
+      "deliverables": [
+        "Deployment web com duas réplicas.",
+        "Job que termina com sucesso e registra uma verificação.",
+        "Registro da substituição de um Pod do Deployment."
+      ],
+      "rubric": [
+        "A contagem desejada é restaurada pelo controlador.",
+        "O Job tem política de reinício e limite de tentativas.",
+        "Você distingue Pod, ReplicaSet, Deployment e Job."
+      ],
+      "challenge": [
+        {
+          "question": "Você removeu um Pod criado diretamente e ele não reapareceu. Por quê?",
+          "options": [
+            "Um Service substitui qualquer Pod",
+            "O namespace está quebrado",
+            "Nenhum controlador foi criado para manter réplicas dele",
+            "Todo Pod sempre deveria reaparecer"
+          ],
+          "answer": 2,
+          "explanation": "A substituição de instâncias pertence a controladores como Deployment, não ao Pod isolado."
+        },
+        {
+          "question": "Um Pod do Deployment falha e outro nasce com o mesmo bug. O que isso demonstra?",
+          "options": [
+            "Uma terceira réplica elimina o bug",
+            "Reconciliação mantém instâncias, mas não corrige o código da imagem",
+            "O scheduler deveria editar seu programa",
+            "Réplicas tornam qualquer aplicação correta"
+          ],
+          "answer": 1,
+          "explanation": "O controlador repete o template; corrigir o defeito exige mudar a aplicação ou sua configuração."
+        },
+        {
+          "question": "Uma tarefa criou um registro e falhou antes de confirmar sucesso. A nova tentativa pode duplicá-lo. Qual proteção pertence ao desenho?",
+          "options": [
+            "Idempotência por chave e operação consistente",
+            "Apenas aumentar backoffLimit",
+            "Trocar Job por ConfigMap",
+            "Mudar o nome do namespace"
+          ],
+          "answer": 0,
+          "explanation": "Reexecuções exigem que efeitos de aplicação sejam seguros para repetição."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Rede e acesso",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Conecte serviços por nomes e escolha como expor uma aplicação.",
+      "skills": [
+        "Services",
+        "DNS",
+        "Gateway API"
+      ],
+      "project": "Acesso interno documentado",
+      "deliverables": [
+        "Service ClusterIP com seletor correto.",
+        "Cliente que resolve DNS e acessa o serviço.",
+        "Plano de entrada externa com pré-requisitos do Gateway API."
+      ],
+      "rubric": [
+        "EndpointSlices contêm os Pods esperados.",
+        "Port-forward fica restrito ao computador local.",
+        "Gateway API não é apresentado como incluído automaticamente."
+      ],
+      "challenge": [
+        {
+          "question": "Service existe, mas EndpointSlices não têm os Pods pretendidos. Onde investigar primeiro?",
+          "options": [
+            "A cor do dashboard",
+            "Apenas o arquivo .bashrc",
+            "O preço da nuvem",
+            "Seletor do Service, labels e readiness dos Pods"
+          ],
+          "answer": 3,
+          "explanation": "A seleção e elegibilidade dos endpoints precedem investigar caminhos externos."
+        },
+        {
+          "question": "DNS resolve o Service, mas HTTP retorna 403. O que já foi demonstrado?",
+          "options": [
+            "Um 403 sempre exige trocar CNI",
+            "O Service concede autorização automática",
+            "A resolução funcionou; a recusa HTTP exige investigar a aplicação ou proxy",
+            "O DNS está necessariamente quebrado"
+          ],
+          "answer": 2,
+          "explanation": "Conectividade e autorização são contratos distintos; o status HTTP acrescenta evidência de outra camada."
+        },
+        {
+          "question": "HTTPRoute foi aceita no servidor, mas nenhum endereço responde. Qual evidência falta?",
+          "options": [
+            "Usar sempre Ingress antigo",
+            "Controller, GatewayClass/Gateway e condições de programação com teste real",
+            "Mais réplicas do ConfigMap",
+            "Um nome maior para o namespace"
+          ],
+          "answer": 1,
+          "explanation": "A existência de objetos não prova que o caminho de dados foi provisionado."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Configuração e saúde",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Separe configurações e credenciais e modele sinais de saúde úteis.",
+      "skills": [
+        "ConfigMap",
+        "Secret",
+        "Probes"
+      ],
+      "project": "Aplicação configurável com saúde",
+      "deliverables": [
+        "ConfigMap para configuração pública e Secret fictício.",
+        "Pod que recebe apenas as chaves necessárias.",
+        "Readiness e liveness com critérios diferentes."
+      ],
+      "rubric": [
+        "Nenhum segredo real aparece em Git ou nos logs.",
+        "Você explica reinício necessário para configuração via env.",
+        "Falha de readiness não é confundida com reinício por liveness."
+      ],
+      "challenge": [
+        {
+          "question": "Após atualizar um ConfigMap, uma aplicação continua mostrando o env antigo. Qual correção é compatível com o modelo?",
+          "options": [
+            "Planejar nova inicialização/rollout para consumir o env novo",
+            "Apagar a imagem do registry",
+            "Esperar que o processo receba env automaticamente",
+            "Transformar o ConfigMap em Service"
+          ],
+          "answer": 0,
+          "explanation": "Configuração via env é capturada no início do processo."
+        },
+        {
+          "question": "Um colega leu o token base64 do YAML e decodificou. Qual conclusão é correta?",
+          "options": [
+            "A criptografia do Kubernetes foi quebrada",
+            "Basta renomear Secret para ConfigMap",
+            "É impossível ler Secret pela API",
+            "A codificação não substitui autorização e proteção dos dados"
+          ],
+          "answer": 3,
+          "explanation": "Quem pode ler o Secret pode obter seu conteúdo; limite acesso e exposição."
+        },
+        {
+          "question": "O banco caiu e todas as APIs reiniciam incessantemente por liveness. Qual problema revisar?",
+          "options": [
+            "Aumentar réplicas sempre corrige o banco",
+            "Trocar todas as probes por labels",
+            "A probe usa uma falha externa que reiniciar a API não resolve",
+            "Readiness deveria desligar o notebook"
+          ],
+          "answer": 2,
+          "explanation": "Uma probe precisa desencadear uma reação útil; dependências externas podem criar cascatas de reinício."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Recursos e agendamento",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Defina orçamento de CPU e memória e investigue decisões do scheduler.",
+      "skills": [
+        "Requests e limits",
+        "Scheduling",
+        "Quotas"
+      ],
+      "project": "Orçamento de recursos do laboratório",
+      "deliverables": [
+        "Deployment com requests e limits justificados.",
+        "Relatório de um Pending provocado e corrigido.",
+        "ResourceQuota e LimitRange no namespace de estudo."
+      ],
+      "rubric": [
+        "Requests cabem na capacidade observada do nó.",
+        "A causa de Pending vem de eventos, não de tentativa aleatória.",
+        "Você distingue limite de CPU, OOM e quota de namespace."
+      ],
+      "challenge": [
+        {
+          "question": "Dez réplicas solicitam 200m cada. Qual request total de CPU é esse?",
+          "options": [
+            "10 Mi",
+            "2 CPUs",
+            "200 CPUs",
+            "20m"
+          ],
+          "answer": 1,
+          "explanation": "Dez vezes 200m são 2000m, equivalentes a duas CPUs."
+        },
+        {
+          "question": "Um Pod tolera o taint do nó A, mas foi para B. Isso viola a regra?",
+          "options": [
+            "Não; toleration não obriga seleção do nó tolerado",
+            "Sim, toleration equivale a nodeName",
+            "Sim, o Service mudou o nó",
+            "Só se houver duas interfaces"
+          ],
+          "answer": 0,
+          "explanation": "Toleration remove uma barreira de taint; o scheduler ainda decide entre nós elegíveis."
+        },
+        {
+          "question": "Duas réplicas cabem na quota, mas rollout com surge pede uma terceira e trava. Qual hipótese é útil?",
+          "options": [
+            "A imagem sempre contém um vírus",
+            "Services aumentam a quota automaticamente",
+            "Apenas reiniciar kubectl resolve",
+            "O orçamento não reservou recursos para a réplica temporária"
+          ],
+          "answer": 3,
+          "explanation": "Revisões temporariamente coexistentes consomem recursos e quota."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Persistência e estado",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Diferencie armazenamento temporário, PVC e identidade persistente.",
+      "skills": [
+        "Volumes",
+        "PVC e StorageClass",
+        "StatefulSet"
+      ],
+      "project": "Dados que sobrevivem ao Pod",
+      "deliverables": [
+        "Comparação reproduzível entre emptyDir e PVC.",
+        "StatefulSet mínimo com claim template e Service headless.",
+        "Backup e restauração de um arquivo fictício em novo PVC."
+      ],
+      "rubric": [
+        "O teste recria Pod e confere o conteúdo.",
+        "A política de retenção e o limite do armazenamento local são documentados.",
+        "Você não chama replicação de backup nem StatefulSet de banco altamente disponível."
+      ],
+      "challenge": [
+        {
+          "question": "O arquivo mensagem voltou após recriar o Pod. Isso prova que emptyDir persistiu?",
+          "options": [
+            "Sim, emptyDir replica em toda nuvem",
+            "Somente o Service sabe",
+            "Não; o init container pode tê-lo criado de novo",
+            "Sim, qualquer arquivo que volta persistiu"
+          ],
+          "answer": 2,
+          "explanation": "Distinguir reprodução do dado e preservação do volume exige um marcador que não seja recriado."
+        },
+        {
+          "question": "O PVC está Pending e o evento diz waiting for first consumer. Qual passo faz sentido?",
+          "options": [
+            "Trocar o nome do usuário",
+            "Criar/observar o Pod consumidor para permitir decisão de localização",
+            "Apagar todos os volumes do cluster",
+            "Ignorar o evento e instalar um banco pago"
+          ],
+          "answer": 1,
+          "explanation": "Algumas classes aguardam o consumidor para provisionar volume no local compatível."
+        },
+        {
+          "question": "Você escalou um StatefulSet de banco para três réplicas. Isso por si só criou um banco replicado?",
+          "options": [
+            "Não; a aplicação precisa de configuração e protocolo de replicação próprios",
+            "Sim, volumeClaimTemplates copia transações",
+            "Sim, o Service replica os dados",
+            "Somente a label app é necessária"
+          ],
+          "answer": 0,
+          "explanation": "StatefulSet preserva identidade; não implementa o comportamento interno da aplicação."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Segurança de aplicações",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Aplique privilégio mínimo à API, aos containers e ao tráfego.",
+      "skills": [
+        "RBAC",
+        "Pod Security",
+        "NetworkPolicy"
+      ],
+      "project": "Revisão de segurança por evidências",
+      "deliverables": [
+        "ServiceAccount com acesso de leitura limitado ao namespace.",
+        "Manifesto compatível com controles Restricted.",
+        "Política de rede e plano de teste com CNI compatível."
+      ],
+      "rubric": [
+        "kubectl auth can-i demonstra uma permissão concedida e outra negada.",
+        "Container usa usuário não root, seccomp e capabilities reduzidas.",
+        "A existência de NetworkPolicy não é tratada como prova de bloqueio."
+      ],
+      "challenge": [
+        {
+          "question": "Uma API só precisa listar Pods de forge. Qual permissão é mais coerente?",
+          "options": [
+            "cluster-admin para qualquer ServiceAccount",
+            "Permissão de delete secrets em todos os namespaces",
+            "Montar o kubeconfig do administrador no container",
+            "Role namespaced com list pods e RoleBinding para a identidade da API"
+          ],
+          "answer": 3,
+          "explanation": "A autorização deve coincidir com a necessidade mínima da carga."
+        },
+        {
+          "question": "Após tornar a raiz somente leitura, a aplicação falha ao escrever cache. Qual ajuste preserva a intenção?",
+          "options": [
+            "Remover RBAC de todo o cluster",
+            "Dar acesso root ao namespace inteiro",
+            "Montar um volume de escrita apenas no caminho necessário e ajustar permissões",
+            "Executar tudo privilegiado"
+          ],
+          "answer": 2,
+          "explanation": "O requisito de escrita pode ser limitado a um volume específico."
+        },
+        {
+          "question": "Há duas políticas que selecionam um Pod: uma não permite ingress e outra permite um cliente. O que ocorre para esse cliente?",
+          "options": [
+            "As duas políticas são ignoradas automaticamente",
+            "A permissão da segunda política pode autorizá-lo, pois regras são aditivas",
+            "A política vazia sempre tem prioridade absoluta",
+            "O nome em ordem alfabética decide"
+          ],
+          "answer": 1,
+          "explanation": "NetworkPolicy combina permissões aplicáveis; não opera por ordem ou prioridade de uma regra deny."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Diagnóstico e recuperação",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Investigue falhas usando eventos, estado, logs e rede.",
+      "skills": [
+        "Eventos e logs",
+        "CrashLoopBackOff",
+        "Debug de rede"
+      ],
+      "project": "Caderno de incidentes reproduzíveis",
+      "deliverables": [
+        "Três falhas controladas: imagem, processo e seletor.",
+        "Linha do tempo com evidência e hipótese para cada falha.",
+        "Correção pequena e verificação após recuperação."
+      ],
+      "rubric": [
+        "A investigação preserva a mensagem original do erro.",
+        "Logs anteriores e eventos são usados quando apropriado.",
+        "Você prova a recuperação pela rota que falhava."
+      ],
+      "challenge": [
+        {
+          "question": "O evento informa denied ao obter imagem privada. Qual mudança tem relação direta com a causa?",
+          "options": [
+            "Revisar referência e autorização de pull, sem expor credenciais",
+            "Aumentar réplicas do Service",
+            "Adicionar uma readiness diferente",
+            "Aumentar CPU do navegador"
+          ],
+          "answer": 0,
+          "explanation": "Problemas de acesso ao registry precisam de credencial e permissão corretas para pull."
+        },
+        {
+          "question": "Reiniciar o Pod dez vezes produz o mesmo exit code e mensagem. Qual próximo passo melhora o diagnóstico?",
+          "options": [
+            "Continuar reiniciando sem ler logs",
+            "Apagar o DNS do cluster",
+            "Criar um Secret com qualquer valor sem verificar",
+            "Investigar a condição específica que encerra o processo e corrigir o template"
+          ],
+          "answer": 3,
+          "explanation": "Repetição idêntica é evidência de causa persistente, não de recuperação."
+        },
+        {
+          "question": "O EndpointSlice lista Pods, mas targetPort é 81 e o servidor escuta 80. Qual correção é específica?",
+          "options": [
+            "Adicionar mais Nodes sem medir",
+            "Criar um novo cluster imediatamente",
+            "Ajustar targetPort e testar a requisição novamente",
+            "Trocar apenas a label do namespace"
+          ],
+          "answer": 2,
+          "explanation": "O Service precisa encaminhar para a porta real do processo."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Entrega declarativa",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Empacote, customize e revise mudanças antes de reconciliá-las.",
+      "skills": [
+        "Kustomize",
+        "Helm",
+        "GitOps"
+      ],
+      "project": "Entrega local versionada",
+      "deliverables": [
+        "Base e overlay de Kustomize com diferença visível.",
+        "Chart Helm mínimo renderizado e validado antes de instalar.",
+        "Fluxo de pull request e plano de reconciliação GitOps."
+      ],
+      "rubric": [
+        "Segredos não são gravados nos values versionados.",
+        "Manifesto renderizado é o objeto da revisão.",
+        "Aplicar manualmente arquivos de Git não é chamado de GitOps completo."
+      ],
+      "challenge": [
+        {
+          "question": "Duas equipes copiaram manifests inteiros e corrigiram um bug só numa cópia. Qual estrutura ajuda a reduzir essa divergência?",
+          "options": [
+            "Um Service sem seletor para cada arquivo",
+            "Base comum com overlays pequenos e revisão da renderização",
+            "Mais cópias sem revisão",
+            "Secret com os manifests dentro"
+          ],
+          "answer": 1,
+          "explanation": "Composição evita duplicar configurações comuns sem esconder o resultado final."
+        },
+        {
+          "question": "Um chart passou em helm lint. Isso prova que a API da aplicação responde?",
+          "options": [
+            "Não; validação de pacote e saúde da aplicação são verificações diferentes",
+            "Sim, lint faz teste de carga de toda aplicação",
+            "Sim, o nome release significa saudável",
+            "Só quando a saída é verde"
+          ],
+          "answer": 0,
+          "explanation": "Ainda é necessário observar recursos e testar o comportamento da carga."
+        },
+        {
+          "question": "Um reconciliador reverte repetidamente seu scale manual. Qual causa provável revisar?",
+          "options": [
+            "O DNS decidiu a quantidade de réplicas",
+            "kubectl nunca altera replicas",
+            "O namespace ignora integers",
+            "Git declara outro número e o controller mantém essa intenção"
+          ],
+          "answer": 3,
+          "explanation": "Controle declarativo precisa de uma fonte e ownership claros para evitar disputa."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Observabilidade e escala",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Use sinais e pré-requisitos corretos para observar e escalar.",
+      "skills": [
+        "Logs e métricas",
+        "HPA",
+        "Disponibilidade"
+      ],
+      "project": "Painel de evidências e escala",
+      "deliverables": [
+        "Relatório de logs, eventos e métricas disponíveis.",
+        "HPA autoscaling/v2 com requests e pré-requisito de métricas.",
+        "PDB e estratégia de rollout justificados para a aplicação."
+      ],
+      "rubric": [
+        "Métrica ausente é diagnosticada antes de atribuir falha ao HPA.",
+        "Escala é validada com carga e observação, quando houver metrics-server.",
+        "PDB não é apresentado como garantia contra toda indisponibilidade."
+      ],
+      "challenge": [
+        {
+          "question": "A CPU está baixa, mas clientes relatam falhas no pagamento. Que evidência falta?",
+          "options": [
+            "Renomear o namespace",
+            "Criar mais ConfigMaps",
+            "Sinais de sucesso e erro da operação de negócio no caminho real",
+            "Apenas aumentar o tamanho do gráfico de CPU"
+          ],
+          "answer": 2,
+          "explanation": "Saúde de infraestrutura e sucesso da operação são medidas diferentes."
+        },
+        {
+          "question": "O HPA mostra Unknown porque metrics.k8s.io não está disponível. Qual é a sequência correta?",
+          "options": [
+            "Apagar todos os PVCs",
+            "Restabelecer a coleta de métricas, validar dados e só então avaliar escala",
+            "Aumentar maxReplicas infinitamente",
+            "Mudar a porta do Service aleatoriamente"
+          ],
+          "answer": 1,
+          "explanation": "Sem o sinal exigido, o controlador não consegue avaliar o alvo como pretendido."
+        },
+        {
+          "question": "Uma revisão alterou um banco de forma incompatível. rollout undo do Deployment basta?",
+          "options": [
+            "Não; compatibilidade e recuperação do banco exigem plano próprio",
+            "Sim, todo SQL é revertido automaticamente",
+            "Sim, PDB desfaz migrações",
+            "Basta renomear a release"
+          ],
+          "answer": 0,
+          "explanation": "Reverter o template não reverte efeitos persistentes externos."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Operação e recuperação",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Planeje manutenção, compatibilidade e backups testáveis.",
+      "skills": [
+        "Manutenção de nós",
+        "Atualização",
+        "Backup e restauração"
+      ],
+      "project": "Runbook de operação do laboratório",
+      "deliverables": [
+        "Simulação segura de cordon/uncordon no cluster de estudo.",
+        "Plano de upgrade com versões compatíveis e APIs usadas.",
+        "Matriz de backup: manifests, dados de aplicação e estado do control plane."
+      ],
+      "rubric": [
+        "Nenhuma manutenção é aplicada a contexto de produção.",
+        "Plano inclui verificação, ordem e critérios de interrupção.",
+        "Uma restauração de dado fictício é demonstrada em destino separado."
+      ],
+      "challenge": [
+        {
+          "question": "Um drain fica bloqueado por PDB. Qual ação inicial é responsável?",
+          "options": [
+            "Forçar todas as remoções imediatamente",
+            "Excluir todos os PDBs do cluster",
+            "Apagar o namespace do usuário",
+            "Entender orçamento e saúde/capacidade antes de decidir a manutenção"
+          ],
+          "answer": 3,
+          "explanation": "O bloqueio pode proteger disponibilidade; investigue a razão e planeje correção."
+        },
+        {
+          "question": "Seu YAML usa uma API removida na versão alvo. Qual solução é necessária antes do upgrade?",
+          "options": [
+            "Trocar o nome do diretório",
+            "Rodar apply infinitamente",
+            "Migrar o contrato do recurso e testar em ambiente compatível",
+            "Só aumentar replicas"
+          ],
+          "answer": 2,
+          "explanation": "A aplicação precisa usar APIs que o servidor alvo consegue aceitar e reconciliar."
+        },
+        {
+          "question": "Você tem todos os manifests em Git, mas perdeu o PVC do banco. O que falta para recuperar os registros?",
+          "options": [
+            "Renomear o Deployment",
+            "Backup consistente dos dados e procedimento de restauração validado",
+            "Mais uma cópia do Service YAML",
+            "Apenas instalar kubectl de novo"
+          ],
+          "answer": 1,
+          "explanation": "Configuração reproduzível não recria dados de usuário perdidos."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Extensibilidade e projeto final",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Entenda CRDs e operators e integre a trilha numa entrega verificável.",
+      "skills": [
+        "CRDs e operators",
+        "Arquitetura",
+        "Projeto final"
+      ],
+      "project": "Aplicação operacional em kind",
+      "deliverables": [
+        "Repositório com manifests/overlays, aplicação e instruções locais.",
+        "Provas de rollout, acesso, persistência e controles de segurança.",
+        "Runbook de incidentes, recuperação e decisões de produção pendentes."
+      ],
+      "rubric": [
+        "Uma máquina limpa consegue reproduzir o cenário com pré-requisitos explícitos.",
+        "As evidências correspondem aos critérios, sem apenas marcar checkboxes.",
+        "Você separa o que foi implementado localmente do que exigiria operação de produção."
+      ],
+      "challenge": [
+        {
+          "question": "A CRD existe e objetos são aceitos, mas nenhum Pod novo aparece. Qual é a explicação provável?",
+          "options": [
+            "Não existe controller implementando essa ação para o recurso",
+            "Toda CRD deveria gerar um Pod obrigatoriamente",
+            "O namespace precisa ter o mesmo nome do kind",
+            "O schema é um programa Bash"
+          ],
+          "answer": 0,
+          "explanation": "Armazenar recursos e reconciliar efeitos são responsabilidades separadas."
+        },
+        {
+          "question": "Um operator gera cobrança externa em todo evento observado. Qual risco de desenho existe?",
+          "options": [
+            "Kubernetes garante execução única de todo evento",
+            "OwnerReference cancela cobranças automaticamente",
+            "Finalizer faz criptografia financeira",
+            "Eventos repetidos podem duplicar efeitos se faltar idempotência"
+          ],
+          "answer": 3,
+          "explanation": "Controladores precisam tolerar reprocessamento e distinguir efeito já concluído."
+        },
+        {
+          "question": "Seu projeto roda no kind. Qual afirmação é responsável ao apresentá-lo?",
+          "options": [
+            "Dois Pods provam alta disponibilidade entre datacenters",
+            "Não é necessário backup porque o manifesto existe",
+            "Os cenários locais foram demonstrados; requisitos de produção ainda precisam de desenho e validação próprios",
+            "Ele está automaticamente pronto para qualquer carga de produção"
+          ],
+          "answer": 2,
+          "explanation": "Evidências locais têm alcance definido e não substituem ensaios de operação de produção."
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": 1,
+      "level": 1,
+      "week": 1,
+      "title": "Seu primeiro cluster com kind",
+      "goal": "Criar um cluster local e identificar control plane, nó e runtime.",
+      "theory": [
+        {
+          "title": "O que o cluster faz",
+          "text": "Kubernetes recebe um estado desejado por uma API e trabalha para aproximar o estado observado dele. O control plane coordena decisões; o kubelet de cada nó acompanha Pods e conversa com um runtime compatível com CRI. Uma imagem construída com Docker pode executar em containerd: o cluster não exige Docker Engine em seus nós."
+        },
+        {
+          "title": "Um laboratório local",
+          "text": "kind cria nós Kubernetes em containers do seu computador. Isso facilita aprender e testar sem conta de nuvem. Um cluster de um nó compartilha uma única máquina e não demonstra alta disponibilidade. No Windows, execute os roteiros no Bash do WSL2 com o provedor de containers acessível."
+        },
+        {
+          "title": "Verifique antes de continuar",
+          "text": "Instale kind e kubectl pelas instruções oficiais e escolha versões compatíveis. O nome forge produz o contexto kind-forge. Usar --context em cada comando evita atingir outro ambiente; não copie credenciais de um cluster do trabalho para este laboratório."
+        }
+      ],
+      "code": "set -eu\nkind version\nkubectl version --client\nkind create cluster --name forge --wait 180s\nkubectl --context kind-forge cluster-info\nkubectl --context kind-forge get nodes -o wide\n",
+      "filename": "aula-01.sh",
+      "language": "bash",
+      "run": "bash aula-01.sh",
+      "expected": "O cluster forge é criado; forge-control-plane aparece Ready. As versões e endereços variam conforme o ambiente.",
+      "quiz": {
+        "question": "Quem inicia containers em um nó Kubernetes?",
+        "options": [
+          "O navegador do usuário",
+          "Somente Docker Desktop em todos os nós",
+          "Um Service ClusterIP",
+          "O kubelet por meio de um runtime compatível com CRI"
+        ],
+        "answer": 3,
+        "explanation": "O kubelet coordena o ciclo de vida dos Pods e usa a interface do runtime."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confirme o alvo",
+          "prompt": "Liste os contextos e depois os nós com --context kind-forge. Registre qual foi usado.",
+          "hint": "kubectl config get-contexts somente lista configurações.",
+          "solution": "Execute kubectl config get-contexts e kubectl --context kind-forge get nodes. Não mude o contexto padrão.",
+          "criteria": [
+            "Contexto alvo registrado.",
+            "Nó Ready identificado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique os componentes",
+          "prompt": "Descreva o caminho de um pedido desde kubectl até um container em execução.",
+          "hint": "Separe API server, scheduler, controller e kubelet.",
+          "solution": "kubectl envia à API; controllers reconciliam; scheduler escolhe nó; kubelet e runtime iniciam o Pod.",
+          "criteria": [
+            "Distingue control plane de nó.",
+            "Não exige Docker Engine no cluster."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Reconheça o limite",
+          "prompt": "Escreva duas consequências de usar um único nó no seu notebook.",
+          "hint": "Considere falha física e disputa de recursos.",
+          "solution": "Uma falha no computador interrompe todo o cluster; todos os workloads disputam os mesmos recursos locais.",
+          "criteria": [
+            "Aponta falha única.",
+            "Diferencia estudo de produção."
+          ]
+        }
+      ],
+      "source": "https://kind.sigs.k8s.io/docs/user/quick-start/",
+      "caution": "A primeira execução pressupõe que não exista cluster forge. Nas próximas aulas, reutilize-o; não recrie o cluster para cada exercício.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 2,
+      "level": 1,
+      "week": 2,
+      "title": "Objetos, YAML e reconciliação",
+      "goal": "Ler metadata, spec e status e aplicar um manifesto idempotente.",
+      "theory": [
+        {
+          "title": "Um objeto tem intenção e observação",
+          "text": "metadata identifica o recurso. spec descreve o que você deseja; status relata o que controllers observaram. O arquivo YAML não é um script sequencial: ele representa dados enviados à API. O resultado pode levar tempo porque a reconciliação acontece depois da aceitação do pedido."
+        },
+        {
+          "title": "Aplicar e inspecionar",
+          "text": "kubectl apply cria ou atualiza o recurso descrito. Aplicar novamente o mesmo documento não deveria criar uma segunda cópia com outro nome. Validação de schema encontra campos desconhecidos; ela não prova que uma imagem está acessível ou que a aplicação atende corretamente."
+        },
+        {
+          "title": "Versão e tipo",
+          "text": "apiVersion e kind escolhem o contrato do recurso. Um Deployment usa apps/v1 e exige que seu seletor corresponda às labels do template. Nesta aula começamos com ConfigMap para observar um objeto simples; a aplicação consumirá essa configuração em outro nível."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: objetivo\n  labels: {curso: kubernetes}\ndata:\n  mensagem: aprender por evidencias\nYAML\nk get configmap objetivo -o yaml\nk get configmap objetivo -o jsonpath='{.data.mensagem}'\n",
+      "filename": "aula-02.sh",
+      "language": "bash",
+      "run": "bash aula-02.sh",
+      "expected": "O ConfigMap objetivo contém data.mensagem = aprender por evidencias e a label curso=kubernetes.",
+      "quiz": {
+        "question": "Qual campo descreve o estado desejado de um Deployment?",
+        "options": [
+          "resourceVersion",
+          "uid",
+          "spec",
+          "status"
+        ],
+        "answer": 2,
+        "explanation": "spec expressa a intenção; status é atualizado a partir do estado observado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Aplique duas vezes",
+          "prompt": "Execute o exemplo duas vezes e conte os ConfigMaps chamados objetivo.",
+          "hint": "O nome identifica o mesmo objeto no namespace.",
+          "solution": "Use k get configmap objetivo e observe created/configured/unchanged conforme a execução. Há um único objeto.",
+          "criteria": [
+            "Um objeto com esse nome.",
+            "Explica idempotência."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Investigue o schema",
+          "prompt": "Consulte kubectl explain configmap e compare data com metadata.",
+          "hint": "explain consulta a descrição dos campos.",
+          "solution": "Execute k explain configmap.data e k explain configmap.metadata; data contém valores e metadata identifica o objeto.",
+          "criteria": [
+            "Consulta os dois campos.",
+            "Diferencia identidade de conteúdo."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Faça uma mudança observável",
+          "prompt": "Troque a mensagem para estudo declarativo e reaplique. Confirme por jsonpath.",
+          "hint": "Edite o manifesto, não apenas sua anotação.",
+          "solution": "Altere data.mensagem, rode apply e leia {.data.mensagem}.",
+          "criteria": [
+            "Valor novo observado.",
+            "Mesmo nome e namespace."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/overview/working-with-objects/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 3,
+      "level": 1,
+      "week": 3,
+      "title": "Namespaces, labels e consultas",
+      "goal": "Organizar recursos sem confundir nomes com fronteiras completas de segurança.",
+      "theory": [
+        {
+          "title": "Escopo de nomes",
+          "text": "Dois namespaces podem conter um ConfigMap com o mesmo nome. Nodes, PersistentVolumes e algumas outras APIs têm escopo de cluster. Usar -n escolhe um namespace, mas não muda o tipo de um recurso. Nomes como default e kube-system merecem atenção: nosso laboratório fica em forge."
+        },
+        {
+          "title": "Labels classificam objetos",
+          "text": "Labels são pares de chave e valor consultáveis por seletores. Elas conectam Services a Pods e ajudam a localizar componentes. Annotations carregam metadados complementares que normalmente não são usados para seleção. Planeje labels legíveis como app, componente e ambiente."
+        },
+        {
+          "title": "Organização não basta para isolar",
+          "text": "Um namespace não cria automaticamente regras de rede, limites de recursos ou autorização. Essas políticas serão configuradas explicitamente. Durante a aprendizagem, usar contexto e namespace em cada comando torna o alvo visível e reduz erros ao alternar ambientes."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nkubectl --context kind-forge create namespace forge-equipe --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk create configmap catalogo --from-literal=ambiente=estudo --dry-run=client -o yaml | k apply -f -\nk label configmap catalogo app=catalogo ambiente=estudo --overwrite\nk get configmap -l app=catalogo --show-labels\nkubectl --context kind-forge -n forge-equipe get configmap\n",
+      "filename": "aula-03.sh",
+      "language": "bash",
+      "run": "bash aula-03.sh",
+      "expected": "catalogo é listado em forge com duas labels; não aparece automaticamente em forge-equipe.",
+      "quiz": {
+        "question": "Um namespace sozinho bloqueia tráfego entre suas aplicações?",
+        "options": [
+          "Somente se o nome contiver prod",
+          "Não; políticas de rede e implementação compatível são necessárias",
+          "Sim, todo tráfego é bloqueado",
+          "Sim, exceto aos domingos"
+        ],
+        "answer": 1,
+        "explanation": "Namespace organiza escopos; isolamento de rede depende de mecanismos específicos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Mesmo nome em dois escopos",
+          "prompt": "Crie catalogo também em forge-equipe, com ambiente=equipe. Consulte cada valor.",
+          "hint": "Inclua --context e -n nas duas consultas.",
+          "solution": "Crie o segundo ConfigMap com --dry-run=client -o yaml e apply em forge-equipe. As consultas devolvem valores distintos.",
+          "criteria": [
+            "Dois escopos demonstrados.",
+            "Não muda o contexto global."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Selecione por label",
+          "prompt": "Liste somente ConfigMaps com ambiente=estudo e explique o filtro.",
+          "hint": "Use -l ambiente=estudo.",
+          "solution": "k get configmap -l ambiente=estudo retorna catalogo, além de outros objetos que possuam exatamente essa label.",
+          "criteria": [
+            "Filtro explícito.",
+            "Explica igualdade de label."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Identifique recursos globais",
+          "prompt": "Compare kubectl api-resources para namespaces e nodes com pods.",
+          "hint": "A coluna NAMESPACED indica o escopo.",
+          "solution": "Consulte kubectl --context kind-forge api-resources e identifique pods=true, nodes=false, namespaces=false.",
+          "criteria": [
+            "Identifica três recursos.",
+            "Diferencia escopo de autorização."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 4,
+      "level": 2,
+      "week": 4,
+      "title": "Pods e ciclo de vida",
+      "goal": "Executar um Pod e interpretar fase, readiness e reinícios.",
+      "theory": [
+        {
+          "title": "A unidade de execução",
+          "text": "Pod reúne um ou mais containers estreitamente relacionados, compartilhando rede e volumes declarados. Containers do mesmo Pod podem conversar por localhost. Isso não significa juntar frontend, API e banco independentes no mesmo Pod: seus ciclos de vida e escala costumam ser diferentes."
+        },
+        {
+          "title": "Efêmero por desenho",
+          "text": "Um Pod pode terminar ou ser removido. Sua fase é um resumo do ciclo de vida; Running não prova que toda função da aplicação está saudável. Observe também condições, estados dos containers e contagem de reinícios. Um Pod isolado não tem controlador para criar um substituto com novo nome."
+        },
+        {
+          "title": "Inspecionar sem adivinhar",
+          "text": "get mostra resumo; describe reúne condições e eventos; logs lê stdout e stderr do container selecionado. Use essas visões juntas. A imagem nginx do laboratório é apenas um servidor conhecido para observar o ciclo de vida, sem exigir código de aplicação neste começo."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata:\n  name: primeiro-pod\n  labels: {app: primeiro}\nspec:\n  containers:\n  - name: web\n    image: nginx:stable-alpine\n    ports:\n    - containerPort: 80\nYAML\nk wait --for=condition=Ready pod/primeiro-pod --timeout=180s\nk get pod primeiro-pod -o wide\nk describe pod primeiro-pod\n",
+      "filename": "aula-04.sh",
+      "language": "bash",
+      "run": "bash aula-04.sh",
+      "expected": "primeiro-pod fica Ready, recebe IP e nó. describe mostra a criação e inicialização do container.",
+      "quiz": {
+        "question": "O que containers de um mesmo Pod compartilham?",
+        "options": [
+          "O espaço de rede do Pod e volumes explicitamente montados",
+          "Todo o disco de todos os nós",
+          "Todas as senhas de outros namespaces",
+          "O processo principal obrigatoriamente"
+        ],
+        "answer": 0,
+        "explanation": "Pod fornece uma rede compartilhada e permite compartilhar volumes configurados."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Encontre o endereço",
+          "prompt": "Leia o IP e o nó do Pod e explique por que não usá-los como endereço permanente.",
+          "hint": "Use get pod -o wide.",
+          "solution": "IP e nó pertencem à instância atual; um Pod substituto pode ter outro IP. Um Service resolverá esse problema.",
+          "criteria": [
+            "IP e nó registrados.",
+            "Explica endereço efêmero."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Observe o processo",
+          "prompt": "Leia os logs do container web. Registre quais mensagens são inicialização e quais são requisições.",
+          "hint": "k logs primeiro-pod -c web.",
+          "solution": "A saída depende das requisições recebidas; identifique o startup e evite inventar linhas que não ocorreram.",
+          "criteria": [
+            "Comando e saída reais.",
+            "Distingue eventos de logs."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Compare condições",
+          "prompt": "Consulte fase e condições do Pod pelo YAML.",
+          "hint": "status.phase e status.conditions têm papéis diferentes.",
+          "solution": "k get pod primeiro-pod -o yaml mostra Running e as condições observadas; explique que isso não testa uma regra de negócio.",
+          "criteria": [
+            "Fase identificada.",
+            "Limite do estado Ready explicado."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/workloads/pods/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 5,
+      "level": 2,
+      "week": 5,
+      "title": "Deployments e réplicas",
+      "goal": "Manter uma quantidade desejada de Pods e acompanhar rollout.",
+      "theory": [
+        {
+          "title": "Controlar a intenção",
+          "text": "Deployment gerencia ReplicaSets que mantêm réplicas do template de Pod. Você declara a quantidade e a configuração; o controlador decide criar e remover instâncias. Labels do template precisam combinar com o seletor, porque ele identifica quais Pods pertencem à carga."
+        },
+        {
+          "title": "Substituição observável",
+          "text": "Ao remover um Pod do Deployment, outra instância é criada para restaurar a contagem. Isso recupera uma instância, mas não corrige automaticamente bugs na imagem, dependências quebradas ou dados perdidos. Disponibilidade também depende de probes, capacidade e desenho da aplicação."
+        },
+        {
+          "title": "Mudança de template",
+          "text": "Alterar a imagem ou outro campo do template inicia uma nova revisão. Ajustar só o número de réplicas escala a revisão existente. rollout status espera o avanço do Deployment; se ficar bloqueado, investigue os Pods e eventos antes de repetir comandos."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web\nspec:\n  replicas: 2\n  selector:\n    matchLabels: {app: web}\n  template:\n    metadata:\n      labels: {app: web}\n    spec:\n      containers:\n      - name: web\n        image: nginx:stable-alpine\n        ports:\n        - containerPort: 80\nYAML\nk rollout status deployment/web --timeout=180s\nk get deployment web\nk get replicasets -l app=web\nk get pods -l app=web\n",
+      "filename": "aula-05.sh",
+      "language": "bash",
+      "run": "bash aula-05.sh",
+      "expected": "Deployment web fica 2/2 disponível; ReplicaSet e dois Pods carregam app=web.",
+      "quiz": {
+        "question": "Quem normalmente mantém a contagem de réplicas de um Deployment?",
+        "options": [
+          "Um ConfigMap",
+          "O kubectl aberto no terminal",
+          "Um PersistentVolume",
+          "O ReplicaSet gerenciado pelo Deployment"
+        ],
+        "answer": 3,
+        "explanation": "Deployment coordena revisões; ReplicaSet mantém o número desejado de Pods."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Comprove substituição",
+          "prompt": "Remova apenas um Pod app=web e observe um novo nome até voltar a duas réplicas.",
+          "hint": "Leia o nome exato antes de delete pod.",
+          "solution": "Use k get pods -l app=web, remova um nome observado e acompanhe k get pods -l app=web -w.",
+          "criteria": [
+            "Nome anterior e novo registrados.",
+            "Contagem restaurada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Escale com intenção",
+          "prompt": "Altere replicas para 3 no manifesto e reaplique. Depois retorne para 2.",
+          "hint": "Mantenha o manifesto como referência.",
+          "solution": "Ao mudar spec.replicas, o controlador cria ou remove instâncias sem exigir imagem nova.",
+          "criteria": [
+            "Escala verificada.",
+            "Arquivo coincide com intenção final."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Leia os donos",
+          "prompt": "Inspecione ownerReferences de um Pod e do ReplicaSet.",
+          "hint": "O Pod aponta para ReplicaSet; este aponta para Deployment.",
+          "solution": "Use get -o yaml nos nomes observados e trace a cadeia de ownership.",
+          "criteria": [
+            "Dois vínculos identificados.",
+            "Distingue as três APIs."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 6,
+      "level": 2,
+      "week": 6,
+      "title": "Jobs, tentativas e tarefas periódicas",
+      "goal": "Representar trabalho finito sem tratá-lo como servidor permanente.",
+      "theory": [
+        {
+          "title": "Um resultado que termina",
+          "text": "Job acompanha conclusão de trabalho. Seu container deve retornar código zero quando tiver sucesso e código diferente de zero quando falhar. A política Never ou OnFailure define o tratamento de reinício dos containers; backoffLimit controla tentativas do Job."
+        },
+        {
+          "title": "Repetição exige cuidado",
+          "text": "Uma tarefa pode executar novamente após falhas ou interrupções. Portanto, enviar cobrança, publicar mensagem ou gravar um resultado precisa considerar idempotência. Não assuma que o Job garante exatamente uma execução de cada efeito externo."
+        },
+        {
+          "title": "Agendamento periódico",
+          "text": "CronJob cria Jobs conforme uma expressão de agenda. concurrencyPolicy, prazo e histórico ajudam a limitar sobreposição e acúmulo, mas não tornam uma tarefa automaticamente segura. Começamos por uma verificação local que imprime uma linha e encerra, sem efeitos em serviços externos."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: batch/v1\nkind: Job\nmetadata:\n  name: verificacao\nspec:\n  backoffLimit: 2\n  template:\n    spec:\n      restartPolicy: Never\n      containers:\n      - name: verificar\n        image: busybox:1.37\n        command: [sh, -c, 'printf \"verificacao concluida\\n\"']\nYAML\nk wait --for=condition=Complete job/verificacao --timeout=180s\nk logs job/verificacao\n",
+      "filename": "aula-06.sh",
+      "language": "bash",
+      "run": "bash aula-06.sh",
+      "expected": "O Job atinge Complete e escreve verificacao concluida. Reexecutar apply não executa novamente um Job já concluído.",
+      "quiz": {
+        "question": "Qual workload é apropriado para uma tarefa que precisa terminar?",
+        "options": [
+          "Ingress",
+          "ConfigMap",
+          "Job",
+          "Service"
+        ],
+        "answer": 2,
+        "explanation": "Job observa conclusão de Pods para trabalho finito."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Provoque uma falha controlada",
+          "prompt": "Crie outro Job verificacao-falha com comando exit 1 e backoffLimit 1. Observe eventos e estado.",
+          "hint": "Use nome novo: o template de Job existente não é livremente editável.",
+          "solution": "O Job tenta executar e depois registra falha; descreva a evidência em vez de esperar Complete.",
+          "criteria": [
+            "Nome separado.",
+            "Código de saída e falha registrados."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desenhe uma tarefa repetível",
+          "prompt": "Explique como uma exportação periódica evitaria sobrescrever ou duplicar resultados silenciosamente.",
+          "hint": "Use identificador de execução e escrita controlada.",
+          "solution": "Defina uma chave de período e comportamento ao encontrar resultado existente; teste repetir a mesma entrada.",
+          "criteria": [
+            "Chave idempotente definida.",
+            "Cenário repetido previsto."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Leia o CronJob",
+          "prompt": "Consulte kubectl explain cronjob.spec.concurrencyPolicy e compare Allow, Forbid e Replace.",
+          "hint": "Concurrency trata Jobs concorrentes desse CronJob.",
+          "solution": "Allow admite sobreposição; Forbid evita iniciar nova execução enquanto outra está ativa; Replace substitui a ativa.",
+          "criteria": [
+            "Três opções distinguidas.",
+            "Não promete execução exatamente uma vez."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/workloads/controllers/job/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 7,
+      "level": 3,
+      "week": 7,
+      "title": "Services e descoberta por seletores",
+      "goal": "Criar endereço lógico e verificar os endpoints selecionados.",
+      "theory": [
+        {
+          "title": "Endereço para um grupo",
+          "text": "Service fornece um contrato de acesso a um conjunto de Pods. Seu seletor encontra labels; os endpoints acompanham instâncias elegíveis. ClusterIP atende dentro do cluster. Declarar containerPort no Pod não publica uma porta no seu computador nem cria um Service."
+        },
+        {
+          "title": "Portas têm contextos",
+          "text": "port é a porta do Service; targetPort aponta para o destino no Pod. Elas podem ter números distintos. Se o seletor não combinar com os Pods, o Service existe na API, mas não oferece os endpoints esperados. Verifique EndpointSlices em vez de concluir que rede está funcionando só porque o objeto foi criado."
+        },
+        {
+          "title": "Acesso local temporário",
+          "text": "port-forward permite inspecionar um serviço pelo seu computador durante o estudo. Use endereço de loopback e encerre com Ctrl+C. Esse túnel depende do processo kubectl e não substitui um desenho de entrada, autenticação e disponibilidade para usuários reais."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web\nspec:\n  replicas: 2\n  selector:\n    matchLabels: {app: web}\n  template:\n    metadata:\n      labels: {app: web}\n    spec:\n      containers:\n      - name: web\n        image: nginx:stable-alpine\n        ports:\n        - containerPort: 80\nYAML\nk rollout status deployment/web --timeout=180s\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n  selector: {app: web}\n  ports:\n  - port: 80\n    targetPort: 80\nYAML\nk get service web\nk get endpointslices -l kubernetes.io/service-name=web\n# Em outro terminal, consulte http://127.0.0.1:8080 . Encerre com Ctrl+C.\nk port-forward --address 127.0.0.1 service/web 8080:80\n",
+      "filename": "aula-07.sh",
+      "language": "bash",
+      "run": "bash aula-07.sh",
+      "expected": "EndpointSlice mostra os endpoints de web; com o port-forward ativo, 127.0.0.1:8080 responde a página do nginx.",
+      "quiz": {
+        "question": "Qual configuração conecta um Service aos Pods do exemplo?",
+        "options": [
+          "O número de réplicas sozinho",
+          "selector app=web corresponde às labels dos Pods",
+          "A ordem dos objetos no arquivo",
+          "O nome do arquivo YAML"
+        ],
+        "answer": 1,
+        "explanation": "O seletor escolhe Pods por labels e alimenta os endpoints do serviço."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste duas portas",
+          "prompt": "Crie um Service web-alt com port 8081 e targetPort 80. Acesse por port-forward local 8082:8081.",
+          "hint": "A porta local, a do Service e a do container são diferentes.",
+          "solution": "O tráfego percorre 8082 local para 8081 do Service e 80 do Pod.",
+          "criteria": [
+            "Três portas registradas.",
+            "Resposta verificada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Encontre um seletor errado",
+          "prompt": "Mude apenas o seletor de web-alt para app=inexistente e inspecione EndpointSlices. Depois corrija.",
+          "hint": "O Service pode existir sem endpoints úteis.",
+          "solution": "Compare ausência de destinos com o seletor; restaure app=web e verifique novamente.",
+          "criteria": [
+            "Falha reproduzida.",
+            "Correção demonstrada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Explique alcance",
+          "prompt": "Compare ClusterIP e port-forward no seu laboratório.",
+          "hint": "Pergunte onde estão cliente e túnel.",
+          "solution": "ClusterIP é acesso interno; port-forward cria um caminho temporário via kubectl no computador.",
+          "criteria": [
+            "Alcance interno explicado.",
+            "Limite do túnel documentado."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/services-networking/service/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 8,
+      "level": 3,
+      "week": 8,
+      "title": "DNS e comunicação entre namespaces",
+      "goal": "Resolver nomes de Services a partir de um Pod cliente.",
+      "theory": [
+        {
+          "title": "Nomes em lugar de IPs",
+          "text": "O DNS do cluster permite encontrar Services por nomes estáveis. Dentro do mesmo namespace, o nome curto costuma bastar. Para outro namespace, inclua esse escopo, como web.forge. O domínio completo depende da configuração do cluster; cluster.local é o padrão comum do laboratório."
+        },
+        {
+          "title": "Teste do lugar certo",
+          "text": "Um nome interno pode não resolver no seu navegador ou no terminal da máquina hospedeira. Faça a consulta de dentro de um Pod, porque é nesse ambiente que a aplicação usará o DNS do cluster. Separe falha de resolução, falha de conexão e erro da aplicação."
+        },
+        {
+          "title": "Rede não garante autorização",
+          "text": "Resolver um nome e alcançar uma porta não concede direito a executar uma operação. Autenticação e autorização da aplicação continuam necessárias. Mais adiante, NetworkPolicy limitará conectividade, mas ainda não substituirá as regras de acesso ao recurso de negócio."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web\nspec:\n  replicas: 2\n  selector:\n    matchLabels: {app: web}\n  template:\n    metadata:\n      labels: {app: web}\n    spec:\n      containers:\n      - name: web\n        image: nginx:stable-alpine\n        ports:\n        - containerPort: 80\nYAML\nk rollout status deployment/web --timeout=180s\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n  selector: {app: web}\n  ports:\n  - port: 80\n    targetPort: 80\nYAML\nk run cliente-dns --image=busybox:1.37 --restart=Never --dry-run=client -o yaml --command -- sleep 3600 | k apply -f -\nk wait --for=condition=Ready pod/cliente-dns --timeout=180s\nk exec cliente-dns -- nslookup web.forge.svc.cluster.local\nk exec cliente-dns -- wget -qO- http://web.forge.svc.cluster.local\n",
+      "filename": "aula-08.sh",
+      "language": "bash",
+      "run": "bash aula-08.sh",
+      "expected": "nslookup resolve o Service e wget recebe HTML do nginx. O IP retornado não precisa coincidir com o IP de um Pod.",
+      "quiz": {
+        "question": "Onde testar o nome web.forge.svc.cluster.local?",
+        "options": [
+          "Dentro de um Pod configurado com o DNS do cluster",
+          "Somente num navegador externo sem túnel",
+          "No nome de uma imagem Docker",
+          "Dentro do arquivo README sem executar"
+        ],
+        "answer": 0,
+        "explanation": "A resolução interna é configurada para workloads do cluster."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compare nomes",
+          "prompt": "No cliente, compare web, web.forge e o nome completo. Registre o resultado.",
+          "hint": "O cliente está no namespace forge.",
+          "solution": "Os três devem resolver no laboratório com domínio padrão; em outro namespace o nome curto muda de escopo.",
+          "criteria": [
+            "Consultas reais registradas.",
+            "Namespace considerado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Produza um erro de DNS",
+          "prompt": "Consulte servico-que-nao-existe.forge e compare com a consulta válida.",
+          "hint": "Ausência do registro difere de conexão recusada.",
+          "solution": "nslookup deve indicar que não encontrou o nome; isso ocorre antes de uma requisição HTTP.",
+          "criteria": [
+            "Mensagem de resolução registrada.",
+            "Camada da falha identificada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Mude o cliente de escopo",
+          "prompt": "Crie cliente no namespace forge-equipe e consulte web e web.forge.",
+          "hint": "Crie o namespace se necessário.",
+          "solution": "web curto procura no escopo do cliente; web.forge identifica o Service do outro namespace.",
+          "criteria": [
+            "Escopos comparados.",
+            "Usa contexto explícito."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 9,
+      "level": 3,
+      "week": 9,
+      "title": "Entrada externa e Gateway API",
+      "goal": "Distinguir Service, Ingress e Gateway API e verificar os componentes disponíveis.",
+      "theory": [
+        {
+          "title": "Tipos de exposição",
+          "text": "NodePort e LoadBalancer mudam o acesso ao Service, mas um cluster local não ganha automaticamente um balanceador externo. No começo, port-forward evita dependências adicionais. Para HTTP compartilhado, é comum um componente de entrada encaminhar host e caminho para Services."
+        },
+        {
+          "title": "Gateway exige implementação",
+          "text": "Gateway API adiciona recursos por CRDs e precisa de uma implementação compatível instalada. GatewayClass descreve a classe de infraestrutura, Gateway representa pontos de entrada e HTTPRoute descreve rotas da aplicação. Criar apenas um HTTPRoute não faz tráfego aparecer."
+        },
+        {
+          "title": "Escolha consciente",
+          "text": "A API Ingress está congelada, embora continue estável; Gateway API é o caminho em evolução. Não instale manifests remotos antigos sem revisar suporte e compatibilidade. Aqui a prática inicial é inventariar o cluster e preparar uma rota, sem prometer um controlador já instalado no kind."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nkubectl --context kind-forge api-resources --api-group=gateway.networking.k8s.io\nkubectl --context kind-forge get ingressclass\nk get services\n# Se a listagem da API Gateway estiver vazia, faltam as CRDs.\n# Antes de instalar: selecione uma implementação compatível e siga seu guia oficial para kind.\n",
+      "filename": "aula-09.sh",
+      "language": "bash",
+      "run": "bash aula-09.sh",
+      "expected": "É normal o kind básico não listar Gateway, HTTPRoute nem IngressClass. O resultado vira inventário dos pré-requisitos, não prova de rota externa funcional.",
+      "quiz": {
+        "question": "Gateway API funciona em um kind básico apenas criando HTTPRoute?",
+        "options": [
+          "Sim, sempre vem pronta",
+          "Sim, um Secret instala o controlador",
+          "Somente mudar a porta do navegador basta",
+          "Não; precisa de CRDs, implementação e Gateway configurado"
+        ],
+        "answer": 3,
+        "explanation": "A API e a implementação de dados precisam estar disponíveis e configuradas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Faça um inventário",
+          "prompt": "Liste APIs Gateway e classes presentes. Classifique presente, ausente e não verificado.",
+          "hint": "Não trate ausência esperada como falha de YAML.",
+          "solution": "Anote CRDs, controller, GatewayClass, endereço e modo de acesso que ainda precisariam ser configurados.",
+          "criteria": [
+            "Estado real registrado.",
+            "Pré-requisitos separados."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desenhe o fluxo",
+          "prompt": "Descreva o caminho cliente → Gateway → HTTPRoute → Service → Pod.",
+          "hint": "Separe recurso de configuração e processo que encaminha tráfego.",
+          "solution": "HTTPRoute configura o encaminhamento; o controller implementa-o usando Service e endpoints.",
+          "criteria": [
+            "Cinco peças conectadas.",
+            "Controller incluído."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Prepare uma decisão",
+          "prompt": "Escolha uma implementação da lista oficial e registre suporte a kind, instalação, versão e como testar status Accepted/Programmed.",
+          "hint": "Use documentação do projeto selecionado.",
+          "solution": "A entrega é um plano verificável; só marque rota funcional após instalar componentes e realizar requisição observada.",
+          "criteria": [
+            "Fonte primária citada.",
+            "Critério de teste definido."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/services-networking/gateway/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 10,
+      "level": 4,
+      "week": 10,
+      "title": "ConfigMaps e atualização de configuração",
+      "goal": "Consumir configuração pública sem reconstruir a imagem.",
+      "theory": [
+        {
+          "title": "Separar código e ambiente",
+          "text": "ConfigMap contém dados não confidenciais. A mesma imagem pode receber outra mensagem, modo ou endereço por configuração. A chave deve ser nomeada para expressar seu contrato com a aplicação; ausência de chave obrigatória pode impedir a inicialização do container."
+        },
+        {
+          "title": "Env e volume têm atualização diferente",
+          "text": "Uma variável de ambiente é capturada ao iniciar o container. Alterar o ConfigMap depois não muda magicamente essa variável no processo já iniciado. Volumes projetados podem receber atualizações com atraso, mas a aplicação ainda precisa reler o arquivo; subPath tem comportamento de atualização diferente."
+        },
+        {
+          "title": "Uma verificação pequena",
+          "text": "Nosso Pod lê MENSAGEM e imprime uma linha. Esse experimento torna a origem do valor visível. Para uma aplicação contínua, planeje como publicar configuração, iniciar nova revisão e verificar comportamento, sem colocar credenciais em ConfigMap."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk create configmap saudacao --from-literal=MENSAGEM='estudo local' --dry-run=client -o yaml | k apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: config-env}\nspec:\n  restartPolicy: Never\n  containers:\n  - name: mostrar\n    image: busybox:1.37\n    command: [sh, -c, 'printf \"%s\\n\" \"$MENSAGEM\"']\n    env:\n    - name: MENSAGEM\n      valueFrom:\n        configMapKeyRef: {name: saudacao, key: MENSAGEM}\nYAML\nk wait --for=jsonpath='{.status.phase}'=Succeeded pod/config-env --timeout=180s\nk logs config-env\n",
+      "filename": "aula-10.sh",
+      "language": "bash",
+      "run": "bash aula-10.sh",
+      "expected": "O Pod termina com sucesso e imprime estudo local, valor vindo do ConfigMap.",
+      "quiz": {
+        "question": "Uma variável env de um container já iniciado muda quando o ConfigMap muda?",
+        "options": [
+          "Só quando se lê logs",
+          "Todo ConfigMap reinicia Pods automaticamente",
+          "Não; o processo precisa ser reiniciado para receber o novo env",
+          "Sim, a cada milissegundo"
+        ],
+        "answer": 2,
+        "explanation": "Env é fornecido na inicialização do container; a mudança exige um mecanismo de atualização."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Varie o valor",
+          "prompt": "Troque o ConfigMap para estudo revisado e crie um novo Pod config-env-2 com a mesma referência. Compare logs.",
+          "hint": "Use nome novo para o Pod finito.",
+          "solution": "O novo Pod lê o valor atualizado; o log do antigo continua contendo a execução anterior.",
+          "criteria": [
+            "Valores comparados.",
+            "Ciclo de vida considerado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Use arquivo",
+          "prompt": "Monte saudacao como volume de leitura e leia /config/MENSAGEM em um Pod de teste.",
+          "hint": "Volumes e volumeMounts precisam usar o mesmo nome.",
+          "solution": "Defina configMap.name=saudacao e mountPath=/config com readOnly=true; cat retorna o conteúdo da chave.",
+          "criteria": [
+            "Arquivo lido.",
+            "Montagem e chave explicadas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Documente o contrato",
+          "prompt": "Defina o que sua aplicação fará se a chave MENSAGEM estiver ausente.",
+          "hint": "Separar chave obrigatória de valor padrão.",
+          "solution": "Escolha falhar com mensagem útil ou assumir um padrão explícito; teste a chave ausente num objeto separado.",
+          "criteria": [
+            "Comportamento definido.",
+            "Falha controlada registrada."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/configuration/configmap/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 11,
+      "level": 4,
+      "week": 11,
+      "title": "Secrets e mínimo acesso",
+      "goal": "Usar uma credencial fictícia sem confundir base64 com proteção criptográfica.",
+      "theory": [
+        {
+          "title": "Dado sensível continua sensível",
+          "text": "Secret separa informações confidenciais do manifesto da aplicação, mas não elimina o risco de exposição. O campo data usa base64, que é codificação reversível. A proteção do armazenamento, permissões da API e acesso ao nó precisam ser planejados pelo operador."
+        },
+        {
+          "title": "Entregar só o necessário",
+          "text": "Prefira montar apenas a chave exigida pelo container e restringir leitura da API. Credenciais reais não devem aparecer em exemplos públicos, histórico do shell, logs, values ou Git. O laboratório usa exclusivamente um valor fictício, sem conexão com banco ou serviço externo."
+        },
+        {
+          "title": "Rotação é comportamento",
+          "text": "Trocar um Secret exige saber quando a aplicação relê o valor. Env pede nova inicialização; arquivo projetado pode atualizar, mas o processo precisa observá-lo. Teste a troca com um valor fictício antes de depender dela numa integração real."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk create secret generic credencial-demo --from-literal=token=valor-ficticio --dry-run=client -o yaml | k apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: secret-arquivo}\nspec:\n  restartPolicy: Never\n  containers:\n  - name: verificar\n    image: busybox:1.37\n    command: [sh, -c, 'test -s /credenciais/token && echo chave-presente']\n    volumeMounts:\n    - {name: credencial, mountPath: /credenciais, readOnly: true}\n  volumes:\n  - name: credencial\n    secret:\n      secretName: credencial-demo\n      items:\n      - {key: token, path: token}\nYAML\nk wait --for=jsonpath='{.status.phase}'=Succeeded pod/secret-arquivo --timeout=180s\nk logs secret-arquivo\n",
+      "filename": "aula-11.sh",
+      "language": "bash",
+      "run": "bash aula-11.sh",
+      "expected": "O log mostra somente chave-presente; o exemplo não imprime o token nem usa uma credencial real.",
+      "quiz": {
+        "question": "Base64 no campo data de Secret significa criptografia?",
+        "options": [
+          "Só quando o nome termina em token",
+          "Não; é uma codificação reversível",
+          "Sim, equivale a um cofre completo",
+          "Sim, substitui RBAC"
+        ],
+        "answer": 1,
+        "explanation": "Segurança do Secret exige controles de acesso, armazenamento e uso além da representação base64."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Evite vazamento",
+          "prompt": "Mude o verificador para registrar apenas presente/ausente, sem imprimir o conteúdo.",
+          "hint": "test -s verifica arquivo não vazio.",
+          "solution": "Use um teste do arquivo e mensagens sem segredo. Confira que logs e anotações não contêm o valor.",
+          "criteria": [
+            "Verifica presença.",
+            "Não registra conteúdo."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Modele rotação",
+          "prompt": "Descreva a sequência para trocar um Secret consumido via env por um Deployment.",
+          "hint": "Pense em publicação, rollout e verificação.",
+          "solution": "Atualize valor pelo canal seguro, inicie rollout e teste autenticação; planeje janela de coexistência ou reversão quando o serviço externo exigir.",
+          "criteria": [
+            "Sequência observável.",
+            "Dependência externa considerada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Revise os arquivos",
+          "prompt": "Encontre no seu repositório onde um Secret real seria acidentalmente versionado. Proponha prevenção.",
+          "hint": "Considere YAML renderizado e scripts.",
+          "solution": "Use apenas exemplos fictícios, ignore arquivos locais sensíveis e forneça instruções de provisionamento seguro; ignorar arquivo não apaga histórico anterior.",
+          "criteria": [
+            "Fontes de vazamento listadas.",
+            "Prevenção coerente."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/configuration/secret/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 12,
+      "level": 4,
+      "week": 12,
+      "title": "Readiness, liveness e startup probes",
+      "goal": "Usar cada probe para uma decisão distinta e testar suas consequências.",
+      "theory": [
+        {
+          "title": "Pronto para receber tráfego",
+          "text": "Readiness sinaliza se a instância pode atender. Quando falha, o Pod deixa de ser elegível para tráfego normal do Service. Não é um comando para reiniciar o processo. Use um teste que represente capacidade de atendimento sem depender excessivamente de sistemas externos."
+        },
+        {
+          "title": "Vivo e inicializado",
+          "text": "Liveness identifica situações em que reiniciar o container pode recuperar o serviço. Uma liveness agressiva pode criar ciclos de reinício. Startup probe oferece tempo para inicialização antes que outras verificações assumam seu papel; seu orçamento deriva de períodos e limiar de falha."
+        },
+        {
+          "title": "Teste uma hipótese",
+          "text": "Neste Pod, HTTP em / funciona como sinal simples. Observe condições e reinícios ao mudar uma probe em um Pod de teste separado. Escolher endpoint, timeout e limiares pede evidência do comportamento real, não copiar números de outra aplicação."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: web-probes, labels: {app: probes}}\nspec:\n  containers:\n  - name: web\n    image: nginx:stable-alpine\n    ports: [{containerPort: 80}]\n    readinessProbe:\n      httpGet: {path: /, port: 80}\n      periodSeconds: 5\n    livenessProbe:\n      httpGet: {path: /, port: 80}\n      periodSeconds: 10\n    startupProbe:\n      httpGet: {path: /, port: 80}\n      periodSeconds: 2\n      failureThreshold: 30\nYAML\nk wait --for=condition=Ready pod/web-probes --timeout=180s\nk describe pod web-probes\n",
+      "filename": "aula-12.sh",
+      "language": "bash",
+      "run": "bash aula-12.sh",
+      "expected": "web-probes torna-se Ready; as três probes aparecem em describe e o contador de reinícios permanece estável quando os testes passam.",
+      "quiz": {
+        "question": "Qual probe altera elegibilidade para receber tráfego sem exigir reinício?",
+        "options": [
+          "Readiness",
+          "Liveness",
+          "Uma label chamada healthy",
+          "NodePort"
+        ],
+        "answer": 0,
+        "explanation": "Readiness trata disponibilidade para tráfego; liveness trata necessidade de reiniciar."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Readiness que falha",
+          "prompt": "Crie web-probes-falha com readiness em /inexistente e liveness em /. Observe Ready e RESTARTS.",
+          "hint": "Use outro nome para não editar Pod existente.",
+          "solution": "A readiness recebe 404 e fica falsa; liveness saudável não deve reiniciar o container por essa causa.",
+          "criteria": [
+            "Falha HTTP observada.",
+            "Readiness separada de reinício."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Calcule startup",
+          "prompt": "Calcule o orçamento aproximado de startup do exemplo e proponha outro para inicialização de 90s.",
+          "hint": "failureThreshold vezes periodSeconds.",
+          "solution": "O exemplo permite cerca de 60s; para 90s, use orçamento acima do pior caso medido, justificando margem.",
+          "criteria": [
+            "Cálculo correto.",
+            "Margem justificada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Escolha dependências",
+          "prompt": "Explique por que falha temporária de um banco não deve sempre disparar liveness.",
+          "hint": "Reiniciar sua API pode não recuperar o banco.",
+          "solution": "Uma dependência indisponível pode afetar readiness; liveness deve apontar condição recuperável pelo reinício, evitando tempestade de reinícios.",
+          "criteria": [
+            "Causa e reação ligadas.",
+            "Evita reinício sem benefício."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 13,
+      "level": 5,
+      "week": 13,
+      "title": "Requests, limits e unidades",
+      "goal": "Definir recursos e distinguir reserva de agendamento de limite de execução.",
+      "theory": [
+        {
+          "title": "Requests ajudam o scheduler",
+          "text": "O scheduler considera requests ao escolher onde um Pod cabe. Uma request de 100m representa um décimo de CPU, não cem megabytes. Memória usa unidades como Mi. Requests são parte do contrato de capacidade e não uma medida automática do uso real."
+        },
+        {
+          "title": "Limits restringem uso",
+          "text": "Um limite de CPU pode levar a throttling. Pressão sobre o limite de memória pode resultar em encerramento por falta de memória. Configurar valores altos sem medir não cria capacidade. O orçamento deve incluir todas as instâncias e containers relevantes."
+        },
+        {
+          "title": "Comece com observação",
+          "text": "O exemplo declara valores pequenos para um servidor de estudo. Eles não são recomendação universal de produção. Verifique capacidade alocável, comportamento sob carga e sinais de limitação; depois ajuste com evidências, sem remover limites apenas para esconder um problema."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: recursos-demo}\nspec:\n  containers:\n  - name: web\n    image: nginx:stable-alpine\n    resources:\n      requests: {cpu: 100m, memory: 32Mi}\n      limits: {cpu: 500m, memory: 96Mi}\nYAML\nk wait --for=condition=Ready pod/recursos-demo --timeout=180s\nk get pod recursos-demo -o jsonpath='{.spec.containers[0].resources}'\n",
+      "filename": "aula-13.sh",
+      "language": "bash",
+      "run": "bash aula-13.sh",
+      "expected": "O Pod declara request 100m/32Mi e limit 500m/96Mi. Isso não comprova qual será o uso sob carga.",
+      "quiz": {
+        "question": "O scheduler usa qual valor como parte do cálculo de capacidade solicitada?",
+        "options": [
+          "Somente o nome da imagem",
+          "O tamanho do README",
+          "A contagem de Services",
+          "Requests"
+        ],
+        "answer": 3,
+        "explanation": "Requests descrevem os recursos solicitados para decidir onde agendar o Pod."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Some réplicas",
+          "prompt": "Calcule requests totais de 5 réplicas com 100m CPU e 32Mi memória cada.",
+          "hint": "Some cada recurso separadamente.",
+          "solution": "São 500m CPU e 160Mi de memória, sem contar outros containers ou overhead.",
+          "criteria": [
+            "Unidades corretas.",
+            "Total de instâncias considerado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Diferencie falhas",
+          "prompt": "Explique como CPU throttling difere de encerramento por memória.",
+          "hint": "CPU limita taxa; memória pode impedir continuar o processo.",
+          "solution": "Throttling reduz tempo de CPU disponível; exceder limite de memória pode causar OOMKilled. Investigue estado e métricas.",
+          "criteria": [
+            "Duas consequências distinguidas.",
+            "Cita evidência observável."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Inspecione capacidade",
+          "prompt": "Leia allocatable dos nós e compare com a soma das suas requests.",
+          "hint": "Use kubectl describe node e get node -o yaml.",
+          "solution": "A capacidade alocável é diferente do total físico; outras cargas também consomem orçamento.",
+          "criteria": [
+            "Capacidade registrada.",
+            "Outras cargas consideradas."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 14,
+      "level": 5,
+      "week": 14,
+      "title": "Scheduling, afinidade e estado Pending",
+      "goal": "Explicar um agendamento bloqueado com evidência dos eventos.",
+      "theory": [
+        {
+          "title": "Escolher um nó elegível",
+          "text": "O scheduler encontra nós que satisfazem restrições e recursos solicitados. nodeSelector é um filtro simples por labels; afinidade permite expressar preferências ou exigências mais detalhadas. Uma condição impossível deixa o Pod Pending sem que o container tenha iniciado."
+        },
+        {
+          "title": "Taints e tolerations",
+          "text": "Taint pode afastar Pods de um nó. Toleration permite considerar esse nó, mas não obriga agendamento nele e não concede recursos inexistentes. Não adicione tolerations genéricas para esconder a razão de um Pending sem entender a política do ambiente."
+        },
+        {
+          "title": "Uma falha controlada",
+          "text": "Vamos pedir um nó com label inexistente. O evento FailedScheduling deve explicar a incompatibilidade. Depois substituímos o Pod de demonstração sem essa restrição. A correção vem da hipótese confirmada, não de apagar recursos aleatoriamente."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: agenda-impossivel}\nspec:\n  nodeSelector: {forge.exemplo/tipo: inexistente}\n  containers:\n  - name: pausa\n    image: busybox:1.37\n    command: [sleep, '3600']\nYAML\nk get pod agenda-impossivel\nk describe pod agenda-impossivel\n",
+      "filename": "aula-14.sh",
+      "language": "bash",
+      "run": "bash aula-14.sh",
+      "expected": "O Pod permanece Pending e os eventos indicam que nenhum nó satisfaz o nodeSelector. Não há logs de aplicação para um container que não iniciou.",
+      "quiz": {
+        "question": "O Pod Pending por nodeSelector impossível tem logs de um processo já iniciado?",
+        "options": [
+          "Só se o nome for curto",
+          "O Service armazena esses logs",
+          "Não; o agendamento bloqueou o início do container",
+          "Sim, sempre existem logs do nginx"
+        ],
+        "answer": 2,
+        "explanation": "Diagnostique scheduling e eventos antes de procurar logs de um processo inexistente."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Corrija a restrição",
+          "prompt": "Remova apenas agenda-impossivel e recrie sem nodeSelector. Espere Ready.",
+          "hint": "Alguns campos do Pod exigem recriação.",
+          "solution": "Use k delete pod agenda-impossivel e reaplique o manifesto corrigido; não remova outros Pods.",
+          "criteria": [
+            "Escopo da remoção limitado.",
+            "Ready observado após correção."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Leia labels reais",
+          "prompt": "Liste labels dos nós e proponha uma seleção que exista no cluster.",
+          "hint": "get nodes --show-labels.",
+          "solution": "Use uma label observada, como kubernetes.io/os=linux, e justifique a necessidade da restrição.",
+          "criteria": [
+            "Label observada.",
+            "Restrição tem motivo."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Compare toleration e direção",
+          "prompt": "Explique por que tolerar um taint não garante ir para esse nó.",
+          "hint": "Permissão para considerar não é escolha obrigatória.",
+          "solution": "Outros filtros e pontuação continuam valendo; use afinidade/seleção quando houver necessidade legítima de destino.",
+          "criteria": [
+            "Sem garantia indevida.",
+            "Outros critérios citados."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 15,
+      "level": 5,
+      "week": 15,
+      "title": "LimitRange e ResourceQuota",
+      "goal": "Estabelecer limites de consumo e validar uma rejeição de admissão.",
+      "theory": [
+        {
+          "title": "Política do namespace",
+          "text": "ResourceQuota limita consumo agregado declarado no namespace e também pode limitar contagens de objetos. LimitRange define padrões e intervalos para recursos de containers. Essas regras atuam em criação/alteração e ajudam equipes a compartilhar capacidade sem pedidos ilimitados."
+        },
+        {
+          "title": "Rejeição não é Pending",
+          "text": "Uma quota excedida pode fazer a API recusar a criação; nesse caso não há Pod criado esperando scheduler. Já um Pod aceito com requests que não cabem pode ficar Pending. Identificar em qual etapa ocorreu a falha evita investigar o componente errado."
+        },
+        {
+          "title": "Use um escopo separado",
+          "text": "Vamos criar forge-quota para que a política não interfira nos outros exercícios. O pequeno orçamento é proposital para observar defaults e rejeição. Na prática, quotas precisam considerar réplicas extras durante rollout, jobs e recursos dos componentes auxiliares."
+        }
+      ],
+      "code": "set -eu\nkq() { kubectl --context kind-forge -n forge-quota \"$@\"; }\nkubectl --context kind-forge create namespace forge-quota --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nkq apply -f - <<'YAML'\napiVersion: v1\nkind: LimitRange\nmetadata: {name: padroes}\nspec:\n  limits:\n  - type: Container\n    defaultRequest: {cpu: 100m, memory: 32Mi}\n    default: {cpu: 300m, memory: 64Mi}\n---\napiVersion: v1\nkind: ResourceQuota\nmetadata: {name: orcamento}\nspec:\n  hard:\n    pods: '2'\n    requests.cpu: 300m\n    requests.memory: 96Mi\n    limits.cpu: 900m\n    limits.memory: 192Mi\nYAML\nkq describe resourcequota orcamento\nkq describe limitrange padroes\n",
+      "filename": "aula-15.sh",
+      "language": "bash",
+      "run": "bash aula-15.sh",
+      "expected": "forge-quota possui orçamento e defaults de container; nenhum outro namespace recebe essa política.",
+      "quiz": {
+        "question": "Qual diferença separa rejeição por quota de um Pod Pending?",
+        "options": [
+          "Pending significa sucesso completo",
+          "A quota pode impedir a criação; Pending é estado de objeto aceito",
+          "São sempre o mesmo estado",
+          "Quota é apenas uma annotation"
+        ],
+        "answer": 1,
+        "explanation": "Admissão e scheduling são etapas diferentes e produzem evidências distintas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Veja os defaults",
+          "prompt": "Crie em forge-quota um Pod busybox sem resources e leia o objeto resultante.",
+          "hint": "LimitRange injeta defaults quando aplicável.",
+          "solution": "O Pod ganha request e limit definidos pela política; registre os valores no YAML retornado.",
+          "criteria": [
+            "Defaults observados.",
+            "Origem da política explicada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Exceda só o laboratório",
+          "prompt": "Tente criar três Pods pequenos no namespace forge-quota e registre a rejeição do terceiro.",
+          "hint": "O limite pods é 2.",
+          "solution": "Após dois objetos aceitos, a API recusa o terceiro por quota. Remova só os Pods de demonstração ao finalizar.",
+          "criteria": [
+            "Mensagem da API registrada.",
+            "Sem alterar forge ou outros namespaces."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Inclua rollout no orçamento",
+          "prompt": "Calcule por que uma atualização com maxSurge=1 pode precisar de capacidade além das réplicas normais.",
+          "hint": "O Pod extra também solicita recursos.",
+          "solution": "Some o consumo do Pod de surge; uma quota sem margem pode bloquear a atualização mesmo com serviço antigo saudável.",
+          "criteria": [
+            "Capacidade extra calculada.",
+            "Relaciona quota e rollout."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/policy/resource-quotas/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 16,
+      "level": 6,
+      "week": 16,
+      "title": "Volumes temporários e durabilidade",
+      "goal": "Observar emptyDir e distinguir reinício de container de substituição de Pod.",
+      "theory": [
+        {
+          "title": "Camadas de armazenamento",
+          "text": "O filesystem gravável de um container não deve guardar dados que precisam sobreviver à substituição da instância. Volume monta armazenamento num caminho explícito. emptyDir existe durante a vida do Pod e pode ser compartilhado entre seus containers; ele não é um backup nem um PVC."
+        },
+        {
+          "title": "O que sobrevive a quê",
+          "text": "Um volume emptyDir pode sobreviver ao reinício de um container dentro do mesmo Pod. Ao remover o Pod, seu conteúdo é descartado. Essa diferença importa para caches, arquivos temporários e handoff entre init container e processo principal."
+        },
+        {
+          "title": "Experimento verificável",
+          "text": "O init container do exemplo escreve um arquivo; o container principal lê e fica ativo. Isso mostra compartilhamento de volume sem depender de rede. Não guarde informação real: o teste foi desenhado para explorar dados efêmeros."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: volume-temporario}\nspec:\n  initContainers:\n  - name: preparar\n    image: busybox:1.37\n    command: [sh, -c, 'echo criado-no-pod > /dados/mensagem']\n    volumeMounts: [{name: dados, mountPath: /dados}]\n  containers:\n  - name: ler\n    image: busybox:1.37\n    command: [sh, -c, 'cat /dados/mensagem; sleep 3600']\n    volumeMounts: [{name: dados, mountPath: /dados}]\n  volumes:\n  - name: dados\n    emptyDir: {}\nYAML\nk wait --for=condition=Ready pod/volume-temporario --timeout=180s\nk logs volume-temporario -c ler\n",
+      "filename": "aula-16.sh",
+      "language": "bash",
+      "run": "bash aula-16.sh",
+      "expected": "O container ler imprime criado-no-pod, arquivo escrito pelo init container no emptyDir compartilhado.",
+      "quiz": {
+        "question": "Quando o conteúdo de emptyDir normalmente é perdido?",
+        "options": [
+          "Quando o Pod deixa de existir",
+          "Sempre que kubectl logs é executado",
+          "Quando se cria um Service",
+          "Somente quando o README muda"
+        ],
+        "answer": 0,
+        "explanation": "emptyDir está vinculado ao ciclo de vida do Pod, não a um endereço permanente."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Mude o conteúdo",
+          "prompt": "Grave um segundo arquivo via exec e leia-o pelo container principal.",
+          "hint": "Os dois acessam a mesma montagem.",
+          "solution": "k exec volume-temporario -c ler -- sh -c \"echo teste > /dados/segundo\"; depois cat pelo mesmo caminho.",
+          "criteria": [
+            "Arquivo escrito e lido.",
+            "Montagem identificada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Teste substituição",
+          "prompt": "Remova apenas volume-temporario e reaplique; veja quais arquivos existem.",
+          "hint": "O init cria mensagem novamente; segundo não será recriado.",
+          "solution": "O novo Pod possui emptyDir novo. mensagem volta por ação do init; segundo desaparece.",
+          "criteria": [
+            "Resultados dos dois arquivos.",
+            "Diferencia recriação de persistência."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Escolha um uso adequado",
+          "prompt": "Classifique cache reconstruível e arquivo único de faturamento para emptyDir.",
+          "hint": "Considere perda do Pod.",
+          "solution": "Cache pode ser adequado se reconstruível; dado único exige armazenamento e estratégia de recuperação próprios.",
+          "criteria": [
+            "Duas classificações justificadas.",
+            "Perda considerada."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/storage/volumes/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 17,
+      "level": 6,
+      "week": 17,
+      "title": "PVC, StorageClass e retenção",
+      "goal": "Solicitar armazenamento e verificar como ele é provisionado no cluster local.",
+      "theory": [
+        {
+          "title": "Solicitar sem escolher um disco manualmente",
+          "text": "PersistentVolumeClaim descreve uma necessidade de armazenamento. StorageClass pode fornecer provisionamento dinâmico por um driver, enquanto PersistentVolume representa a capacidade oferecida. O kind costuma instalar uma classe local, mas o aluno deve verificar qual existe antes de assumir o provisionamento."
+        },
+        {
+          "title": "Persistir não é replicar",
+          "text": "O PVC separa o ciclo de vida do armazenamento do Pod. Isso não garante disponibilidade entre nós, backup ou recuperação após perder a máquina. AccessMode descreve modos de acesso suportados; não é mecanismo de coordenação da aplicação nem substitui bloqueio transacional."
+        },
+        {
+          "title": "Observe binding e política",
+          "text": "Um PVC pode ficar Pending até um consumidor ser agendado, conforme volumeBindingMode. ReclaimPolicy do volume e regras do provisionador influenciam o destino do dado quando o claim é removido. No laboratório, mantenha claims fictícios e não os apague antes do exercício de restauração."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nkubectl --context kind-forge get storageclass\nk apply -f - <<'YAML'\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata: {name: dados-demo}\nspec:\n  accessModes: [ReadWriteOnce]\n  resources:\n    requests: {storage: 128Mi}\n---\napiVersion: v1\nkind: Pod\nmetadata: {name: escritor-pvc}\nspec:\n  containers:\n  - name: escrever\n    image: busybox:1.37\n    command: [sh, -c, 'test -f /dados/marcador || echo preservado > /dados/marcador; sleep 3600']\n    volumeMounts: [{name: dados, mountPath: /dados}]\n  volumes:\n  - name: dados\n    persistentVolumeClaim: {claimName: dados-demo}\nYAML\nk wait --for=condition=Ready pod/escritor-pvc --timeout=180s\nk get pvc dados-demo\nk exec escritor-pvc -- cat /dados/marcador\n",
+      "filename": "aula-17.sh",
+      "language": "bash",
+      "run": "bash aula-17.sh",
+      "expected": "Com StorageClass padrão funcional, PVC fica Bound após consumidor e o Pod lê preservado. Se não houver classe padrão, investigue o provisionamento antes de esperar sucesso.",
+      "quiz": {
+        "question": "Um PVC Bound em armazenamento local prova backup e alta disponibilidade?",
+        "options": [
+          "Sim, todo PVC replica em três regiões",
+          "Sim, ReadWriteOnce significa backup diário",
+          "Somente se o claim tiver nome dados",
+          "Não; binding e durabilidade operacional são questões diferentes"
+        ],
+        "answer": 3,
+        "explanation": "Um volume local pode depender de um único nó e não fornece backup automático."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Prove sobrevivência ao Pod",
+          "prompt": "Altere o marcador para valor único, remova só escritor-pvc e recrie com o mesmo claim.",
+          "hint": "O comando só inicializa o arquivo se não existir.",
+          "solution": "Depois da recriação, o marcador alterado deve continuar. Não remova dados-demo.",
+          "criteria": [
+            "Marcador único preservado.",
+            "Mesmo claim usado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Leia a classe",
+          "prompt": "Inspecione provisioner, volumeBindingMode e reclaimPolicy da classe padrão.",
+          "hint": "Use get storageclass -o yaml.",
+          "solution": "Registre os valores reais; explique quando binding ocorre e como remoção pode afetar o volume.",
+          "criteria": [
+            "Três campos registrados.",
+            "Sem presumir comportamento de nuvem."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Diagnostique Pending",
+          "prompt": "Descreva como distinguir espera por consumidor de ausência de StorageClass.",
+          "hint": "Consulte describe pvc e eventos.",
+          "solution": "Eventos podem informar WaitForFirstConsumer ou falha de provisionamento; a causa vem da mensagem e configuração da classe.",
+          "criteria": [
+            "Duas hipóteses separadas.",
+            "Evidência indicada."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 18,
+      "level": 6,
+      "week": 18,
+      "title": "StatefulSet e recuperação de dados",
+      "goal": "Manter identidade estável e restaurar dados fictícios em destino separado.",
+      "theory": [
+        {
+          "title": "Identidade previsível",
+          "text": "StatefulSet dá nomes e identidades estáveis aos Pods e pode associar um PVC a cada réplica por volumeClaimTemplates. Um Service headless participa da descoberta de nomes. Isso é útil para aplicações que sabem operar com identidade persistente, sem tornar qualquer banco automaticamente replicado."
+        },
+        {
+          "title": "Escala exige aplicação compatível",
+          "text": "Aumentar replicas de um StatefulSet não cria um protocolo de replicação de banco. Cada instância pode ter seus próprios dados. Consistência, eleição, recuperação e backups precisam ser tratados pela aplicação ou por um operador que conheça o domínio."
+        },
+        {
+          "title": "Restaure para provar",
+          "text": "Uma cópia de arquivo parado é suficiente para o dado fictício desta aula; bancos reais exigem consistência e procedimento específico. Capture o conteúdo e restaure em outro claim ou instância, verificando o valor. Replicação e snapshot sem teste de leitura não comprovam recuperação."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Service\nmetadata: {name: arquivo}\nspec:\n  clusterIP: None\n  selector: {app: arquivo}\n  ports: [{name: teste, port: 8080, targetPort: 8080}]\n---\napiVersion: apps/v1\nkind: StatefulSet\nmetadata: {name: arquivo}\nspec:\n  serviceName: arquivo\n  replicas: 1\n  selector:\n    matchLabels: {app: arquivo}\n  template:\n    metadata:\n      labels: {app: arquivo}\n    spec:\n      containers:\n      - name: guardar\n        image: busybox:1.37\n        command: [sh, -c, 'test -f /dados/registro || echo evidencia-001 > /dados/registro; sleep 3600']\n        volumeMounts: [{name: dados, mountPath: /dados}]\n  volumeClaimTemplates:\n  - metadata: {name: dados}\n    spec:\n      accessModes: [ReadWriteOnce]\n      resources:\n        requests: {storage: 128Mi}\nYAML\nk rollout status statefulset/arquivo --timeout=180s\nk exec arquivo-0 -- cat /dados/registro > backup-registro.txt\ncat backup-registro.txt\nk get pvc\n",
+      "filename": "aula-18.sh",
+      "language": "bash",
+      "run": "bash aula-18.sh",
+      "expected": "arquivo-0 usa o claim dados-arquivo-0 e backup-registro.txt contém evidencia-001. O Service headless demonstra identidade; não há servidor HTTP no container deste exemplo.",
+      "quiz": {
+        "question": "O que StatefulSet acrescenta sem implementar replicação do banco?",
+        "options": [
+          "Backup externo de todos os dados",
+          "Execução de SQL sem aplicação",
+          "Identidade estável e associação persistente por réplica",
+          "Consistência de qualquer banco por configuração automática"
+        ],
+        "answer": 2,
+        "explanation": "A API organiza identidades e volumes; os protocolos de dados pertencem à aplicação."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste a identidade",
+          "prompt": "Remova apenas arquivo-0 e observe a criação de arquivo-0 novamente com o mesmo claim.",
+          "hint": "O nome estável não é o mesmo UID de Pod.",
+          "solution": "Compare metadata.uid antes e depois; nome persiste, instância muda e o claim permanece associado.",
+          "criteria": [
+            "UIDs comparados.",
+            "Claim preservado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Restaure em outro destino",
+          "prompt": "Crie um Pod com PVC novo recuperacao-demo e grave nele o conteúdo de backup-registro.txt. Leia e compare.",
+          "hint": "Use stdin com exec -i e cat para gravar arquivo.",
+          "solution": "Com Pod de recuperação pronto, use k exec -i recuperacao-demo -- sh -c \"cat > /dados/registro\" < backup-registro.txt; compare a leitura.",
+          "criteria": [
+            "Destino independente.",
+            "Conteúdo restaurado igual."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Avalie um banco real",
+          "prompt": "Explique por que copiar arquivos de um banco em escrita pode produzir backup inválido.",
+          "hint": "A consistência pode envolver vários arquivos e logs.",
+          "solution": "Use ferramenta e procedimento de backup do banco, ponto de consistência, retenção e teste de restauração; não aplique o cat do laboratório ao banco.",
+          "criteria": [
+            "Consistência explicada.",
+            "Teste de restauração incluído."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 19,
+      "level": 7,
+      "week": 19,
+      "title": "ServiceAccounts e RBAC",
+      "goal": "Conceder apenas leitura de Pods e demonstrar uma ação negada.",
+      "theory": [
+        {
+          "title": "Identidade e autorização",
+          "text": "ServiceAccount identifica uma carga dentro do cluster. Role descreve ações sobre recursos em um namespace; RoleBinding associa essa regra a uma identidade. Autenticar significa reconhecer quem pede; autorizar significa decidir se essa identidade pode executar uma ação no recurso alvo."
+        },
+        {
+          "title": "Menor conjunto necessário",
+          "text": "Dar cluster-admin a toda aplicação elimina uma fronteira importante. Conceda verbos e recursos mínimos, evite curingas e revise necessidade de ler Secrets. Se a aplicação não usa a API, desabilitar automountServiceAccountToken evita entregar uma credencial que não será utilizada."
+        },
+        {
+          "title": "Teste positivo e negativo",
+          "text": "O exemplo dá get, list e watch de Pods para leitor em forge. O administrador do kind usa impersonation para verificar a identidade. Uma resposta yes isolada não prova privilégio mínimo: também precisamos confirmar que uma ação como delete é negada."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: ServiceAccount\nmetadata: {name: leitor}\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: Role\nmetadata: {name: ler-pods}\nrules:\n- apiGroups: ['']\n  resources: [pods]\n  verbs: [get, list, watch]\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: RoleBinding\nmetadata: {name: leitor-pods}\nsubjects:\n- kind: ServiceAccount\n  name: leitor\n  namespace: forge\nroleRef:\n  kind: Role\n  name: ler-pods\n  apiGroup: rbac.authorization.k8s.io\nYAML\nk auth can-i get pods --as=system:serviceaccount:forge:leitor\nk auth can-i delete pods --as=system:serviceaccount:forge:leitor || true\n",
+      "filename": "aula-19.sh",
+      "language": "bash",
+      "run": "bash aula-19.sh",
+      "expected": "As verificações retornam yes para get pods e no para delete pods. O resultado negativo é esperado e o script permite continuar.",
+      "quiz": {
+        "question": "Que objeto associa uma Role a uma ServiceAccount no namespace?",
+        "options": [
+          "Uma annotation qualquer",
+          "RoleBinding",
+          "Service ClusterIP",
+          "PersistentVolumeClaim"
+        ],
+        "answer": 1,
+        "explanation": "RoleBinding liga uma regra existente aos sujeitos autorizados."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste outro recurso",
+          "prompt": "Verifique se leitor pode ler Secrets e registre a resposta.",
+          "hint": "A Role lista apenas pods.",
+          "solution": "k auth can-i get secrets --as=system:serviceaccount:forge:leitor deve retornar no nesse laboratório.",
+          "criteria": [
+            "Teste negativo registrado.",
+            "Não amplia a Role."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desenhe acesso do processo",
+          "prompt": "Explique como selecionar ServiceAccount no Pod e desativar token quando a API não for necessária.",
+          "hint": "serviceAccountName e automountServiceAccountToken.",
+          "solution": "Use serviceAccountName: leitor quando houver uso legítimo; para carga sem API, defina automountServiceAccountToken: false.",
+          "criteria": [
+            "Campos identificados.",
+            "Justifica presença de credencial."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Limite o escopo",
+          "prompt": "Compare a mesma consulta em forge e forge-equipe.",
+          "hint": "Uma RoleBinding namespaced não libera todos os namespaces.",
+          "solution": "A identidade tem leitura conforme a RoleBinding em forge; outro escopo continua negado se não houver regra adicional.",
+          "criteria": [
+            "Escopos comparados.",
+            "Sem cluster-admin desnecessário."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/reference/access-authn-authz/rbac/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 20,
+      "level": 7,
+      "week": 20,
+      "title": "Pod Security e execução sem root",
+      "goal": "Criar um Pod endurecido e distinguir política de admissão de identidade de usuário.",
+      "theory": [
+        {
+          "title": "Privilégio do processo",
+          "text": "runAsNonRoot e um UID não zero evitam iniciar como root no container. allowPrivilegeEscalation: false, capabilities removidas e seccomp RuntimeDefault reduzem capacidades disponíveis. Isso precisa ser compatível com a imagem: um processo que grava em diretório protegido pode falhar depois do endurecimento."
+        },
+        {
+          "title": "Política que verifica",
+          "text": "Pod Security Admission pode verificar padrões como Restricted no namespace. Ele admite ou rejeita especificações; não reescreve automaticamente um Pod inseguro em um seguro. Use um namespace de teste separado para experimentar sem afetar todos os exemplos anteriores."
+        },
+        {
+          "title": "Filesystem controlado",
+          "text": "readOnlyRootFilesystem ajuda a impedir gravações inesperadas na raiz da imagem. Caminhos que realmente precisam de escrita devem ter volumes explícitos com permissões corretas. O nosso processo apenas executa id e dorme, tornando simples verificar o usuário e os controles sem necessidade de privilégio."
+        }
+      ],
+      "code": "set -eu\nkr() { kubectl --context kind-forge -n forge-restrito \"$@\"; }\nkubectl --context kind-forge create namespace forge-restrito --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nkubectl --context kind-forge label namespace forge-restrito pod-security.kubernetes.io/enforce=restricted --overwrite\nkr apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: processo-restrito}\nspec:\n  automountServiceAccountToken: false\n  securityContext:\n    runAsNonRoot: true\n    runAsUser: 1000\n    seccompProfile: {type: RuntimeDefault}\n  containers:\n  - name: processo\n    image: busybox:1.37\n    command: [sh, -c, 'id; sleep 3600']\n    securityContext:\n      allowPrivilegeEscalation: false\n      readOnlyRootFilesystem: true\n      capabilities: {drop: [ALL]}\nYAML\nkr wait --for=condition=Ready pod/processo-restrito --timeout=180s\nkr logs processo-restrito\n",
+      "filename": "aula-20.sh",
+      "language": "bash",
+      "run": "bash aula-20.sh",
+      "expected": "O Pod é aceito no namespace Restricted e id mostra uid=1000. As labels de política se aplicam apenas a forge-restrito.",
+      "quiz": {
+        "question": "Pod Security Admission transforma automaticamente um Pod root em não root?",
+        "options": [
+          "Não; verifica o manifesto e pode rejeitá-lo",
+          "Sim, altera qualquer imagem para outro usuário",
+          "Somente quando há um Service",
+          "Sim, remove todos os arquivos"
+        ],
+        "answer": 0,
+        "explanation": "O autor precisa fornecer uma especificação e imagem compatíveis com a política."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Observe rejeição",
+          "prompt": "Prepare processo-inseguro no mesmo namespace sem os controles Restricted. Use dry-run de servidor e registre a rejeição.",
+          "hint": "Não precisa criar uma carga privilegiada de verdade.",
+          "solution": "kubectl apply --dry-run=server valida admissão e deve indicar os controles ausentes.",
+          "criteria": [
+            "Validação no servidor.",
+            "Mensagem interpretada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Teste filesystem",
+          "prompt": "Tente gravar /teste no processo-restrito e explique o erro; não remova os controles.",
+          "hint": "A raiz está somente para leitura.",
+          "solution": "A escrita falha; se a aplicação precisar de escrita, monte um volume em caminho específico com permissões adequadas.",
+          "criteria": [
+            "Erro de escrita registrado.",
+            "Alternativa de volume descrita."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Revise uma imagem",
+          "prompt": "Liste dois motivos pelos quais trocar UID pode quebrar uma imagem.",
+          "hint": "Considere portas e arquivos.",
+          "solution": "Permissão de diretórios e requisitos do processo precisam ser verificados; escolha portas e caminhos adequados em vez de devolver root automaticamente.",
+          "criteria": [
+            "Dois requisitos identificados.",
+            "Correção mantém mínimo privilégio."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/security/pod-security-standards/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 21,
+      "level": 7,
+      "week": 21,
+      "title": "NetworkPolicy e comprovação de isolamento",
+      "goal": "Declarar uma política e reconhecer a dependência da implementação de rede.",
+      "theory": [
+        {
+          "title": "Selecionar tráfego permitido",
+          "text": "NetworkPolicy seleciona Pods e permite conexões conforme regras. Políticas são aditivas: não existe uma regra deny que prevaleça sobre todas as permissões de outras políticas. Ingress e egress são avaliados em seus respectivos lados; DNS precisa de autorização quando você isola a saída."
+        },
+        {
+          "title": "Objeto não é prova de bloqueio",
+          "text": "A implementação de rede precisa aplicar NetworkPolicy. O CNI padrão de um kind básico não deve ser presumido como mecanismo de enforcement. Você pode conseguir criar o objeto sem que qualquer pacote seja bloqueado. O teste precisa registrar sucesso permitido e falha negada no caminho real."
+        },
+        {
+          "title": "Laboratório com pré-requisito",
+          "text": "O exemplo abaixo permite estudar o schema em forge, sem afirmar enforcement. Para provar isolamento, crie um cluster separado com CNI compatível, como Cilium, seguindo o guia oficial para kind e sua configuração antes da criação. Não substitua a rede do cluster em uso sem planejar migração."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata: {name: isolar-app-protegida}\nspec:\n  podSelector:\n    matchLabels: {app: protegida}\n  policyTypes: [Ingress]\n  ingress: []\nYAML\nk describe networkpolicy isolar-app-protegida\nkubectl --context kind-forge -n kube-system get daemonsets\n",
+      "filename": "aula-21.sh",
+      "language": "bash",
+      "run": "bash aula-21.sh",
+      "expected": "A API armazena a política para Pods app=protegida. Esta saída sozinha não demonstra bloqueio de tráfego; verifique o CNI e faça testes em cluster que implemente a política.",
+      "quiz": {
+        "question": "Criar uma NetworkPolicy sem erro prova que conexões foram bloqueadas?",
+        "options": [
+          "Sim, todo cluster aplica todas as políticas",
+          "Sim, desde que o nome comece com deny",
+          "Somente o tamanho do YAML importa",
+          "Não; a implementação precisa aplicar a política e o tráfego deve ser testado"
+        ],
+        "answer": 3,
+        "explanation": "Aceitação pela API e aplicação da política no caminho de dados são evidências diferentes."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Verifique a implementação",
+          "prompt": "Identifique o CNI do seu cluster e encontre a documentação de suporte a NetworkPolicy.",
+          "hint": "Liste componentes e consulte o projeto, não apenas o nome do recurso.",
+          "solution": "No kind padrão, não declare isolamento comprovado. Um cluster separado com Cilium deve seguir https://docs.cilium.io/en/stable/installation/kind/ e testes de conectividade.",
+          "criteria": [
+            "Fonte primária do CNI registrada.",
+            "Estado verificado ou explicitamente pendente."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desenhe o teste positivo e negativo",
+          "prompt": "Para app=protegida, descreva um cliente autorizado e outro não autorizado, com a mesma requisição HTTP.",
+          "hint": "A comparação precisa mudar identidade/labels, não o endpoint.",
+          "solution": "Depois de instalar CNI adequado, aplicar regra allow ao seletor autorizado deve permitir um cliente e bloquear o outro. Registre timeout/recusa observados.",
+          "criteria": [
+            "Mesmo destino nos testes.",
+            "As duas evidências previstas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Considere DNS em egress",
+          "prompt": "Explique por que bloquear toda saída pode quebrar consultas DNS mesmo quando a API de destino é permitida.",
+          "hint": "DNS é tráfego próprio, normalmente UDP e também TCP.",
+          "solution": "Permita o DNS do cluster de modo compatível com seu ambiente e depois a aplicação de destino; valide resolução e conexão separadamente.",
+          "criteria": [
+            "DNS incluído.",
+            "Camadas testadas separadamente."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/services-networking/network-policies/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 22,
+      "level": 8,
+      "week": 22,
+      "title": "Eventos, imagens e falhas de inicialização",
+      "goal": "Construir uma sequência de investigação antes de tentar corrigir.",
+      "theory": [
+        {
+          "title": "Comece pelo estado observado",
+          "text": "Pending, ImagePullBackOff e CrashLoopBackOff apontam para etapas diferentes. get fornece um resumo; describe e eventos detalham scheduling, download e criação. Uma imagem inexistente não será corrigida por aumentar memória ou por apagar um Service."
+        },
+        {
+          "title": "Evidência e hipótese",
+          "text": "Registre comando, horário aproximado, recurso e mensagem exata. Faça uma hipótese pequena que explique a evidência e mude uma variável por vez. Eventos não são um histórico permanente de auditoria; colete as informações enquanto o problema está visível."
+        },
+        {
+          "title": "Imagem com erro proposital",
+          "text": "O exemplo usa uma tag fictícia para produzir falha de pull. Não requer credenciais de registry nem depende de sistema externo da empresa. Depois de registrar a causa, remova apenas o Pod de demonstração e teste com uma imagem válida."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: imagem-falha}\nspec:\n  containers:\n  - name: web\n    image: nginx:tag-forge-inexistente\nYAML\nk get pod imagem-falha\nk describe pod imagem-falha\nk get events --field-selector involvedObject.name=imagem-falha --sort-by=.metadata.creationTimestamp\n",
+      "filename": "aula-22.sh",
+      "language": "bash",
+      "run": "bash aula-22.sh",
+      "expected": "Após a tentativa de download, os eventos indicam falha ao obter a imagem/tag. O estado pode passar por ErrImagePull e ImagePullBackOff.",
+      "quiz": {
+        "question": "Um Pod em ImagePullBackOff exige investigar primeiro o quê?",
+        "options": [
+          "O nome do arquivo de anotações",
+          "A cor da interface",
+          "Imagem, tag, registry, credencial e conectividade de pull",
+          "Apenas o targetPort do Service"
+        ],
+        "answer": 2,
+        "explanation": "O container ainda não iniciou; o caminho de obtenção da imagem é a primeira hipótese."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Registre sem antecipar",
+          "prompt": "Cole a mensagem real do evento de pull e explique quais partes apontam para tag ou acesso.",
+          "hint": "Não substitua saída observada pela esperada do curso.",
+          "solution": "A saída varia; interprete manifest unknown, denied ou falha de rede conforme ocorreu.",
+          "criteria": [
+            "Mensagem preservada.",
+            "Hipótese apoiada pela evidência."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Corrija em escopo mínimo",
+          "prompt": "Remova apenas imagem-falha e recrie com nginx:stable-alpine. Espere Ready.",
+          "hint": "Um Pod isolado pode exigir recriação.",
+          "solution": "Corrija a referência, confirme download e estado Ready; não apague outros recursos para limpar o erro.",
+          "criteria": [
+            "Correção limitada.",
+            "Ready demonstrado."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Diferencie a etapa",
+          "prompt": "Compare esse incidente com Pending por nodeSelector.",
+          "hint": "Um alcançou o nó e tentou pull; o outro não foi agendado.",
+          "solution": "Use nodeName/condições/eventos para justificar em qual etapa cada caso parou.",
+          "criteria": [
+            "Duas etapas identificadas.",
+            "Evidência de cada caso."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 23,
+      "level": 8,
+      "week": 23,
+      "title": "Logs anteriores e CrashLoopBackOff",
+      "goal": "Investigar encerramento do processo sem tratar reinícios como solução.",
+      "theory": [
+        {
+          "title": "Reinício tem uma causa",
+          "text": "CrashLoopBackOff resume o atraso entre novas tentativas de iniciar um container que falha. A causa pode estar em configuração, permissões, dependências ou no próprio processo. Olhe código de saída e último estado encerrado em vez de usar o nome do estado como explicação final."
+        },
+        {
+          "title": "A instância anterior importa",
+          "text": "logs --previous recupera logs da instância anterior do container quando disponíveis. O container atual pode ter apenas começado ou já parado. stdout e stderr úteis devem contextualizar o erro sem revelar tokens, dados pessoais ou credenciais."
+        },
+        {
+          "title": "Um defeito simples",
+          "text": "O comando do laboratório imprime uma pista e retorna 2. O kubelet reinicia conforme restartPolicy; isso não fará o comando se tornar correto. A correção é mudar a condição que encerra o processo e depois verificar estabilidade por um intervalo, não apenas por um único get."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Pod\nmetadata: {name: processo-falha}\nspec:\n  restartPolicy: Always\n  containers:\n  - name: processo\n    image: busybox:1.37\n    command: [sh, -c, 'echo configuracao-obrigatoria-ausente >&2; exit 2']\nYAML\nk describe pod processo-falha\nk logs processo-falha -c processo || true\n# Execute depois de ao menos um reinício; antes disso, pode não existir instância anterior.\nk logs processo-falha -c processo --previous || true\n",
+      "filename": "aula-23.sh",
+      "language": "bash",
+      "run": "bash aula-23.sh",
+      "expected": "O processo escreve configuracao-obrigatoria-ausente e termina com exit code 2; após reinícios, aparece BackOff/CrashLoopBackOff e --previous pode recuperar a tentativa anterior.",
+      "quiz": {
+        "question": "Qual opção consulta a instância anterior do container, quando disponível?",
+        "options": [
+          "kubectl apply --undo-logs",
+          "kubectl logs --previous",
+          "kubectl logs --tomorrow",
+          "kubectl get service --history"
+        ],
+        "answer": 1,
+        "explanation": "--previous é útil quando o processo atual reinicia antes de você coletar a evidência."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Leia o código de saída",
+          "prompt": "Localize lastState.terminated.exitCode e a contagem de reinícios.",
+          "hint": "Use get pod -o yaml ou describe.",
+          "solution": "O código 2 corresponde ao exit do roteiro; registre o contador observado, que varia com o tempo.",
+          "criteria": [
+            "Código correto.",
+            "Contador real registrado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Faça a correção pequena",
+          "prompt": "Recrie somente processo-falha com comando que imprime configuracao-ok e dorme. Observe estabilidade.",
+          "hint": "Retirar a condição de falha difere de só reiniciar.",
+          "solution": "O processo permanece vivo e o novo Pod não deve acumular reinícios pela mesma causa.",
+          "criteria": [
+            "Mudança explica a causa.",
+            "Observação temporal registrada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Melhore a mensagem",
+          "prompt": "Proponha uma mensagem que diga qual chave falta sem imprimir seu valor.",
+          "hint": "Nomes de configuração podem orientar sem revelar conteúdo.",
+          "solution": "Registre código de erro e nome da chave obrigatória ausente; omita credenciais e conteúdo.",
+          "criteria": [
+            "Contexto útil.",
+            "Sem valor sensível."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 24,
+      "level": 8,
+      "week": 24,
+      "title": "Diagnóstico de Services e rede",
+      "goal": "Isolar DNS, seleção de endpoints, porta e resposta da aplicação.",
+      "theory": [
+        {
+          "title": "Uma sequência de perguntas",
+          "text": "O nome resolve? O Service tem endpoints? A porta do destino está correta? O processo escuta? A aplicação responde com qual status? Essa sequência produz hipóteses menores do que concluir que Kubernetes inteiro está com problema."
+        },
+        {
+          "title": "Use o cliente adequado",
+          "text": "Teste a partir de um Pod no mesmo caminho da aplicação. Uma imagem de produção enxuta pode não ter shell ou ferramentas; prefira um cliente de diagnóstico autorizado ou container efêmero com permissões apropriadas. Não torne a imagem final pesada apenas para executar ferramentas ocasionalmente."
+        },
+        {
+          "title": "Conserte a ligação",
+          "text": "Vamos criar um Service com seletor incorreto e consultar EndpointSlices antes de mudá-lo. O exemplo cria um Deployment próprio, rede-diag, para que a correção fique isolada. Depois confirme uma requisição HTTP real pelo nome do Service, não só a existência de recursos."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: apps/v1\nkind: Deployment\nmetadata: {name: rede-diag}\nspec:\n  replicas: 2\n  selector:\n    matchLabels: {app: rede-diag}\n  template:\n    metadata:\n      labels: {app: rede-diag}\n    spec:\n      containers:\n      - name: web\n        image: nginx:stable-alpine\n        ports: [{containerPort: 80}]\nYAML\nk rollout status deployment/rede-diag --timeout=180s\nk apply -f - <<'YAML'\napiVersion: v1\nkind: Service\nmetadata: {name: rede-diag}\nspec:\n  selector: {app: etiqueta-errada}\n  ports: [{port: 80, targetPort: 80}]\nYAML\nk get endpointslices -l kubernetes.io/service-name=rede-diag\nk patch service rede-diag --type merge -p '{\"spec\":{\"selector\":{\"app\":\"rede-diag\"}}}'\nk get endpointslices -l kubernetes.io/service-name=rede-diag\nk run cliente-rede --image=busybox:1.37 --restart=Never --dry-run=client -o yaml --command -- sleep 3600 | k apply -f -\nk wait --for=condition=Ready pod/cliente-rede --timeout=180s\nk exec cliente-rede -- wget -qO- http://rede-diag\n",
+      "filename": "aula-24.sh",
+      "language": "bash",
+      "run": "bash aula-24.sh",
+      "expected": "Antes da correção faltam endpoints compatíveis; depois os Pods entram no EndpointSlice e o cliente recebe HTML do nginx.",
+      "quiz": {
+        "question": "DNS funciona e o Service não tem endpoints corretos. Qual evidência investigar?",
+        "options": [
+          "Seletor, labels e readiness dos Pods",
+          "Somente a configuração do seu monitor",
+          "A quantidade de commits em Git",
+          "O horário da aula"
+        ],
+        "answer": 0,
+        "explanation": "Endpoints dependem da seleção e elegibilidade das instâncias."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Registre antes e depois",
+          "prompt": "Capture o seletor errado, labels reais e EndpointSlices depois da correção.",
+          "hint": "A evidência precisa mostrar a ligação.",
+          "solution": "Três consultas demonstram qual igualdade estava faltando e qual destino ficou disponível.",
+          "criteria": [
+            "Antes preservado.",
+            "Depois prova a hipótese."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Introduza porta errada",
+          "prompt": "Use Service separado rede-porta com targetPort 81 e explique a diferença do erro de seletor.",
+          "hint": "Endpoints podem existir mesmo com porta errada.",
+          "solution": "A seleção encontra Pods, mas o processo escuta em 80; corrija targetPort e repita HTTP.",
+          "criteria": [
+            "Seleção e porta separadas.",
+            "Requisição verifica a correção."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Desenhe observação segura",
+          "prompt": "Defina quais permissões um cliente de diagnóstico precisa e por que não deve receber cluster-admin.",
+          "hint": "Acesso de rede e acesso à API são coisas diferentes.",
+          "solution": "Dê só autorização para criar/observar o recurso de teste quando necessária e limite sua conectividade; evite credenciais administrativas dentro do cliente.",
+          "criteria": [
+            "Duas fronteiras distinguidas.",
+            "Privilégio mínimo mantido."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 25,
+      "level": 9,
+      "week": 25,
+      "title": "Kustomize e overlays",
+      "goal": "Renderizar uma base com diferenças de ambiente sem duplicar tudo.",
+      "theory": [
+        {
+          "title": "Composição declarativa",
+          "text": "Kustomize transforma manifests a partir de bases e overlays. A base descreve o que é comum; o overlay aplica diferenças como réplicas, namespace, labels e imagens. O resultado renderizado continua sendo um conjunto de objetos Kubernetes, que deve ser revisado antes de aplicar."
+        },
+        {
+          "title": "Arquivo e efeito",
+          "text": "kustomization.yaml declara os recursos e transformações. kubectl kustomize mostra o resultado sem enviá-lo ao cluster; kubectl apply -k envia esse resultado. Essa separação ajuda a comparar intenção com mudanças reais, reduzindo surpresas durante revisão."
+        },
+        {
+          "title": "Não misture segredos",
+          "text": "Gerar ConfigMaps é conveniente, mas o repositório não deve conter credenciais reais em geradores ou arquivos anexos. Planeje como provisionar valores sensíveis por um mecanismo apropriado. Nesta aula a diferença entre base e overlay é somente o nome prefixado de uma configuração pública."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nmkdir -p forge-kustomize/base forge-kustomize/dev\ncat > forge-kustomize/base/config.yaml <<'YAML'\napiVersion: v1\nkind: ConfigMap\nmetadata: {name: app-config}\ndata: {modo: estudo}\nYAML\ncat > forge-kustomize/base/kustomization.yaml <<'YAML'\napiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources: [config.yaml]\nYAML\ncat > forge-kustomize/dev/kustomization.yaml <<'YAML'\napiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nnamespace: forge\nnamePrefix: dev-\nresources: [../base]\nYAML\nkubectl kustomize forge-kustomize/dev\nk apply -k forge-kustomize/dev\nk get configmap dev-app-config\n",
+      "filename": "aula-25.sh",
+      "language": "bash",
+      "run": "bash aula-25.sh",
+      "expected": "A renderização contém ConfigMap dev-app-config no namespace forge; apply cria ou atualiza esse objeto.",
+      "quiz": {
+        "question": "Qual comando mostra a renderização sem aplicar no cluster?",
+        "options": [
+          "kubectl delete namespace forge",
+          "kubectl logs -k",
+          "kubectl rollout forever",
+          "kubectl kustomize DIRETORIO"
+        ],
+        "answer": 3,
+        "explanation": "Renderizar permite revisar objetos antes de enviá-los à API."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Crie outro overlay",
+          "prompt": "Faça overlay teste- sem editar a base e compare nomes renderizados.",
+          "hint": "Use namePrefix em um novo diretório.",
+          "solution": "Duas renderizações usam a mesma base e produzem dev-app-config e teste-app-config.",
+          "criteria": [
+            "Base reaproveitada.",
+            "Diferença observada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Revise o resultado",
+          "prompt": "Salve a renderização e identifique nome, namespace e data antes de aplicar.",
+          "hint": "Renderização é a entrada real da API.",
+          "solution": "kubectl kustomize ... > renderizado.yaml; revise campos e só aplique quando fizerem sentido.",
+          "criteria": [
+            "Três campos verificados.",
+            "Ordem de revisão explícita."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Evite duplicação",
+          "prompt": "Explique qual alteração pertence à base e qual pertence apenas a dev.",
+          "hint": "Comum a todos versus específico do ambiente.",
+          "solution": "Estrutura compartilhada fica na base; prefixo e ajustes próprios de dev ficam no overlay.",
+          "criteria": [
+            "Critério claro.",
+            "Exemplo concreto."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 26,
+      "level": 9,
+      "week": 26,
+      "title": "Helm: chart, values e release",
+      "goal": "Criar um chart mínimo, renderizar e instalar uma release local.",
+      "theory": [
+        {
+          "title": "Template e dados",
+          "text": "Chart agrupa templates e metadados. Values fornecem parâmetros; renderização produz manifests concretos. Release é a instalação identificada daquele chart com valores determinados. Usar Helm não dispensa compreender o recurso Kubernetes gerado nem revisar permissões do pacote."
+        },
+        {
+          "title": "Revise antes de instalar",
+          "text": "helm lint encontra alguns problemas de estrutura; helm template permite inspecionar os objetos. Esses passos não provam saúde de uma aplicação. Na instalação, espere os recursos relevantes e verifique comportamento. Evite values com segredos reais, pois valores e manifestos podem ficar no histórico de release."
+        },
+        {
+          "title": "Um pacote sem dependências pagas",
+          "text": "O chart autoral abaixo cria apenas um ConfigMap com modo configurável. Não depende de repositório de charts nem de banco externo. Os comandos básicos usados são comuns às linhas atuais de Helm; confira sua versão e documentação para flags específicas de operação."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nhelm version\nmkdir -p forge-chart/templates\ncat > forge-chart/Chart.yaml <<'YAML'\napiVersion: v2\nname: forge-config\nversion: 0.1.0\ntype: application\nYAML\ncat > forge-chart/values.yaml <<'YAML'\nmodo: estudo\nYAML\ncat > forge-chart/templates/config.yaml <<'YAML'\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: {{ .Release.Name }}-config\ndata:\n  modo: {{ .Values.modo | quote }}\nYAML\nhelm lint ./forge-chart\nhelm template forge-config ./forge-chart --namespace forge\nhelm upgrade --install forge-config ./forge-chart --kube-context kind-forge --namespace forge\nk get configmap forge-config-config\n",
+      "filename": "aula-26.sh",
+      "language": "bash",
+      "run": "bash aula-26.sh",
+      "expected": "Lint e renderização exibem um chart válido de configuração; a release forge-config cria forge-config-config com modo estudo.",
+      "quiz": {
+        "question": "Qual é a diferença entre chart e release?",
+        "options": [
+          "Release é sempre um cluster novo",
+          "Chart é um Secret criptografado",
+          "Chart é o pacote; release é uma instalação identificada com valores",
+          "São dois nomes para um Pod"
+        ],
+        "answer": 2,
+        "explanation": "O mesmo chart pode originar instalações distintas com nomes e valores próprios."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Altere um valor",
+          "prompt": "Faça upgrade com modo=revisao e confirme o ConfigMap.",
+          "hint": "--set é adequado aqui porque o valor é público e fictício.",
+          "solution": "Use helm upgrade forge-config ./forge-chart --set modo=revisao com contexto e namespace explícitos.",
+          "criteria": [
+            "Valor novo verificado.",
+            "Mesmo nome de release."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Inspecione histórico",
+          "prompt": "Liste history da release e identifique as revisões.",
+          "hint": "Mantenha --kube-context kind-forge --namespace forge.",
+          "solution": "helm history forge-config mostra as revisões criadas. Relacione revisão a mudança e não confunda com commit Git.",
+          "criteria": [
+            "Histórico real registrado.",
+            "Revisão e commit distinguidos."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Revise um pacote externo",
+          "prompt": "Escreva o que verificaria antes de instalar chart de terceiros.",
+          "hint": "Considere imagens, permissões, volumes e origem.",
+          "solution": "Renderize e revise RBAC, Secrets, hooks, imagens e requisitos; consulte manutenção e compatibilidade da fonte oficial.",
+          "criteria": [
+            "Quatro pontos concretos.",
+            "Não instala por confiança no nome."
+          ]
+        }
+      ],
+      "source": "https://helm.sh/docs/intro/using_helm/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 27,
+      "level": 9,
+      "week": 27,
+      "title": "GitOps, drift e promoção de mudanças",
+      "goal": "Separar versionamento, entrega manual e reconciliação contínua.",
+      "theory": [
+        {
+          "title": "Estado desejado versionado",
+          "text": "GitOps combina estado declarativo versionado, obtenção automática por agentes e reconciliação contínua. Colocar YAML em Git é uma parte; executar apply manualmente depois não implementa sozinho todo esse modelo. A distinção evita prometer automação que ainda não foi instalada."
+        },
+        {
+          "title": "Drift precisa de dono",
+          "text": "Drift é a diferença entre intenção registrada e estado observado. Uma alteração manual pode ser revertida por um reconciliador, ou persistir quando não há um. Defina quem escreve cada campo e como mudanças emergenciais voltam à fonte, sem criar dois controladores brigando pela mesma configuração."
+        },
+        {
+          "title": "Prepare a revisão local",
+          "text": "Nosso exercício usa diff e apply para entender a comparação, sem instalar Flux ou Argo CD automaticamente. A promoção entre ambientes deve ocorrer por mudança revisada na referência desejada, com evidências e critério de reversão. Nunca coloque tokens de acesso a Git no repositório."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\ncat > forge-gitops-config.yaml <<'YAML'\napiVersion: v1\nkind: ConfigMap\nmetadata: {name: estado-versionado, namespace: forge}\ndata: {revisao: '1'}\nYAML\n# diff retorna 1 quando há diferenças; 0 quando não há. Outro código indica erro.\nif k diff -f forge-gitops-config.yaml; then\n  echo sem-diferencas\nelse\n  codigo=$?\n  test \"$codigo\" -eq 1 || exit \"$codigo\"\n  echo diferencas-encontradas\nfi\nk apply -f forge-gitops-config.yaml\nk get configmap estado-versionado -o jsonpath='{.data.revisao}'\n",
+      "filename": "aula-27.sh",
+      "language": "bash",
+      "run": "bash aula-27.sh",
+      "expected": "A comparação informa diferenças antes da primeira aplicação; após apply, a configuração possui revisao=1. Este é um exercício de comparação manual, não um reconciliador GitOps instalado.",
+      "quiz": {
+        "question": "Qual peça falta quando há YAML em Git, mas só um humano executa apply?",
+        "options": [
+          "Trocar YAML por TXT",
+          "Agente que obtém e reconcilia continuamente o estado desejado",
+          "Um nome de branch mais longo",
+          "Uma label gitops=true"
+        ],
+        "answer": 1,
+        "explanation": "O modelo completo exige automação de obtenção e reconciliação, além do versionamento."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Provoque drift controlado",
+          "prompt": "Altere só a chave revisao do ConfigMap via patch, execute diff e depois restaure pelo arquivo.",
+          "hint": "Compare estado observado e fonte desejada.",
+          "solution": "A diferença aparece; apply com a fonte restaura o valor. Sem reconciliador instalado, isso depende da ação manual.",
+          "criteria": [
+            "Drift observado.",
+            "Restauração verificada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desenhe promoção",
+          "prompt": "Defina um fluxo dev → revisão → produção com aprovação e imagem imutável.",
+          "hint": "A mesma build deve ser identificável em cada etapa.",
+          "solution": "Promova referência por digest em commit revisado, registre testes e mantenha caminho para reverter o estado desejado.",
+          "criteria": [
+            "Identidade da build preservada.",
+            "Reversão definida."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Planeje emergência",
+          "prompt": "Explique como uma mudança emergencial manual deve ser incorporada ao Git.",
+          "hint": "Evite que reconciliador sobrescreva uma intenção não registrada.",
+          "solution": "Registre o ajuste na fonte, revise e reconcilie; documente janela e responsável sem desligar controles permanentemente.",
+          "criteria": [
+            "Fonte atualizada.",
+            "Conflito de donos considerado."
+          ]
+        }
+      ],
+      "source": "https://opengitops.dev/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 28,
+      "level": 10,
+      "week": 28,
+      "title": "Logs, métricas e traces",
+      "goal": "Relacionar sinais à pergunta operacional e ao caminho do usuário.",
+      "theory": [
+        {
+          "title": "Sinais respondem perguntas diferentes",
+          "text": "Logs registram eventos do processo; métricas agregam medidas ao longo do tempo; traces mostram caminho e duração de operações distribuídas. Um dashboard com CPU não demonstra que uma confirmação de serviço foi concluída corretamente. Comece pela pergunta do usuário e busque o sinal que a responde."
+        },
+        {
+          "title": "Coleta não é automática e eterna",
+          "text": "kubectl logs depende dos logs disponíveis do container e sua retenção local. Métricas históricas e traces exigem instrumentação, coleta e armazenamento apropriados. Não exponha endpoints de diagnóstico nem registre credenciais para facilitar observação."
+        },
+        {
+          "title": "Inventário antes de ferramentas",
+          "text": "O exemplo reúne estado, eventos e logs do Deployment web. kubectl top será usado apenas se a API de métricas estiver disponível no próximo exercício. Documente o que existe, o que não existe e qual incidente ficaria invisível sem instrumentação adicional."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: apps/v1\nkind: Deployment\nmetadata: {name: web}\nspec:\n  replicas: 2\n  selector:\n    matchLabels: {app: web}\n  template:\n    metadata:\n      labels: {app: web}\n    spec:\n      containers:\n      - name: web\n        image: nginx:stable-alpine\n        ports: [{containerPort: 80}]\nYAML\nk rollout status deployment/web --timeout=180s\nk get pods -l app=web -o wide\nk logs deployment/web --all-containers=true --tail=30\nk get events --sort-by=.metadata.creationTimestamp\nkubectl --context kind-forge get apiservice v1beta1.metrics.k8s.io || true\n",
+      "filename": "aula-28.sh",
+      "language": "bash",
+      "run": "bash aula-28.sh",
+      "expected": "Você obtém estado, logs recentes e eventos. É normal o kind básico não ter metrics.k8s.io instalada; isso deve ser registrado como pré-requisito ausente.",
+      "quiz": {
+        "question": "Qual sinal melhor representa medidas agregadas como taxa e duração ao longo do tempo?",
+        "options": [
+          "Métricas",
+          "Somente labels de namespace",
+          "Um arquivo Dockerfile",
+          "O nome de um Service"
+        ],
+        "answer": 0,
+        "explanation": "Métricas quantificam comportamento; logs e traces complementam a interpretação."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Defina um SLI",
+          "prompt": "Proponha um indicador de sucesso para a rota principal da sua API.",
+          "hint": "Considere requisições corretas e total elegível.",
+          "solution": "Exemplo: fração de confirmações válidas atendidas sem erro em janela definida, acompanhada de latência. Evite contar só processo vivo.",
+          "criteria": [
+            "Evento de sucesso claro.",
+            "Janela e denominador definidos."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Colete uma requisição",
+          "prompt": "Faça HTTP por port-forward e procure o evento correspondente no log do web.",
+          "hint": "Use caminho ou identificador fictício reconhecível.",
+          "solution": "Uma requisição com caminho /evidencia-forge permite correlacionar cliente e log de acesso, mesmo se retornar 404.",
+          "criteria": [
+            "Cliente e log correlacionados.",
+            "Status real registrado."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Avalie retenção",
+          "prompt": "Explique o que perderia ao apagar o Pod sem coleta central de logs.",
+          "hint": "Logs locais não são arquivo histórico garantido.",
+          "solution": "Sem coleta e retenção, evidências antigas podem ficar indisponíveis. Defina política e custo antes de instalar ferramentas.",
+          "criteria": [
+            "Limitação explicitada.",
+            "Necessidade operacional justificada."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/cluster-administration/observability/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 29,
+      "level": 10,
+      "week": 29,
+      "title": "HPA e pré-requisitos de métricas",
+      "goal": "Configurar autoscaling/v2 sem prometer escala a partir de métricas ausentes.",
+      "theory": [
+        {
+          "title": "Escala baseada em evidências",
+          "text": "HorizontalPodAutoscaler ajusta réplicas segundo métricas e alvos. O alvo de utilização de CPU é relativo à request de CPU; sem request adequada, essa proporção não é uma base útil. Escalar Pods não cria automaticamente novos nós nem aumenta a capacidade do banco."
+        },
+        {
+          "title": "Métricas precisam chegar",
+          "text": "O HPA de recursos normalmente depende de metrics.k8s.io, frequentemente fornecida por metrics-server. kind básico pode não trazer esse componente. Antes de gerar carga, confira se a API está disponível e os valores aparecem; Unknown exige diagnóstico da coleta e configuração."
+        },
+        {
+          "title": "Teste e estabilização",
+          "text": "Escolha mínimo, máximo e janelas coerentes com inicialização e tráfego. Carga precisa atingir o recurso medido, e o aumento de réplicas pode levar tempo. Nosso manifesto demonstra o contrato; só marque escala comprovada após métricas funcionais, carga controlada e observação de réplicas."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: apps/v1\nkind: Deployment\nmetadata: {name: escala-web}\nspec:\n  replicas: 2\n  selector:\n    matchLabels: {app: escala-web}\n  template:\n    metadata:\n      labels: {app: escala-web}\n    spec:\n      containers:\n      - name: web\n        image: nginx:stable-alpine\n        ports: [{containerPort: 80}]\nYAML\nk rollout status deployment/escala-web --timeout=180s\nk set resources deployment escala-web --requests=cpu=100m,memory=32Mi --limits=cpu=500m,memory=96Mi\nk rollout status deployment/escala-web --timeout=180s\nk apply -f - <<'YAML'\napiVersion: autoscaling/v2\nkind: HorizontalPodAutoscaler\nmetadata: {name: escala-web}\nspec:\n  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: escala-web}\n  minReplicas: 2\n  maxReplicas: 4\n  metrics:\n  - type: Resource\n    resource:\n      name: cpu\n      target: {type: Utilization, averageUtilization: 60}\nYAML\nk get hpa escala-web\nk describe hpa escala-web\n",
+      "filename": "aula-29.sh",
+      "language": "bash",
+      "run": "bash aula-29.sh",
+      "expected": "O HPA tem mínimo 2, máximo 4 e alvo de CPU 60% da request. Sem metrics-server/API funcional, métricas ficam desconhecidas; isso não comprova autoscaling em execução.",
+      "quiz": {
+        "question": "Um alvo HPA de CPU 60% é calculado em relação a quê neste caso?",
+        "options": [
+          "A 60% de todos os computadores do mundo",
+          "Ao tamanho da imagem",
+          "À quantidade de Services",
+          "À request de CPU dos containers considerados"
+        ],
+        "answer": 3,
+        "explanation": "Utilization compara uso observado com a request configurada."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Verifique métricas primeiro",
+          "prompt": "Liste a API de métricas e tente kubectl top pods. Registre indisponibilidade em vez de inventar valores.",
+          "hint": "A instalação de metrics-server precisa seguir o guia oficial e compatibilidade local.",
+          "solution": "Se não houver API funcional, descreva esse bloqueio. Não desative validação TLS como padrão de produção para fazer o teste passar.",
+          "criteria": [
+            "Disponibilidade real registrada.",
+            "Pré-requisito separado do HPA."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Calcule um alvo",
+          "prompt": "Com request de 100m, qual uso médio corresponde a 60%?",
+          "hint": "Multiplique 100m por 0,60.",
+          "solution": "60m por container considerado representa 60% dessa request; aumento de request altera a proporção.",
+          "criteria": [
+            "Cálculo correto.",
+            "Unidade de CPU correta."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Desenhe carga controlada",
+          "prompt": "Planeje um teste local que acompanhe CPU, desiredReplicas e latência com limite de duração.",
+          "hint": "Não use serviço externo como alvo da carga.",
+          "solution": "A carga deve atingir escala-web no cluster local, ter duração finita e parar após coletar comportamento; confirme se CPU realmente cresce.",
+          "criteria": [
+            "Alvo e limite definidos.",
+            "Critérios de observação concretos."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 30,
+      "level": 10,
+      "week": 30,
+      "title": "Rollout, reversão e orçamento de interrupção",
+      "goal": "Combinar estratégia de atualização, readiness e PDB sem garantias indevidas.",
+      "theory": [
+        {
+          "title": "Atualizar gradualmente",
+          "text": "Deployment pode substituir instâncias por RollingUpdate. maxSurge limita extras; maxUnavailable limita indisponibilidade permitida durante esse processo. Readiness define quando uma nova instância conta como pronta. Uma configuração conservadora exige capacidade para coexistência temporária."
+        },
+        {
+          "title": "PDB tem escopo próprio",
+          "text": "PodDisruptionBudget limita certas interrupções voluntárias pela API de eviction, como manutenção planejada. Não impede falha física, não corrige aplicação e não controla sozinho o rollout do Deployment. O objetivo é coordenar ações de operação, não prometer disponibilidade absoluta."
+        },
+        {
+          "title": "Reverter com contexto",
+          "text": "rollout undo pode restaurar um template anterior, mas não desfaz migrações de banco ou efeitos externos. Verifique histórico, compatibilidade dos dados e comportamento após reversão. Um teste local deve preservar evidências da revisão ruim e provar a recuperação pela requisição que falhou."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: apps/v1\nkind: Deployment\nmetadata: {name: rollout-web}\nspec:\n  replicas: 2\n  selector:\n    matchLabels: {app: rollout-web}\n  template:\n    metadata:\n      labels: {app: rollout-web}\n    spec:\n      containers:\n      - name: web\n        image: nginx:stable-alpine\n        ports: [{containerPort: 80}]\nYAML\nk rollout status deployment/rollout-web --timeout=180s\nk patch deployment rollout-web --type merge -p '{\"spec\":{\"strategy\":{\"type\":\"RollingUpdate\",\"rollingUpdate\":{\"maxSurge\":1,\"maxUnavailable\":0}}}}'\nk apply -f - <<'YAML'\napiVersion: policy/v1\nkind: PodDisruptionBudget\nmetadata: {name: rollout-web}\nspec:\n  minAvailable: 1\n  selector:\n    matchLabels: {app: rollout-web}\nYAML\nk get pdb rollout-web\nk rollout history deployment/rollout-web\nk get deployment rollout-web -o jsonpath='{.spec.strategy}'\n",
+      "filename": "aula-30.sh",
+      "language": "bash",
+      "run": "bash aula-30.sh",
+      "expected": "A estratégia permite um Pod extra e zero indisponíveis durante rollout; o PDB seleciona rollout-web com minAvailable=1. Não foi simulada garantia de disponibilidade em falha de nó.",
+      "quiz": {
+        "question": "Qual interrupção um PDB pode ajudar a limitar?",
+        "options": [
+          "Todo bug de negócio",
+          "Qualquer migração SQL destrutiva",
+          "Eviction voluntária compatível com o orçamento",
+          "Toda falta de energia"
+        ],
+        "answer": 2,
+        "explanation": "PDB coordena interrupções voluntárias específicas; não elimina todas as causas de indisponibilidade."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Atualização ruim controlada",
+          "prompt": "Mude só rollout-web para tag fictícia, observe a nova revisão bloqueada e depois execute rollout undo.",
+          "hint": "Com maxUnavailable=0 e capacidade suficiente, antigas réplicas podem continuar.",
+          "solution": "Registre os Pods antigos e a falha de pull dos novos; reverta e espere rollout status.",
+          "criteria": [
+            "Falha e revisão registradas.",
+            "Recuperação verificada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique custo de surge",
+          "prompt": "Calcule o pico de réplicas para desejado 2 e maxSurge 1.",
+          "hint": "Pico durante coexistência pode ser 3.",
+          "solution": "Planeje recursos para três instâncias além de condições temporárias de término; limites operacionais precisam considerar o ciclo de vida.",
+          "criteria": [
+            "Pico básico calculado.",
+            "Capacidade considerada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina limite da reversão",
+          "prompt": "Dê um exemplo de mudança que rollout undo não desfaz.",
+          "hint": "Pense em dados fora do template de Pod.",
+          "solution": "Uma migração que remove coluna ou um efeito externo já confirmado exige estratégia própria de compatibilidade/recuperação.",
+          "criteria": [
+            "Exemplo concreto.",
+            "Plano além do template."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/workloads/pods/disruptions/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 31,
+      "level": 11,
+      "week": 31,
+      "title": "Cordon, drain e manutenção de nós",
+      "goal": "Entender evacuação segura e os limites do cluster de um nó.",
+      "theory": [
+        {
+          "title": "Parar novos agendamentos",
+          "text": "cordon marca o nó como não agendável para novas cargas normais; não remove automaticamente os Pods já executando. uncordon desfaz essa restrição. É uma etapa útil de manutenção, mas precisa ser acompanhada de observação de capacidade e cargas especiais."
+        },
+        {
+          "title": "Evacuar com cuidado",
+          "text": "drain tenta evictar Pods e considera regras como PDB. DaemonSets e dados temporários exigem decisões explícitas. Forçar remoção para ultrapassar todo bloqueio pode perder disponibilidade ou dados. Num kind de um nó não há outro nó para receber workloads, então evacuar a única máquina não demonstra continuidade."
+        },
+        {
+          "title": "Simulação segura",
+          "text": "O exemplo faz cordon e uncordon apenas no nó conhecido do cluster forge. Ele não executa drain nem remove dados. Para testar evacuação com réplicas disponíveis, crie outro cluster de estudo com múltiplos nós e um orçamento coerente, seguindo a configuração oficial do kind."
+        }
+      ],
+      "code": "set -eu\nkubectl --context kind-forge get node forge-control-plane\nkubectl --context kind-forge cordon forge-control-plane\nkubectl --context kind-forge get node forge-control-plane\nkubectl --context kind-forge uncordon forge-control-plane\nkubectl --context kind-forge get node forge-control-plane\n",
+      "filename": "aula-31.sh",
+      "language": "bash",
+      "run": "bash aula-31.sh",
+      "expected": "Durante o exercício, o nó mostra SchedulingDisabled; no fim volta a aceitar agendamento. Os Pods existentes não são evacuados por cordon.",
+      "quiz": {
+        "question": "O que cordon faz diretamente?",
+        "options": [
+          "Aumenta CPU física do notebook",
+          "Evita novo agendamento normal nesse nó, sem evacuar os Pods existentes",
+          "Apaga todos os Pods",
+          "Faz backup do etcd"
+        ],
+        "answer": 1,
+        "explanation": "Evacuar é outra operação; cordon marca a disponibilidade para agendamento."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Observe cargas existentes",
+          "prompt": "Compare os Pods antes e durante cordon sem removê-los.",
+          "hint": "Não crie falha de produção para demonstrar o conceito.",
+          "solution": "Os Pods já agendados continuam em execução; confirme pelos nomes e nós. Ao final, faça uncordon.",
+          "criteria": [
+            "Comparação registrada.",
+            "Estado final recuperado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Planeje drain",
+          "prompt": "Escreva pré-verificações para evacuar um nó de um cluster com mais de um nó.",
+          "hint": "Considere PDB, storage local e espaço para réplicas.",
+          "solution": "Verifique capacidade destino, restrições de scheduling, PDBs, volumes e encerramento gracioso; defina quando interromper a manutenção.",
+          "criteria": [
+            "Quatro condições concretas.",
+            "Critério de interrupção."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Reconheça host único",
+          "prompt": "Explique o que ocorre ao evacuar o único nó do seu kind.",
+          "hint": "Réplicas ainda dependem de lugar elegível.",
+          "solution": "Sem outro nó elegível, cargas podem ficar Pending; o notebook continua sendo ponto único de falha mesmo com vários nós em containers.",
+          "criteria": [
+            "Scheduling explicado.",
+            "Limite físico reconhecido."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 32,
+      "level": 11,
+      "week": 32,
+      "title": "Atualizações e compatibilidade de APIs",
+      "goal": "Planejar versões e detectar dependências antes de atualizar.",
+      "theory": [
+        {
+          "title": "Compatibilidade não é adivinhação",
+          "text": "Kubernetes define políticas de diferença de versões entre componentes; ferramentas de instalação podem impor restrições adicionais. Não assuma que qualquer kubectl ou plugin funciona com qualquer API server. Registre versões reais e consulte a política para a combinação desejada."
+        },
+        {
+          "title": "API e implementação evoluem",
+          "text": "Uma versão apiVersion no manifesto precisa ser servida pelo cluster. Remoções de APIs e mudanças em CRDs/controllers podem impedir uma atualização. Inventarie recursos, plugins, storage e rede; execute validação e testes em ambiente separado antes de mudar um cluster importante."
+        },
+        {
+          "title": "Upgrade não é recriar dados",
+          "text": "Trocar o cluster kind é simples para manifests reproduzíveis, mas volumes locais não migram por intenção. Separe atualização de cluster, migração de aplicação e recuperação de dados. A prática desta aula produz inventário e plano, sem alterar a versão do seu cluster existente."
+        }
+      ],
+      "code": "set -eu\nkubectl --context kind-forge version\nkind version\nkubectl --context kind-forge api-versions\nkubectl --context kind-forge api-resources --namespaced=true\nkubectl --context kind-forge get nodes -o wide\n",
+      "filename": "aula-32.sh",
+      "language": "bash",
+      "run": "bash aula-32.sh",
+      "expected": "Você produz um inventário de versões e APIs realmente disponíveis. Nenhum componente foi atualizado pelo roteiro.",
+      "quiz": {
+        "question": "Antes de atualizar o cluster, o que deve ser verificado nos manifests?",
+        "options": [
+          "Se as APIs utilizadas continuam servidas e suportadas na versão alvo",
+          "Apenas se os arquivos terminam em .yaml",
+          "Somente a cor do editor",
+          "Se o nome do namespace tem menos de dez letras"
+        ],
+        "answer": 0,
+        "explanation": "Remoções ou mudanças de APIs podem impedir criação e reconciliação dos recursos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Faça um inventário",
+          "prompt": "Liste apiVersion e kind dos recursos principais do seu projeto.",
+          "hint": "Inclua CRDs e recursos de addons quando existirem.",
+          "solution": "Registre Deployments apps/v1, Services v1 e demais contratos efetivamente usados; associe cada addon ao seu guia de compatibilidade.",
+          "criteria": [
+            "APIs reais identificadas.",
+            "Addons incluídos."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Consulte version skew",
+          "prompt": "Escolha um par de versões pretendidas e confira a política oficial.",
+          "hint": "Não escreva um limite numérico por memória sem conferir.",
+          "solution": "Use https://kubernetes.io/releases/version-skew-policy/ e os requisitos da ferramenta; registre a conclusão e data.",
+          "criteria": [
+            "Fonte oficial consultada.",
+            "Combinação explícita."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Desenhe o ensaio",
+          "prompt": "Planeje recriar a aplicação em um segundo cluster local sem perder dados fictícios.",
+          "hint": "Estado de aplicação e manifests têm rotas diferentes.",
+          "solution": "Reaplique manifests compatíveis, restaure backup em novo destino e teste funcionalidade; não remova o original antes de validar.",
+          "criteria": [
+            "Destino separado.",
+            "Dados e configuração verificados."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/releases/version-skew-policy/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 33,
+      "level": 11,
+      "week": 33,
+      "title": "Backups, etcd e restauração testada",
+      "goal": "Separar configurações, dados da aplicação e estado do control plane.",
+      "theory": [
+        {
+          "title": "Três camadas de recuperação",
+          "text": "Git pode guardar manifests e decisões, mas não substitui os dados gravados pela aplicação. Backup de banco ou volume precisa de consistência e retenção. Snapshot de etcd protege estado da API em cenários apropriados, mas não inclui automaticamente os bytes de volumes externos."
+        },
+        {
+          "title": "Controle e dados são diferentes",
+          "text": "etcd armazena dados do control plane e pode incluir informações sensíveis. Sua operação exige ferramentas, certificados e procedimentos compatíveis com a instalação. Não copie comandos de restauração em um cluster ativo sem plano: recuperar o control plane é uma atividade operacional diferente de restaurar um arquivo do usuário."
+        },
+        {
+          "title": "Prove recuperação pequena",
+          "text": "Nosso exemplo restaura uma configuração pública em nome diferente e verifica seu conteúdo. O projeto do nível deve também repetir a restauração do arquivo fictício em PVC separado. Defina RPO e RTO como objetivos de perda aceitável e tempo de retorno; meça o que o teste realmente demonstrou."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk create configmap backup-origem --from-literal=registro=evidencia-publica --dry-run=client -o yaml | k apply -f -\nk get configmap backup-origem -o jsonpath='{.data.registro}' > registro-config.txt\nk create configmap backup-restaurado --from-file=registro=registro-config.txt --dry-run=client -o yaml | k apply -f -\nk get configmap backup-restaurado -o jsonpath='{.data.registro}'\nprintf '\n'\n",
+      "filename": "aula-33.sh",
+      "language": "bash",
+      "run": "bash aula-33.sh",
+      "expected": "backup-restaurado contém evidencia-publica. Este teste cobre uma configuração fictícia, não um snapshot de etcd nem um banco em operação.",
+      "quiz": {
+        "question": "Um snapshot de etcd garante que todos os dados de PVCs externos foram copiados?",
+        "options": [
+          "Sim, automaticamente em qualquer driver",
+          "Somente quando o Service é LoadBalancer",
+          "Sim, basta que o PVC esteja Bound",
+          "Não; estado da API e conteúdo de volumes são camadas diferentes"
+        ],
+        "answer": 3,
+        "explanation": "A estratégia precisa cobrir dados de aplicação, configuração e control plane segundo cada mecanismo."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Monte a matriz",
+          "prompt": "Liste onde estão manifests, Secret, dados de aplicação e estado de control plane, com método de recuperação.",
+          "hint": "Cada camada pede proteção e acesso próprios.",
+          "solution": "Use Git para intenção sem segredos reais, ferramenta consistente do banco/volume para dados e procedimento suportado do control plane quando operado por você.",
+          "criteria": [
+            "Quatro categorias separadas.",
+            "Métodos coerentes."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Meça restauração",
+          "prompt": "Repita o exercício do arquivo fictício em PVC novo e registre tempo e verificação do conteúdo.",
+          "hint": "Conclua pela leitura em destino independente.",
+          "solution": "Marque início e fim, restaure, leia e compare com a evidência original; falha de comparação deve reprovar o ensaio.",
+          "criteria": [
+            "Tempo real registrado.",
+            "Integridade comparada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina RPO e RTO",
+          "prompt": "Escolha objetivos didáticos para sua API local e explique como testá-los.",
+          "hint": "RPO trata perda de dados; RTO trata retorno do serviço.",
+          "solution": "Exemplo: nenhuma perda no conjunto estático do exercício e restauração em até um intervalo definido; execute o ensaio para saber se foi atendido.",
+          "criteria": [
+            "Objetivos mensuráveis.",
+            "Não confunde frequência com restauração bem-sucedida."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 34,
+      "level": 12,
+      "week": 34,
+      "title": "CRDs e validação de novos recursos",
+      "goal": "Adicionar um contrato de API sem confundi-lo com um controlador funcional.",
+      "theory": [
+        {
+          "title": "Estender o vocabulário",
+          "text": "CustomResourceDefinition adiciona um tipo à API. O schema define a estrutura aceita, versões e regras básicas. Depois de estabelecida a CRD, você pode criar instâncias desse novo recurso. Isso não executa ações de negócio automaticamente: sem um controller, você está armazenando dados estruturados."
+        },
+        {
+          "title": "Contrato e evolução",
+          "text": "Defina campos com tipos e validação explícitos. Mudar versões pede planejar compatibilidade e conversão dos objetos armazenados. CRDs têm escopo de cluster, mesmo quando suas instâncias são namespaced; instalar uma delas amplia a API disponível para todos os usuários com permissões adequadas."
+        },
+        {
+          "title": "Uma extensão pequena",
+          "text": "O exemplo cria NotaEstudo em um grupo fictício de laboratório e valida nota de zero a dez. O recurso não provisiona banco nem publica mensagens. Ele é uma forma segura de observar schema, descoberta e validação antes de discutir controllers e operators."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nkubectl --context kind-forge apply -f - <<'YAML'\napiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: notasestudo.forge.example.com\nspec:\n  group: forge.example.com\n  scope: Namespaced\n  names:\n    plural: notasestudo\n    singular: notaestudo\n    kind: NotaEstudo\n  versions:\n  - name: v1\n    served: true\n    storage: true\n    schema:\n      openAPIV3Schema:\n        type: object\n        properties:\n          spec:\n            type: object\n            required: [nota]\n            properties:\n              nota: {type: integer, minimum: 0, maximum: 10}\nYAML\nkubectl --context kind-forge wait --for=condition=Established crd/notasestudo.forge.example.com --timeout=60s\nk apply -f - <<'YAML'\napiVersion: forge.example.com/v1\nkind: NotaEstudo\nmetadata: {name: primeiro-registro}\nspec: {nota: 8}\nYAML\nk get notasestudo primeiro-registro -o yaml\n",
+      "filename": "aula-34.sh",
+      "language": "bash",
+      "run": "bash aula-34.sh",
+      "expected": "A API passa a aceitar NotaEstudo, e primeiro-registro contém nota 8. Nenhuma ação externa é realizada por esse recurso.",
+      "quiz": {
+        "question": "Uma CRD sozinha implementa um loop de reconciliação da sua aplicação?",
+        "options": [
+          "Sim, o schema envia e-mails automaticamente",
+          "Somente o Service precisa existir",
+          "Não; um controller precisa observar e agir sobre os recursos",
+          "Sim, qualquer nome de kind executa código"
+        ],
+        "answer": 2,
+        "explanation": "CRD descreve armazenamento e validação da API; comportamento depende de um controlador."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste o contrato",
+          "prompt": "Tente aplicar outro NotaEstudo com nota 11 usando dry-run=server.",
+          "hint": "maximum é 10.",
+          "solution": "A API deve rejeitar o valor fora do intervalo; registre a mensagem e mantenha o recurso válido intacto.",
+          "criteria": [
+            "Rejeição observada.",
+            "Regra do schema identificada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Verifique descoberta",
+          "prompt": "Liste api-resources do grupo forge.example.com e identifique escopo e kind.",
+          "hint": "CRD global e instância namespaced são papéis distintos.",
+          "solution": "A descoberta mostra NotaEstudo namespaced; a definição continua sendo CRD de escopo de cluster.",
+          "criteria": [
+            "Descoberta registrada.",
+            "Dois escopos explicados."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Planeje evolução",
+          "prompt": "Proponha como adicionar um campo opcional comentario sem invalidar os registros existentes.",
+          "hint": "Não torne obrigatório um valor que antigos objetos não possuem sem migração.",
+          "solution": "Defina campo string opcional, valide seu limite e teste leitura/escrita de objetos antigos antes de exigir novos campos.",
+          "criteria": [
+            "Compatibilidade considerada.",
+            "Teste de objetos antigos previsto."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 35,
+      "level": 12,
+      "week": 35,
+      "title": "Operators, ownership e arquitetura",
+      "goal": "Avaliar quando automatizar operação com controller e como evitar efeitos duplicados.",
+      "theory": [
+        {
+          "title": "Conhecimento operacional em software",
+          "text": "Operator combina recursos customizados e controladores que codificam procedimentos de um domínio. Ele pode coordenar configuração, atualização ou recuperação, conforme sua implementação. Instalar um operator adiciona código com permissões e responsabilidade operacional; não transforme isso em um atalho para ignorar o sistema que ele gerencia."
+        },
+        {
+          "title": "Reconciliação deve ser repetível",
+          "text": "Eventos podem ser repetidos e a observação pode estar temporariamente desatualizada. Um reconciliador deve comparar intenção e estado, fazer passos idempotentes e registrar condições úteis. OwnerReferences ajudam a modelar ownership; finalizers podem adiar remoção até terminar uma limpeza, exigindo cuidado para não prender objetos indefinidamente."
+        },
+        {
+          "title": "Arquitetura antes de implementação",
+          "text": "Nosso exercício inspeciona o recurso de estudo e os controllers nativos em vez de instalar um operator externo. Desenhe primeiro a máquina de estados e os efeitos autorizados. Se a aplicação cabe em Deployment mais configuração, uma CRD talvez acrescente custo sem entregar benefício."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk get deployments,replicasets,pods -o wide\nkubectl --context kind-forge get customresourcedefinitions\n# Se você concluiu a aula anterior:\nk get notasestudo primeiro-registro -o yaml\n# Observe que não há controller autoral nem status de execução para NotaEstudo.\n",
+      "filename": "aula-35.sh",
+      "language": "bash",
+      "run": "bash aula-35.sh",
+      "expected": "Você identifica workloads gerenciados por controllers e a CRD do laboratório. NotaEstudo continua sendo um registro, sem operator autoral instalado.",
+      "quiz": {
+        "question": "Qual propriedade é especialmente importante num reconciliador que pode receber eventos repetidos?",
+        "options": [
+          "Depender de executar exatamente uma vez",
+          "Idempotência dos passos e comparação entre estado desejado e observado",
+          "Enviar a mesma cobrança em toda reconciliação",
+          "Ignorar erros para o loop terminar"
+        ],
+        "answer": 1,
+        "explanation": "Repetição é normal no modelo de reconciliação; efeitos precisam tolerá-la."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Desenhe o reconciliador",
+          "prompt": "Para um recurso Relatorio, escreva estados e passos de geração com chave idempotente.",
+          "hint": "Considere repetir o pedido após falha.",
+          "solution": "Estados Pendente, Gerando, Pronto e Falhou podem usar uma chave de execução; o controller verifica resultado existente antes de repetir efeito.",
+          "criteria": [
+            "Estados e transições definidos.",
+            "Repetição tratada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Revise permissões de operator",
+          "prompt": "Liste quais APIs um controller simples precisaria ler e escrever.",
+          "hint": "Não conceda cluster-admin por conveniência.",
+          "solution": "Acesso ao tipo customizado e recursos realmente gerenciados deve ser limitado por escopo e verbos; logs e status não exigem domínio irrestrito.",
+          "criteria": [
+            "Recursos e verbos claros.",
+            "Escopo mínimo."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Escolha simplicidade",
+          "prompt": "Compare resolver configuração de sua API com ConfigMap versus CRD+controller.",
+          "hint": "Custo de manutenção também conta.",
+          "solution": "ConfigMap pode bastar para dados sem comportamento operacional novo; CRD+controller se justifica quando há contrato e automação de domínio necessários.",
+          "criteria": [
+            "Dois custos comparados.",
+            "Decisão por necessidade."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/extend-kubernetes/operator/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 36,
+      "level": 12,
+      "week": 36,
+      "title": "Projeto final: entregar, observar e recuperar",
+      "goal": "Consolidar uma aplicação local com critérios de conclusão baseados em evidências.",
+      "theory": [
+        {
+          "title": "Integre as camadas",
+          "text": "Uma entrega reúne aplicação, imagem, configuração, rede, recursos, saúde e dados. Cada peça precisa de um teste específico: requisição funcional, mudança de configuração, substituição de instância, comportamento diante de falha e recuperação de dados. Uma coleção de manifests sem esses testes ainda não demonstra operação."
+        },
+        {
+          "title": "O que o ambiente prova",
+          "text": "Um kind local permite reproduzir deploy, diagnóstico e alguns controles. Ele não comprova alta disponibilidade entre máquinas, segurança completa, recuperação de desastre ou capacidade de produção. Registre quais requisitos exigiriam storage, rede, identidade, backups e observabilidade apropriados fora do notebook."
+        },
+        {
+          "title": "Critério de saída",
+          "text": "Use sua API de Go, Java ou Python quando já existir, ou o servidor estático do exemplo como primeira integração. Entregue README executável, versões/digests, escolhas justificadas e caderno de evidências. Traga o repositório e as saídas para revisão no chat antes de considerar o nível consolidado."
+        }
+      ],
+      "code": "set -eu\nk() { kubectl --context kind-forge -n forge \"$@\"; }\nkubectl --context kind-forge create namespace forge --dry-run=client -o yaml | kubectl --context kind-forge apply -f -\nk apply -f - <<'YAML'\napiVersion: v1\nkind: ConfigMap\nmetadata: {name: entrega-pagina}\ndata:\n  index.html: '<h1>Entrega Kubernetes Forge</h1><p>Ambiente local de estudo.</p>'\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata: {name: entrega}\nspec:\n  replicas: 2\n  selector:\n    matchLabels: {app: entrega}\n  template:\n    metadata:\n      labels: {app: entrega}\n    spec:\n      automountServiceAccountToken: false\n      securityContext:\n        runAsNonRoot: true\n        runAsUser: 1000\n        seccompProfile: {type: RuntimeDefault}\n      containers:\n      - name: web\n        image: python:3.13-alpine\n        command: [python, -u, -m, http.server, '8080', --directory, /pagina]\n        ports: [{containerPort: 8080}]\n        resources:\n          requests: {cpu: 100m, memory: 32Mi}\n          limits: {cpu: 500m, memory: 96Mi}\n        securityContext:\n          allowPrivilegeEscalation: false\n          readOnlyRootFilesystem: true\n          capabilities: {drop: [ALL]}\n        readinessProbe:\n          httpGet: {path: /, port: 8080}\n          periodSeconds: 5\n        livenessProbe:\n          httpGet: {path: /, port: 8080}\n          initialDelaySeconds: 10\n          periodSeconds: 10\n        volumeMounts:\n        - {name: pagina, mountPath: /pagina, readOnly: true}\n      volumes:\n      - name: pagina\n        configMap: {name: entrega-pagina}\n---\napiVersion: v1\nkind: Service\nmetadata: {name: entrega}\nspec:\n  selector: {app: entrega}\n  ports: [{port: 80, targetPort: 8080}]\nYAML\nk rollout status deployment/entrega --timeout=180s\nk get pods -l app=entrega\n# Em outro terminal, consulte http://127.0.0.1:8090 . Encerre com Ctrl+C.\nk port-forward --address 127.0.0.1 service/entrega 8090:80\n",
+      "filename": "aula-36.sh",
+      "language": "bash",
+      "run": "bash aula-36.sh",
+      "expected": "A página Entrega Kubernetes Forge aparece em 127.0.0.1:8090 com o túnel ativo; duas réplicas ficam Ready. Este servidor estático é uma integração didática, não um servidor de aplicação recomendado para produção.",
+      "quiz": {
+        "question": "Qual evidência é mais forte para concluir a entrega?",
+        "options": [
+          "Reproduzir o ambiente, testar comportamento e recuperação e justificar decisões",
+          "Apenas ter 100% de checkboxes",
+          "Somente criar um namespace chamado prod",
+          "Contar quantas linhas de YAML existem"
+        ],
+        "answer": 0,
+        "explanation": "Conclusão depende de resultados verificáveis, não só da existência dos arquivos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste comportamento",
+          "prompt": "Acesse a página, altere conteúdo via ConfigMap e explique como o processo percebe a mudança.",
+          "hint": "Volume de ConfigMap atualiza com atraso; confirme a leitura real.",
+          "solution": "Observe o conteúdo servido antes/depois e documente eventual atraso; não confunda env com volume projetado.",
+          "criteria": [
+            "Requisição antes e depois.",
+            "Mecanismo de configuração explicado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Injete uma falha limitada",
+          "prompt": "Remova apenas um Pod app=entrega e demonstre reconciliação com requisições repetidas locais.",
+          "hint": "Registre nome antigo, novo e respostas observadas.",
+          "solution": "O Deployment restaura a contagem; registre também qualquer interrupção observada, sem prometer zero falha a partir desse ensaio.",
+          "criteria": [
+            "Substituição documentada.",
+            "Respostas reais registradas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Apresente a entrega",
+          "prompt": "Consolide manifests/overlay, acesso, teste de dados em PVC, RBAC, controles de Pod, política de rede e runbook.",
+          "hint": "Use os projetos anteriores como evidências, não como decoração.",
+          "solution": "Liste implementado, testado e pendente; NetworkPolicy só é testada com CNI adequado, HPA só com métricas, dados só com restauração demonstrada.",
+          "criteria": [
+            "Evidências por requisito.",
+            "Limites de produção explícitos."
+          ]
+        }
+      ],
+      "source": "https://kubernetes.io/docs/concepts/overview/working-with-objects/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    }
+  ]
+}

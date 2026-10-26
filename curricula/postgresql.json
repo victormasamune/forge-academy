@@ -1,0 +1,3507 @@
+{
+  "id": "postgresql",
+  "name": "PostgreSQL",
+  "title": "PostgreSQL Forge",
+  "updated": "2026-10-24",
+  "hours": 216,
+  "description": "Do SQL ao desenvolvimento e à operação de PostgreSQL: integridade, consultas, concorrência, desempenho, segurança e recuperação em laboratórios locais.",
+  "prerequisites": [
+    "Noções de lógica e arquivos; a trilha de Bancos de Dados e SQL é recomendada.",
+    "PostgreSQL 18 com patch de manutenção disponível e ferramentas psql, createdb, pg_dump e pg_restore da mesma versão principal.",
+    "Um banco exclusivamente de laboratório com dados fictícios. Laboratórios de roles e restauração exigem privilégios adicionais explicitados nas aulas."
+  ],
+  "outcome": "Entregar um sistema de pedidos com integridade, SQL analítico, índices justificados, isolamento entre tenants, migrações e restauração testada; discutir replicação e PITR com seus requisitos reais.",
+  "extension": "sql",
+  "codeLanguage": "sql",
+  "setup": [
+    {
+      "title": "Instalar servidor e clientes",
+      "text": "Use os instaladores oficiais de PostgreSQL 18 para seu sistema. A trilha fixa a série 18; não requer uma versão de desenvolvimento. Registre psql --version no terminal e SHOW server_version; numa conexão SQL. Patch do cliente e servidor pode diferir, mas alinhe a versão principal das ferramentas de backup."
+    },
+    {
+      "title": "Criar o laboratório",
+      "text": "Com a role administrativa criada na instalação, execute no terminal: createdb -h localhost -U postgres forge_pg. Entre com psql -X -h localhost -U postgres -d forge_pg. Substitua postgres pela sua role local se necessário; a senha é pedida pelo cliente e não deve ser salva nos arquivos. Execute SELECT current_database(), current_user; e confira forge_pg antes de cada laboratório. Para prática cotidiana, o administrador deve criar uma role login dona apenas de forge_pg, sem SUPERUSER, CREATEDB nem CREATEROLE."
+    },
+    {
+      "title": "Executar os arquivos",
+      "text": "Salve a aula em aula.sql e execute psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql. Troque SUA_ROLE_LOCAL pela role configurada. Comandos de terminal não são SQL; metacomandos com barra invertida são do psql. Exemplos com tabelas temporárias podem ser repetidos numa nova sessão. A plataforma salva seu rascunho, mas não conecta nem executa consultas."
+    },
+    {
+      "title": "Laboratórios administrativos",
+      "text": "Roles, políticas e recuperação usam somente objetos com prefixo forge_ num cluster local descartável. Cada aula informa se precisa de CREATEROLE, CREATEDB ou superuser. Os exemplos não habilitam replicação nem arquivamento automaticamente; esses cenários exigem instâncias e armazenamento próprios, testes de falha e validação operacional."
+    }
+  ],
+  "references": [
+    {
+      "title": "Documentação PostgreSQL 18",
+      "description": "Referência versionada de SQL, administração e programação.",
+      "url": "https://www.postgresql.org/docs/18/index.html"
+    },
+    {
+      "title": "Tutorial oficial",
+      "description": "Primeiro banco, consultas e transações.",
+      "url": "https://www.postgresql.org/docs/18/tutorial.html"
+    },
+    {
+      "title": "Concorrência",
+      "description": "Isolamento, snapshots e bloqueios.",
+      "url": "https://www.postgresql.org/docs/18/mvcc.html"
+    },
+    {
+      "title": "Planos de consulta",
+      "description": "Custos estimados, linhas reais e cuidados com ANALYZE.",
+      "url": "https://www.postgresql.org/docs/18/using-explain.html"
+    },
+    {
+      "title": "Row-Level Security",
+      "description": "Políticas, bypass e privilégios.",
+      "url": "https://www.postgresql.org/docs/18/ddl-rowsecurity.html"
+    },
+    {
+      "title": "Backup e recuperação",
+      "description": "Dump lógico, backup físico e PITR.",
+      "url": "https://www.postgresql.org/docs/18/backup.html"
+    },
+    {
+      "title": "Replicação lógica",
+      "description": "Publications, subscriptions e limites.",
+      "url": "https://www.postgresql.org/docs/18/logical-replication.html"
+    }
+  ],
+  "levels": [
+    {
+      "id": 1,
+      "title": "Ambiente, tipos e integridade",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Crie um laboratório PostgreSQL e transforme regras de domínio em tipos e constraints.",
+      "skills": [
+        "psql",
+        "Tipos",
+        "Constraints"
+      ],
+      "project": "Catálogo de produtos com integridade",
+      "deliverables": [
+        "Banco forge_pg acessível e versão registrada.",
+        "DDL de produtos com preço e SKU válidos.",
+        "Três testes positivos e três violações documentadas."
+      ],
+      "rubric": [
+        "Identifica banco, role e versão antes de alterar dados.",
+        "Rejeita SKU repetido, preço negativo e nome ausente.",
+        "Explica a diferença entre NULL e string vazia."
+      ],
+      "challenge": [
+        {
+          "question": "Um script está conectado a outro database com o mesmo nome de tabela. Qual verificação deve ocorrer antes do INSERT?",
+          "options": [
+            "Confiar que o nome aula.sql escolhe forge_pg.",
+            "Renomear apenas o arquivo.",
+            "Conferir current_database(), current_user e a conexão efetiva.",
+            "Executar o INSERT e procurar a linha em todos os bancos."
+          ],
+          "answer": 2,
+          "explanation": "Tabelas homônimas não identificam o destino; a conexão determina o database."
+        },
+        {
+          "question": "O domínio exige preço presente e não negativo. Qual conjunto de regras atende?",
+          "options": [
+            "Somente CHECK(preco>=0).",
+            "Somente text com valor padrão vazio.",
+            "Somente um comentário no README.",
+            "numeric com NOT NULL e CHECK(preco>=0)."
+          ],
+          "answer": 3,
+          "explanation": "NOT NULL trata ausência; CHECK trata a faixa do valor."
+        },
+        {
+          "question": "Um SKU de negócio não pode se repetir, mas a tabela já tem id como identity. O que falta?",
+          "options": [
+            "Uma regra UNIQUE para sku, além de sua presença se obrigatória.",
+            "Nada; identity torna qualquer outra coluna única.",
+            "Criar um índice não único e esperar que a aplicação cuide.",
+            "Usar MAX(id) ao inserir SKU."
+          ],
+          "answer": 0,
+          "explanation": "Identidade técnica e unicidade de negócio são contratos diferentes."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "CRUD e relatórios",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Altere dados com filtros explícitos e produza relatórios verificáveis.",
+      "skills": [
+        "RETURNING",
+        "NULL",
+        "GROUP BY"
+      ],
+      "project": "Controle de estoque e relatório de vendas",
+      "deliverables": [
+        "Scripts de inserção, atualização e exclusão com RETURNING.",
+        "Relatório por categoria com contagem e total.",
+        "Casos com NULL, zero e categoria sem vendas."
+      ],
+      "rubric": [
+        "Toda escrita em lote tem previsão de linhas afetadas.",
+        "Totais conferem com soma manual da amostra.",
+        "Consulta usa ORDER BY quando exige ordem."
+      ],
+      "challenge": [
+        {
+          "question": "Após UPDATE ... WHERE quantidade>=4 RETURNING, nenhuma linha voltou. Como interpretar?",
+          "options": [
+            "A reserva sempre ocorreu e o retorno foi perdido.",
+            "A condição não encontrou linha elegível; a operação deve tratar reserva recusada.",
+            "O banco transformou saldo negativo em zero.",
+            "É necessário ignorar a condição e atualizar sem WHERE."
+          ],
+          "answer": 1,
+          "explanation": "RETURNING informa as linhas realmente afetadas, não uma promessa de sucesso de negócio."
+        },
+        {
+          "question": "O relatório deve contar linhas sem data de conclusão. Qual filtro é correto?",
+          "options": [
+            "concluida_em = NULL.",
+            "concluida_em <> NULL.",
+            "concluida_em IS NULL.",
+            "concluida_em = ''."
+          ],
+          "answer": 2,
+          "explanation": "Ausência SQL exige teste de NULL; comparações comuns podem produzir desconhecido."
+        },
+        {
+          "question": "Uma categoria existe, mas não há vendas dela. Como preservar a categoria num relatório?",
+          "options": [
+            "Partir somente de vendas com INNER JOIN.",
+            "Usar COUNT(*) e assumir que zero vendas gera zero.",
+            "Remover ORDER BY para o banco inventar a categoria.",
+            "Partir de categorias com LEFT JOIN e contar a chave da venda."
+          ],
+          "answer": 3,
+          "explanation": "A entidade da esquerda é preservada; COUNT da chave do filho ignora a linha nula."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Relacionamentos e composição",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Modele relacionamentos e componha consultas sem multiplicar valores por acidente.",
+      "skills": [
+        "JOIN",
+        "EXISTS",
+        "CTE"
+      ],
+      "project": "Pedidos com clientes e itens",
+      "deliverables": [
+        "DDL com chaves estrangeiras.",
+        "Relatório de pedidos incluindo clientes sem compra.",
+        "Consultas equivalentes com EXISTS e agregação prévia."
+      ],
+      "rubric": [
+        "Distingue ausência de filho de valor nulo no filho.",
+        "Evita duplicar total do pedido ao unir itens.",
+        "Justifica chaves e cardinalidades em um diagrama simples."
+      ],
+      "challenge": [
+        {
+          "question": "Um pedido de 90 com três itens passa a contribuir 270 numa soma após JOIN. Qual diagnóstico é correto?",
+          "options": [
+            "A granularidade virou uma linha por item e repetiu o total do pedido.",
+            "A foreign key somou automaticamente as parcelas.",
+            "SUM não funciona com numeric.",
+            "ORDER BY precisa vir antes do JOIN."
+          ],
+          "answer": 0,
+          "explanation": "Corrija a granularidade ou agregue no conjunto apropriado; DISTINCT em totais pode apagar pedidos legítimos de mesmo valor."
+        },
+        {
+          "question": "A lista de pedidos contém cliente_id NULL. Qual consulta de clientes sem pedidos evita a armadilha da lista nula?",
+          "options": [
+            "id NOT IN sem tratar os NULL.",
+            "NOT EXISTS correlacionado por cliente_id=id.",
+            "JOIN sem ON.",
+            "SUM(cliente_id)=NULL."
+          ],
+          "answer": 1,
+          "explanation": "NOT EXISTS verifica correspondência, sem depender de comparar com uma lista que contém NULL."
+        },
+        {
+          "question": "Depois de inserir uma venda, uma view comum passa a mostrá-la na transação apropriada. Isso significa que a view foi refrescada?",
+          "options": [
+            "Sim; toda view executa REFRESH escondido.",
+            "Sim; o servidor recriou a tabela original.",
+            "Não; ela armazena a consulta e lê os dados visíveis quando consultada.",
+            "Não; views comuns nunca veem novas linhas."
+          ],
+          "answer": 2,
+          "explanation": "Materialized views têm armazenamento e atualização próprios; views comuns não são cópias estáticas."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "SQL analítico",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Calcule rankings, consultas correlacionadas e hierarquias com limites claros.",
+      "skills": [
+        "Janelas",
+        "LATERAL",
+        "Recursão"
+      ],
+      "project": "Painel de vendas e estrutura de categorias",
+      "deliverables": [
+        "Ranking por região com desempate documentado.",
+        "Último pedido de cada cliente com LATERAL.",
+        "Árvore de categorias com proteção contra ciclos."
+      ],
+      "rubric": [
+        "Explicita frame da soma acumulada.",
+        "Preserva clientes sem pedido no relatório.",
+        "Recursão termina mesmo com entrada problemática."
+      ],
+      "challenge": [
+        {
+          "question": "Duas vendas têm o mesmo dia. Como tornar a soma acumulada linha a linha reproduzível?",
+          "options": [
+            "Usar somente ORDER BY dia e presumir desempate.",
+            "Somar sem OVER.",
+            "Trocar numeric por text.",
+            "Ordenar a janela por dia e uma chave única, com frame ROWS explícito."
+          ],
+          "answer": 3,
+          "explanation": "A ordem única e o frame deixam definido o conjunto acumulado de cada linha."
+        },
+        {
+          "question": "Um cliente sem pedidos precisa aparecer com último pedido NULL. Qual composição atende?",
+          "options": [
+            "LEFT JOIN LATERAL com busca ordenada e LIMIT 1.",
+            "CROSS JOIN LATERAL sem outra preservação.",
+            "INNER JOIN que exige pedido.",
+            "ORDER BY sem junção."
+          ],
+          "answer": 0,
+          "explanation": "A junção à esquerda preserva o cliente quando a subconsulta correlacionada está vazia."
+        },
+        {
+          "question": "Uma FK autorreferente permite um ciclo entre duas categorias existentes. O que a FK garante nesse caso?",
+          "options": [
+            "Que a hierarquia sempre seja árvore.",
+            "A existência do pai referenciado, mas não a ausência de ciclos.",
+            "Que toda recursão termine.",
+            "Que só exista uma raiz."
+          ],
+          "answer": 1,
+          "explanation": "Aciclicidade precisa de regra e testes adicionais; recursões devem detectar caminhos repetidos."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Transações e concorrência",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Defina unidades atômicas e observe conflitos em duas sessões.",
+      "skills": [
+        "ACID",
+        "MVCC",
+        "Locks"
+      ],
+      "project": "Reserva concorrente de estoque",
+      "deliverables": [
+        "Transação de reserva que não permite saldo negativo.",
+        "Roteiro de duas sessões e resultados observados.",
+        "Política de retry limitado para falhas transitórias."
+      ],
+      "rubric": [
+        "Uma falha desfaz a operação inteira.",
+        "Diferencia snapshot de bloqueio de escrita.",
+        "Retry reinicia toda a transação e não duplica efeitos externos."
+      ],
+      "challenge": [
+        {
+          "question": "Débito e crédito foram confirmados em comandos independentes e houve falha entre eles. O que o desenho deveria ter feito?",
+          "options": [
+            "Adicionar somente ORDER BY ao débito.",
+            "Confiar que o cliente repetirá apenas o crédito sempre.",
+            "Agrupar as duas mudanças na mesma transação de negócio.",
+            "Desligar constraints para acelerar."
+          ],
+          "answer": 2,
+          "explanation": "Atomicidade exige um limite transacional que inclua todas as mudanças inseparáveis."
+        },
+        {
+          "question": "Em Repeatable Read, uma sessão continua vendo valor antigo após o commit de outra. Isso é necessariamente um erro?",
+          "options": [
+            "Sim; toda leitura deve ver o último commit global.",
+            "Sim; MVCC foi desativado.",
+            "Não; significa que o novo valor nunca foi gravado.",
+            "Não; o snapshot da transação pode conservar a versão anterior."
+          ],
+          "answer": 3,
+          "explanation": "Visibilidade depende do isolamento e do snapshot, não apenas da hora da leitura."
+        },
+        {
+          "question": "Duas transações bloqueiam contas em ordens opostas e uma é abortada por deadlock. Qual ação ajuda?",
+          "options": [
+            "Padronizar ordem de bloqueio e tratar retry da transação inteira.",
+            "Repetir apenas COMMIT sem rollback.",
+            "Esperar para sempre em todas as conexões.",
+            "Supor que SELECT comum bloqueia tudo previamente."
+          ],
+          "answer": 0,
+          "explanation": "Ordem consistente reduz ciclos; o aplicativo ainda deve tratar a falha transitória corretamente."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Índices e planos",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Escolha índices por consultas reais e interprete medidas sem prometer um plano fixo.",
+      "skills": [
+        "B-tree",
+        "GIN",
+        "EXPLAIN"
+      ],
+      "project": "Investigação de consulta lenta",
+      "deliverables": [
+        "Carga sintética reproduzível de pelo menos 10000 linhas.",
+        "Planos antes e depois de dois índices candidatos.",
+        "Relatório de seletividade, buffers e custo de escrita."
+      ],
+      "rubric": [
+        "Compara resultado funcional além do tempo.",
+        "Reconhece custo estimado como unidade abstrata.",
+        "Não força índice para esconder problema de modelagem."
+      ],
+      "challenge": [
+        {
+          "question": "Um índice novo não é usado numa consulta que retorna 95% da tabela. Qual conclusão é mais adequada?",
+          "options": [
+            "O índice certamente está corrompido.",
+            "Uma varredura pode custar menos; examine seletividade e o plano observado.",
+            "Todo índice precisa ser forçado.",
+            "O banco ignora permanentemente todos os índices novos."
+          ],
+          "answer": 1,
+          "explanation": "O planejador escolhe entre alternativas por custos estimados; uso de índice não é objetivo por si só."
+        },
+        {
+          "question": "Uma busca usa lower(email), mas só há índice simples em email. Qual candidato corresponde diretamente à expressão?",
+          "options": [
+            "Índice sobre length(nome) sem relação com a consulta.",
+            "Somente índice em id.",
+            "Índice sobre lower(email), com requisitos e predicado compatíveis.",
+            "Um CHECK(email IS NOT NULL) substitui o índice."
+          ],
+          "answer": 2,
+          "explanation": "A estrutura deve atender a expressão e o conjunto procurados, além de justificar seu custo de manutenção."
+        },
+        {
+          "question": "No plano, cost=100 e actual time=2ms. Pode-se concluir que uma unidade de cost vale 0,02ms universalmente?",
+          "options": [
+            "Sim; vale para qualquer máquina e carga.",
+            "Sim; desde que a tabela seja temporária.",
+            "Não; porque actual time nunca mede execução.",
+            "Não; custo é uma estimativa abstrata e não uma conversão fixa de duração."
+          ],
+          "answer": 3,
+          "explanation": "Custos, estatísticas, cache e execução têm papéis diferentes; uma observação não define conversão universal."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Dados ricos e busca",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Combine JSONB, busca textual e tipos estruturados com integridade relacional.",
+      "skills": [
+        "JSONB",
+        "tsvector",
+        "Arrays e ranges"
+      ],
+      "project": "Catálogo com atributos e busca",
+      "deliverables": [
+        "Atributos JSONB com campos obrigatórios validados.",
+        "Busca textual em português com GIN.",
+        "Disponibilidade modelada com intervalos e testes de fronteira."
+      ],
+      "rubric": [
+        "Distingue SQL NULL de JSON null e chave ausente.",
+        "Escolhe configuração textual explicitamente.",
+        "Intervalos adjacentes respeitam o limite exclusivo."
+      ],
+      "challenge": [
+        {
+          "question": "Dois documentos extraem cor com ->> e ambos dão SQL NULL. Como verificar qual tinha a chave?",
+          "options": [
+            "Usar o operador de existência ? e, se necessário, jsonb_typeof sobre ->.",
+            "Concluir que os documentos são idênticos.",
+            "Converter ambos para integer.",
+            "Usar apenas cor = NULL."
+          ],
+          "answer": 0,
+          "explanation": "Chave ausente e JSON null podem se parecer na extração textual; presença exige teste próprio."
+        },
+        {
+          "question": "O vetor foi gerado com portuguese, mas a consulta usa outra configuração. O que revisar primeiro?",
+          "options": [
+            "Somente a cor do editor.",
+            "A consistência da configuração linguística de indexação e consulta.",
+            "Somente o número de conexões.",
+            "A ordenação do catálogo por id."
+          ],
+          "answer": 1,
+          "explanation": "Normalização incompatível pode produzir lexemas que não se correspondem."
+        },
+        {
+          "question": "Uma reserva termina exatamente quando outra começa e os ranges são [início,fim). Há sobreposição nesse ponto?",
+          "options": [
+            "Sim; todo limite toca duas reservas ao mesmo tempo.",
+            "Depende somente de ORDER BY.",
+            "Não; o fim exclusivo da primeira não pertence a ela.",
+            "Não se pode representar reservas adjacentes em PostgreSQL."
+          ],
+          "answer": 2,
+          "explanation": "Limites fechados-abertos permitem adjacência sem compartilhar o ponto de encontro."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Programação no servidor",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Encapsule regras pequenas e teste funções e gatilhos com efeitos conhecidos.",
+      "skills": [
+        "Funções SQL",
+        "PL/pgSQL",
+        "Triggers"
+      ],
+      "project": "Registro auditável de mudanças",
+      "deliverables": [
+        "Função de cálculo com contrato e casos de borda.",
+        "Função PL/pgSQL que rejeita estado inválido.",
+        "Trigger de auditoria com operação, chave e instante."
+      ],
+      "rubric": [
+        "Regra duplicada em aplicativo e banco é justificada.",
+        "Exceções não são engolidas silenciosamente.",
+        "Trigger trata INSERT, UPDATE e DELETE conscientemente."
+      ],
+      "challenge": [
+        {
+          "question": "Uma função lê preço atual de tabela, mas foi marcada IMMUTABLE para caber num índice. Qual é o problema?",
+          "options": [
+            "Nenhum; IMMUTABLE significa apenas rápida.",
+            "Somente a extensão do arquivo.",
+            "Funções nunca podem ler tabelas.",
+            "Ela promete independência do estado que o próprio corpo não cumpre."
+          ],
+          "answer": 3,
+          "explanation": "Volatilidade é contrato semântico; uma promessa incorreta pode tornar resultados e otimizações inadequados."
+        },
+        {
+          "question": "Uma função PL/pgSQL captura qualquer exceção e retorna sucesso. Qual risco principal?",
+          "options": [
+            "Esconder falhas e fazer o chamador acreditar que a regra foi cumprida.",
+            "Forçar uma foreign key automaticamente.",
+            "Criar um savepoint externo em outro servidor.",
+            "Garantir idempotência completa."
+          ],
+          "answer": 0,
+          "explanation": "Recuperação deve ser específica, justificada e visível; não transforme toda falha em sucesso."
+        },
+        {
+          "question": "Um trigger AFTER UPDATE registra auditoria e depois ocorre ROLLBACK. Qual resultado é esperado?",
+          "options": [
+            "A auditoria permanece por ser AFTER.",
+            "A mudança principal e a auditoria transacional são desfeitas.",
+            "Somente a tabela principal é apagada inteira.",
+            "AFTER confirma automaticamente todos os dados."
+          ],
+          "answer": 1,
+          "explanation": "O trigger não é uma transação autônoma e seu trabalho acompanha a transação principal."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Segurança e integração",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Separe privilégios, teste políticas e vincule valores sem concatenar SQL.",
+      "skills": [
+        "Roles",
+        "RLS",
+        "Parâmetros"
+      ],
+      "project": "Acesso de aplicação por tenant",
+      "deliverables": [
+        "Matriz de privilégios de leitura e escrita.",
+        "Teste RLS com role sem bypass para dois tenants.",
+        "Consulta parametrizada e caso com apóstrofo."
+      ],
+      "rubric": [
+        "Aplicação não usa superuser nem dono das tabelas.",
+        "Privilégio e política são testados como a role real.",
+        "Dados de entrada não viram identificadores ou SQL arbitrário."
+      ],
+      "challenge": [
+        {
+          "question": "Um teste de permissões como superuser passou. Isso comprova que a role de relatório tem apenas SELECT?",
+          "options": [
+            "Sim; superuser simula qualquer restrição por padrão.",
+            "Sim; SELECT é sempre o único privilégio de qualquer role.",
+            "Não; é preciso executar testes positivos e negativos sob a role de relatório.",
+            "Não; roles só existem no cliente."
+          ],
+          "answer": 2,
+          "explanation": "O teste deve usar o contexto realmente sujeito aos privilégios concedidos."
+        },
+        {
+          "question": "RLS filtra corretamente a leitura, mas não há WITH CHECK adequado para inserções. O que deve ser revisado?",
+          "options": [
+            "Somente a ordenação do SELECT.",
+            "Somente o nome da policy.",
+            "RLS não pode afetar INSERT.",
+            "O contrato de novas linhas e valores gravados, além do teste de leitura."
+          ],
+          "answer": 3,
+          "explanation": "Políticas precisam cobrir leitura e escrita conforme a autorização pretendida."
+        },
+        {
+          "question": "Uma API aceita a coluna de ordenação enviada pelo usuário. Binding de um filtro resolve isso sozinho?",
+          "options": [
+            "Não; identificadores exigem seleção permitida e composição segura.",
+            "Sim; qualquer string de coluna vira parâmetro $1.",
+            "Sim; parâmetros concedem privilégios de schema.",
+            "Não; então todos os filtros devem ser concatenados."
+          ],
+          "answer": 0,
+          "explanation": "Parâmetros protegem valores; a estrutura dinâmica deve ser controlada separadamente."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Evolução e manutenção",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Planeje crescimento e mudanças de schema com observabilidade e limites de bloqueio.",
+      "skills": [
+        "Particionamento",
+        "VACUUM",
+        "Migrações"
+      ],
+      "project": "Evolução de tabela de eventos",
+      "deliverables": [
+        "Partições mensais e testes de limites.",
+        "Diagnóstico de versões mortas e transações longas.",
+        "Migração em etapas com rollback operacional descrito."
+      ],
+      "rubric": [
+        "Chave única considera a chave de partição.",
+        "Não usa VACUUM FULL como manutenção automática.",
+        "Mede bloqueios e valida dados antes de apertar constraints."
+      ],
+      "challenge": [
+        {
+          "question": "A tabela é particionada por mês e a consulta não filtra data. Particionar garante consultar uma única partição?",
+          "options": [
+            "Sim; sempre consulta somente a mais recente.",
+            "Não; sem filtro compatível pode ser necessário acessar muitas partições.",
+            "Sim; id define o mês automaticamente.",
+            "Não; particionamento desliga qualquer índice."
+          ],
+          "answer": 1,
+          "explanation": "Pruning depende da consulta e dos limites das partições, não apenas da existência da estrutura."
+        },
+        {
+          "question": "Há versões mortas e uma transação muito antiga mantém snapshot. Qual hipótese precisa ser investigada?",
+          "options": [
+            "VACUUM sempre apaga qualquer versão imediatamente.",
+            "A única causa possível é uma FK ausente.",
+            "A transação pode estar impedindo a remoção de versões ainda potencialmente visíveis.",
+            "É obrigatório executar VACUUM FULL a cada minuto."
+          ],
+          "answer": 2,
+          "explanation": "Manutenção precisa considerar retenção de snapshots e duração de transações, não só frequência de vacuum."
+        },
+        {
+          "question": "CHECK NOT VALID foi criado e VALIDATE falhou num dado legado. A regra estava sem efeito para novas linhas?",
+          "options": [
+            "Sim; NOT VALID desliga qualquer verificação.",
+            "Sim; até o próximo reinício.",
+            "Não; CHECK só verifica SELECT.",
+            "Não; novas escritas já eram verificadas, mas o legado ainda precisava de validação."
+          ],
+          "answer": 3,
+          "explanation": "A validação adiada separa certificação dos dados existentes e imposição da regra nas novas mudanças."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Recuperação e replicação",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Pratique restauração e distinga continuidade de serviço de recuperação histórica.",
+      "skills": [
+        "pg_dump",
+        "WAL e PITR",
+        "Replicação"
+      ],
+      "project": "Plano de recuperação demonstrável",
+      "deliverables": [
+        "Dump custom restaurado em banco separado.",
+        "RPO e RTO definidos com teste cronometrado.",
+        "Desenho de replicação com lag, slots e procedimento de failover."
+      ],
+      "rubric": [
+        "Verifica conteúdo restaurado e objetos globais necessários.",
+        "Reconhece que apagar dados também replica.",
+        "Não declara HA comprovada a partir de uma única instância."
+      ],
+      "challenge": [
+        {
+          "question": "pg_dump gerou arquivo custom sem erros. Qual passo é necessário para demonstrar recuperação da amostra?",
+          "options": [
+            "Restaurar em destino separado e conferir conteúdo, integridade e consulta funcional.",
+            "Apenas renomear o arquivo para .sql.",
+            "Apenas olhar o tamanho do arquivo.",
+            "Executar SELECT 1 na origem."
+          ],
+          "answer": 0,
+          "explanation": "Backup só vira evidência de recuperação quando seu uso foi ensaiado e validado."
+        },
+        {
+          "question": "O backup de base é íntegro, mas falta WAL necessário até o horário-alvo. Pode-se prometer PITR até esse alvo?",
+          "options": [
+            "Sim; o banco inventa as mudanças ausentes.",
+            "Não; a cadeia necessária está incompleta.",
+            "Sim; um arquivo de texto qualquer substitui WAL.",
+            "Sim; basta mudar a data do sistema."
+          ],
+          "answer": 1,
+          "explanation": "É preciso preservar todos os componentes exigidos para reproduzir o estado pretendido."
+        },
+        {
+          "question": "Uma réplica está atualizada, mas o requisito é voltar ao estado de ontem antes de uma exclusão. O que falta?",
+          "options": [
+            "Somente um SELECT mais rápido na réplica.",
+            "Nada; replicação nunca propaga exclusões.",
+            "Estratégia de backup e recuperação histórica adequada e testada.",
+            "Apenas aumentar o pool de conexão."
+          ],
+          "answer": 2,
+          "explanation": "Uma réplica atual normalmente reproduz o estado atual, inclusive erros de negócio propagados."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Operação e projeto final",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Investigue carga e entregue um sistema de pedidos com evidências técnicas.",
+      "skills": [
+        "pg_stat_activity",
+        "Timeouts",
+        "Entrega técnica"
+      ],
+      "project": "Sistema de pedidos PostgreSQL com operação documentada",
+      "deliverables": [
+        "Schema, consultas, índices, migrações e seeds fictícios.",
+        "Testes de concorrência, permissões e restauração.",
+        "Runbook de conexão lenta, bloqueio e recuperação."
+      ],
+      "rubric": [
+        "Cada decisão liga uma consulta ou risco a uma evidência.",
+        "Timeout e pool têm limites e política de cancelamento.",
+        "Entrega reproduzível inclui versões e limitações conhecidas."
+      ],
+      "challenge": [
+        {
+          "question": "A consulta espera, e pg_blocking_pids mostra um PID bloqueador. Qual é o próximo passo responsável?",
+          "options": [
+            "Encerrar todas as conexões imediatamente.",
+            "Desligar constraints de todas as tabelas.",
+            "Assumir corrupção de disco.",
+            "Identificar operação, duração e impacto antes de cancelar ou encerrar algo."
+          ],
+          "answer": 3,
+          "explanation": "O diagnóstico precisa relacionar a espera ao contexto e escolher ação proporcional e autorizada."
+        },
+        {
+          "question": "Oito instâncias com pool máximo de 20 precisam de quantas conexões potenciais só para essa aplicação?",
+          "options": [
+            "160, além de conexões de outros consumidores.",
+            "20 no cluster inteiro automaticamente.",
+            "8 no máximo.",
+            "40 independentemente de instâncias."
+          ],
+          "answer": 0,
+          "explanation": "Limites locais se multiplicam; dimensione o total com reserva operacional."
+        },
+        {
+          "question": "O projeto tem queries corretas, mas a restauração e o teste concorrente não foram executados. Como apresentar a conclusão?",
+          "options": [
+            "Declarar operação de produção comprovada.",
+            "Indicar o que foi demonstrado e registrar esses ensaios como pendentes.",
+            "Omitir os ensaios porque o XP está completo.",
+            "Trocar a versão no README para esconder a lacuna."
+          ],
+          "answer": 1,
+          "explanation": "A defesa técnica deve separar comportamento observado de hipóteses e desenhos ainda não testados."
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": 1,
+      "level": 1,
+      "title": "Conexão, sessão e primeiro SELECT",
+      "goal": "Identificar o servidor, o banco e a role antes de executar SQL.",
+      "theory": [
+        {
+          "title": "Cliente e servidor",
+          "text": "psql é um cliente: recebe texto e envia SQL ao processo servidor. O nome do arquivo não escolhe o banco. A conexão, definida por host, porta, usuário e database, determina onde a consulta roda. Uma sessão conserva configurações e objetos temporários até desconectar."
+        },
+        {
+          "title": "Inspeção antes de escrita",
+          "text": "current_database() e current_user mostram o contexto real; version() mostra o servidor. Compare com a versão do executável psql no terminal. A opção -X ignora configurações pessoais do psql e ON_ERROR_STOP interrompe o script no primeiro erro, tornando a execução mais previsível."
+        },
+        {
+          "title": "SQL e metacomandos",
+          "text": "SELECT termina com ponto e vírgula. Comandos como \\conninfo e \\dt pertencem ao psql e não funcionam como SQL enviado por um driver. A plataforma edita texto; a execução acontece somente no seu laboratório local."
+        }
+      ],
+      "code": "SELECT current_database() AS banco, current_user AS role;\nSHOW server_version;\nSELECT 'PostgreSQL' AS tecnologia, 2 + 3 AS resultado;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Contexto do seu laboratório e versão 18.x; a última consulta retorna tecnologia PostgreSQL e resultado 5.",
+      "quiz": {
+        "question": "O que define em qual banco um arquivo SQL será executado?",
+        "options": [
+          "A extensão .sql.",
+          "A conexão escolhida pelo cliente.",
+          "O título da aula.",
+          "O primeiro nome de tabela."
+        ],
+        "answer": 1,
+        "explanation": "Um arquivo é apenas texto; o database é uma propriedade da conexão."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Comprove o contexto",
+          "prompt": "Registre host, banco, usuário e versão de servidor no README do laboratório.",
+          "hint": "Use \\conninfo, current_database(), current_user e SHOW server_version.",
+          "solution": "No psql rode \\conninfo e SELECT current_database(), current_user; depois SHOW server_version;. Remova qualquer segredo do relatório.",
+          "criteria": [
+            "Registra os quatro itens sem senha.",
+            "Confirma que o banco é forge_pg."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Calcule com alias",
+          "prompt": "Retorne 7 vezes 8 numa coluna chamada horas.",
+          "hint": "Uma expressão pode receber AS horas.",
+          "solution": "SELECT 7 * 8 AS horas; retorna 56.",
+          "criteria": [
+            "Uma linha, coluna horas.",
+            "Resultado numérico 56."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Diagnostique a sessão",
+          "prompt": "Explique por que \\dt funciona no psql e falha numa chamada SQL de um driver.",
+          "hint": "O cliente interpreta a barra invertida.",
+          "solution": "\\dt é metacomando do psql; para consultar tabelas por SQL use information_schema.tables com filtros de schema.",
+          "criteria": [
+            "Identifica a responsabilidade do cliente.",
+            "Dá alternativa SQL sem prometer a mesma formatação."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/app-psql.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 2,
+      "level": 1,
+      "title": "Tipos, conversões e tempo",
+      "goal": "Escolher representações exatas para preço, texto e instantes.",
+      "theory": [
+        {
+          "title": "Domínio antes do tipo",
+          "text": "numeric(p,s) armazena decimais exatos dentro de limites; floating point aproxima valores e é útil para medidas, mas exige cuidado em totais monetários. integer é apropriado a quantidades inteiras. text não impõe um tamanho arbitrário de negócio: limites devem refletir uma regra real."
+        },
+        {
+          "title": "Tempo e fuso",
+          "text": "timestamptz representa um instante e exibe seu valor no fuso da sessão; não preserva o nome original do fuso informado. timestamp without time zone representa componentes de calendário sem escolher um instante global. Declare qual significado o domínio exige antes de converter."
+        },
+        {
+          "title": "Conversões explícitas",
+          "text": "Um cast como ::numeric torna a intenção visível. Dividir dois inteiros usa divisão inteira; converter um operando muda a operação. Entrada textual inválida produz erro em vez de um valor de negócio aceitável. Valide a borda e teste arredondamento, limites e datas."
+        }
+      ],
+      "code": "SET TIME ZONE 'UTC';\nSELECT 5 / 2 AS inteiro, 5::numeric / 2 AS decimal;\nSELECT '2026-10-24 12:00:00-03'::timestamptz AS instante;\nSELECT 0.10::numeric + 0.20::numeric = 0.30::numeric AS exato;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "inteiro=2; decimal=2.5 (zeros finais podem variar); instante=2026-10-24 15:00:00+00; exato=t.",
+      "quiz": {
+        "question": "Qual tipo representa melhor um instante com comparação global?",
+        "options": [
+          "text com data sem convenção.",
+          "timestamp sem fuso em todos os casos.",
+          "timestamptz.",
+          "integer sem unidade documentada."
+        ],
+        "answer": 2,
+        "explanation": "timestamptz normaliza o instante; a exibição usa o fuso da sessão."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Divisão consciente",
+          "prompt": "Calcule a média de 9 unidades por 4 pedidos sem truncar.",
+          "hint": "Converta um operando para numeric.",
+          "solution": "SELECT 9::numeric / 4 AS media; produz 2.25.",
+          "criteria": [
+            "Resultado 2.25.",
+            "Explica por que 9/4 retorna 2."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare instantes",
+          "prompt": "Compare 12:00-03 e 15:00+00 em 24/10/2026.",
+          "hint": "Converta ambos para timestamptz.",
+          "solution": "SELECT '2026-10-24 12:00-03'::timestamptz = '2026-10-24 15:00+00'::timestamptz; retorna t.",
+          "criteria": [
+            "Usa cast de ambos os valores.",
+            "Reconhece instantes iguais com textos distintos."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina preço",
+          "prompt": "Crie coluna preco numeric(10,2) e documente seu maior valor positivo.",
+          "hint": "A precisão inclui todos os dígitos; escala reserva dois.",
+          "solution": "CREATE TEMP TABLE precos(preco numeric(10,2)); O maior valor é 99999999.99; acrescente CHECK(preco>=0) se o domínio rejeita negativos.",
+          "criteria": [
+            "Limite correto de oito dígitos inteiros.",
+            "Distingue limite do tipo e regra de sinal."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/datatype.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 3,
+      "level": 1,
+      "title": "Chaves e constraints",
+      "goal": "Impor integridade mesmo quando diferentes clientes escrevem no banco.",
+      "theory": [
+        {
+          "title": "Identidade e unicidade",
+          "text": "PRIMARY KEY identifica cada linha, combinando unicidade e NOT NULL. GENERATED ALWAYS AS IDENTITY gera valores por sequência, mas a constraint é que garante a chave. Uma chave técnica não elimina a necessidade de UNIQUE numa chave de negócio como SKU."
+        },
+        {
+          "title": "NULL e CHECK",
+          "text": "NOT NULL rejeita ausência. CHECK exige que sua expressão não seja falsa; uma expressão desconhecida por NULL pode passar. Por isso CHECK(preco>=0) deve ser combinado com NOT NULL quando preço é obrigatório. String vazia não é NULL."
+        },
+        {
+          "title": "Erros esperados",
+          "text": "Uma violação de constraint é informação sobre o contrato do banco. Teste violações em comandos isolados ou em transações com savepoints; ON_ERROR_STOP deve parar um script que inesperadamente falhou. Escolha nomes claros para localizar a regra violada."
+        }
+      ],
+      "code": "CREATE TEMP TABLE produtos (\n id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n sku text NOT NULL UNIQUE,\n nome text NOT NULL CHECK (length(btrim(nome)) > 0),\n preco numeric(10,2) NOT NULL CHECK (preco >= 0)\n);\nINSERT INTO produtos(sku,nome,preco) VALUES ('GO-01','Livro',39.90);\nSELECT sku,nome,preco FROM produtos ORDER BY sku;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Uma linha: GO-01 | Livro | 39.90.",
+      "quiz": {
+        "question": "Por que CHECK(preco>=0) sozinho não obriga informar preço?",
+        "options": [
+          "Porque CHECK é apenas comentário.",
+          "Porque numeric converte NULL em zero.",
+          "Porque somente PRIMARY KEY permite CHECK.",
+          "Porque uma avaliação NULL não é falsa e o CHECK a aceita."
+        ],
+        "answer": 3,
+        "explanation": "Combine NOT NULL para presença e CHECK para a faixa de valores."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Rejeite duplicação",
+          "prompt": "Em sessão de laboratório insira duas vezes o mesmo SKU e registre a constraint violada.",
+          "hint": "Repita a inserção em comandos separados.",
+          "solution": "A segunda inserção falha com unique_violation, SQLSTATE 23505. Mantenha UNIQUE(sku), mesmo usando id técnico.",
+          "criteria": [
+            "Detecta duplicata no banco.",
+            "Explica por que id distinto não autoriza SKU repetido."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Preço ausente",
+          "prompt": "Teste preco=NULL e preco=-1 em comandos separados.",
+          "hint": "Observe que duas regras diferentes devem ser acionadas.",
+          "solution": "NULL viola NOT NULL (23502); -1 viola CHECK (23514). Nenhuma linha inválida deve persistir.",
+          "criteria": [
+            "Registra as duas falhas.",
+            "Conta apenas a linha válida após os testes."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Nome em branco",
+          "prompt": "Adapte o modelo para rejeitar nome com apenas espaços e mostre um teste.",
+          "hint": "btrim remove espaços externos.",
+          "solution": "NOT NULL CHECK(length(btrim(nome))>0) rejeita NULL, vazio e espaços; INSERT com nome '   ' deve falhar.",
+          "criteria": [
+            "Mantém nomes normais.",
+            "Rejeita vazio e espaços."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/ddl-constraints.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 4,
+      "level": 2,
+      "title": "INSERT, UPDATE, DELETE e RETURNING",
+      "goal": "Executar escritas com retorno das linhas realmente afetadas.",
+      "theory": [
+        {
+          "title": "DML com evidência",
+          "text": "INSERT, UPDATE e DELETE alteram linhas; RETURNING devolve dados das linhas atingidas na própria instrução. Isso evita buscar uma identidade por MAX(id), que poderia apontar para outra sessão. Uma escrita sem WHERE pode afetar todas as linhas: preveja o conjunto antes de executar."
+        },
+        {
+          "title": "Atualização relativa",
+          "text": "SET estoque=estoque-2 calcula a mudança no servidor e evita o padrão ler, calcular no cliente e sobrescrever com um valor antigo. A condição estoque>=2 junto do UPDATE permite uma reserva atômica de uma linha; zero linhas retornadas significa que a condição não foi atendida."
+        },
+        {
+          "title": "Conflitos explícitos",
+          "text": "ON CONFLICT precisa de uma constraint ou índice de unicidade correspondente. DO UPDATE e DO NOTHING expressam contratos diferentes. Não esconda qualquer erro como se fosse uma duplicata aceitável; valide a quantidade de linhas retornadas e a semântica da operação."
+        }
+      ],
+      "code": "CREATE TEMP TABLE estoque(sku text PRIMARY KEY, quantidade integer NOT NULL CHECK(quantidade>=0));\nINSERT INTO estoque VALUES ('A',5) RETURNING sku,quantidade;\nUPDATE estoque SET quantidade=quantidade-2 WHERE sku='A' AND quantidade>=2 RETURNING sku,quantidade;\nINSERT INTO estoque VALUES('A',99) ON CONFLICT(sku) DO NOTHING;\nSELECT * FROM estoque;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "INSERT retorna A|5; UPDATE retorna A|3; a inserção conflitante não altera a linha; SELECT retorna A|3.",
+      "quiz": {
+        "question": "Como obter a identidade gerada pela sua própria inserção?",
+        "options": [
+          "INSERT ... RETURNING id.",
+          "SELECT MAX(id) depois.",
+          "Esperar que a próxima sequência seja sempre id+1.",
+          "Consultar a última linha sem ORDER BY."
+        ],
+        "answer": 0,
+        "explanation": "RETURNING pertence à mesma instrução e devolve suas linhas afetadas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Reserve sem negativo",
+          "prompt": "Tente reservar 4 unidades quando restam 3 e conte as linhas retornadas.",
+          "hint": "Mantenha quantidade>=4 no WHERE.",
+          "solution": "UPDATE estoque SET quantidade=quantidade-4 WHERE sku='A' AND quantidade>=4 RETURNING *; retorna zero linhas; saldo fica 3.",
+          "criteria": [
+            "Retorno vazio interpretado como reserva recusada.",
+            "Saldo continua 3."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Atualização seletiva",
+          "prompt": "Acrescente SKU B com 7 e aumente somente B em 2.",
+          "hint": "Use a chave no WHERE e RETURNING.",
+          "solution": "INSERT INTO estoque VALUES('B',7); UPDATE estoque SET quantidade=quantidade+2 WHERE sku='B' RETURNING *; B vira 9 e A permanece 3.",
+          "criteria": [
+            "Exatamente uma linha alterada.",
+            "Comprova o saldo de A depois."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Exclua com critério",
+          "prompt": "Exclua somente itens com quantidade zero e retorne seus SKUs.",
+          "hint": "DELETE também suporta RETURNING.",
+          "solution": "DELETE FROM estoque WHERE quantidade=0 RETURNING sku; Com a amostra A=3 e B=9 nenhuma linha é excluída.",
+          "criteria": [
+            "Filtro explícito.",
+            "Prevê zero exclusões nessa amostra."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/dml-returning.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 5,
+      "level": 2,
+      "title": "Filtros, NULL e ordem determinística",
+      "goal": "Escrever condições com semântica de ausência e desempates claros.",
+      "theory": [
+        {
+          "title": "Lógica de três valores",
+          "text": "Comparar algo com NULL usando = resulta desconhecido, não verdadeiro. WHERE conserva apenas verdadeiro. Use IS NULL e IS NOT NULL para presença; IS DISTINCT FROM compara também valores ausentes de modo definido. NOT IN pode surpreender se a subconsulta contiver NULL."
+        },
+        {
+          "title": "Ordem é parte do contrato",
+          "text": "Sem ORDER BY o banco não promete ordem. LIMIT escolhe um subconjunto do resultado ordenado ou de uma ordem indefinida. Para páginas estáveis, acrescente uma chave única ao desempate; ORDER BY preco sozinho não resolve produtos com o mesmo preço."
+        },
+        {
+          "title": "Intervalos e índices",
+          "text": "Datas e instantes são frequentemente filtrados com início inclusivo e fim exclusivo: valor>=inicio AND valor<fim. Esse contrato evita adivinhar o último milissegundo do dia e combina bem com índices. Funções aplicadas à coluna podem exigir outra estratégia de índice."
+        }
+      ],
+      "code": "CREATE TEMP TABLE tarefas(id integer PRIMARY KEY, titulo text, concluida_em date);\nINSERT INTO tarefas VALUES(1,'Ler',NULL),(2,'Praticar','2026-10-23'),(3,'Revisar',NULL);\nSELECT id,titulo FROM tarefas WHERE concluida_em IS NULL ORDER BY id;\nSELECT NULL::integer IS DISTINCT FROM 1 AS diferente;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Pendentes: 1|Ler e 3|Revisar; diferente=t.",
+      "quiz": {
+        "question": "Qual condição seleciona datas ausentes?",
+        "options": [
+          "concluida_em = NULL.",
+          "concluida_em IS NULL.",
+          "concluida_em <> NULL.",
+          "concluida_em = 'NULL'."
+        ],
+        "answer": 1,
+        "explanation": "NULL representa ausência e precisa de testes de presença."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compare com ausência",
+          "prompt": "Preveja e execute SELECT NULL=1, NULL IS DISTINCT FROM 1.",
+          "hint": "O primeiro é desconhecido e o segundo compara ausência.",
+          "solution": "O primeiro resultado é SQL NULL; o segundo é t. No psql, NULL pode aparecer como célula vazia.",
+          "criteria": [
+            "Distingue NULL de f.",
+            "Explica a diferença entre as expressões."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Página estável",
+          "prompt": "Liste uma tarefa pendente por página, ordenada pelo título, com desempate por id.",
+          "hint": "LIMIT precisa de ORDER BY completo.",
+          "solution": "SELECT id,titulo FROM tarefas WHERE concluida_em IS NULL ORDER BY titulo,id LIMIT 1; retorna Ler. Para páginas seguintes avalie cursor pela mesma tupla, evitando OFFSET grande.",
+          "criteria": [
+            "Dois campos de ordenação.",
+            "Resultado Ler na amostra."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Período fechado-aberto",
+          "prompt": "Selecione conclusões de outubro de 2026.",
+          "hint": "Use >= primeiro dia e < primeiro dia do mês seguinte.",
+          "solution": "WHERE concluida_em>=DATE '2026-10-01' AND concluida_em<DATE '2026-11-01'; inclui 23/10 e exclui 01/11.",
+          "criteria": [
+            "Dois limites explícitos.",
+            "Testa início, fim e valor NULL."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/functions-comparison.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 6,
+      "level": 2,
+      "title": "Agregações e GROUP BY",
+      "goal": "Conferir contagens, totais e filtros sobre grupos.",
+      "theory": [
+        {
+          "title": "O que se conta",
+          "text": "COUNT(*) conta linhas; COUNT(coluna) conta somente valores não nulos. SUM ignora valores NULL e, sem entradas, devolve NULL; COALESCE pode oferecer zero quando isso corresponde à regra de negócio. Não substitua ausência por zero sem compreender o significado."
+        },
+        {
+          "title": "Agrupar e filtrar",
+          "text": "WHERE filtra linhas antes da agregação; HAVING filtra grupos depois. Cada coluna projetada deve ser agregada ou fazer parte das regras de agrupamento aceitas. Uma consulta que agrega por categoria não pode selecionar um produto arbitrário como se representasse o grupo."
+        },
+        {
+          "title": "Relatório verificável",
+          "text": "Antes de otimizar, calcule manualmente um conjunto pequeno. Inclua linhas com NULL, grupos com mais de um item e grupos ausentes. Para exibir uma categoria sem vendas, parta da tabela de categorias com LEFT JOIN e escolha COUNT da chave da venda, evitando contar a linha preservada."
+        }
+      ],
+      "code": "CREATE TEMP TABLE vendas(categoria text, valor numeric(10,2));\nINSERT INTO vendas VALUES('livro',30),('livro',20),('curso',NULL);\nSELECT categoria, count(*) AS linhas, count(valor) AS informados, coalesce(sum(valor),0) AS total\nFROM vendas GROUP BY categoria ORDER BY categoria;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "curso|1|0|0; livro|2|2|50.00.",
+      "quiz": {
+        "question": "Qual expressão ignora valores NULL ao contar?",
+        "options": [
+          "COUNT(*).",
+          "COUNT(1) sempre conta apenas não nulos de valor.",
+          "COUNT(valor).",
+          "SUM(*) ."
+        ],
+        "answer": 2,
+        "explanation": "COUNT de uma expressão conta suas avaliações não nulas; COUNT(*) conta linhas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Filtre grupos",
+          "prompt": "Mostre apenas categorias cujo total seja maior que 40.",
+          "hint": "A condição agregada pertence a HAVING.",
+          "solution": "SELECT categoria,sum(valor) FROM vendas GROUP BY categoria HAVING sum(valor)>40; retorna livro|50.00.",
+          "criteria": [
+            "Usa HAVING corretamente.",
+            "Uma categoria no resultado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Conte ausência",
+          "prompt": "Calcule quantas vendas não têm valor informado.",
+          "hint": "COUNT(*)-COUNT(valor) ou FILTER.",
+          "solution": "SELECT count(*) FILTER(WHERE valor IS NULL) FROM vendas; retorna 1. A diferença entre contagens também é 1.",
+          "criteria": [
+            "Resultado 1.",
+            "Não compara valor=NULL."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Conjunto vazio",
+          "prompt": "Compare SUM(valor) e COALESCE(SUM(valor),0) com WHERE false.",
+          "hint": "Ausência de linhas não produz soma zero automaticamente.",
+          "solution": "SELECT sum(valor),coalesce(sum(valor),0) FROM vendas WHERE false; retorna NULL e 0. Documente qual interpretação seu relatório exige.",
+          "criteria": [
+            "Explica o NULL original.",
+            "Justifica quando exibir zero."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/tutorial-agg.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 7,
+      "level": 3,
+      "title": "JOIN e cardinalidade",
+      "goal": "Unir tabelas sem perder registros nem multiplicar totais involuntariamente.",
+      "theory": [
+        {
+          "title": "Chaves e multiplicidade",
+          "text": "Uma foreign key valida que um filho referencia um pai existente, mas não limita quantos filhos esse pai possui. Um JOIN entre pedido e itens devolve uma linha por item, repetindo os dados do pedido. Somar o total do pedido após essa união pode duplicar a receita."
+        },
+        {
+          "title": "INNER e LEFT",
+          "text": "INNER JOIN exige correspondência. LEFT JOIN preserva cada linha da esquerda e preenche a direita com NULL quando não há correspondência. Um filtro da direita no WHERE pode eliminar essas linhas; coloque no ON quando a intenção é filtrar filhos sem perder pais."
+        },
+        {
+          "title": "Desenhe antes de unir",
+          "text": "Declare a granularidade do relatório: uma linha por cliente, pedido ou item. Agregue os filhos antes da união se precisa de um total por pai. Conte a chave do filho, e não COUNT(*), ao medir ausência depois de um LEFT JOIN."
+        }
+      ],
+      "code": "CREATE TEMP TABLE clientes(id integer PRIMARY KEY,nome text);\nCREATE TEMP TABLE pedidos(id integer PRIMARY KEY,cliente_id integer REFERENCES clientes(id),total numeric);\nINSERT INTO clientes VALUES(1,'Ana'),(2,'Bia');\nINSERT INTO pedidos VALUES(10,1,30),(11,1,20);\nSELECT c.nome,count(p.id) AS pedidos,coalesce(sum(p.total),0) AS total\nFROM clientes c LEFT JOIN pedidos p ON p.cliente_id=c.id\nGROUP BY c.id,c.nome ORDER BY c.id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Ana|2|50; Bia|0|0.",
+      "quiz": {
+        "question": "Por que COUNT(*) seria 1 para Bia no LEFT JOIN da aula?",
+        "options": [
+          "Porque existe um pedido oculto.",
+          "Porque COUNT sempre começa em 1.",
+          "Porque a foreign key cria filhos.",
+          "Porque a linha da cliente é preservada mesmo sem pedido."
+        ],
+        "answer": 3,
+        "explanation": "Conte p.id para contar pedidos reais; seu NULL não entra em COUNT(p.id)."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Filtro sem perda",
+          "prompt": "Mostre clientes e pedidos maiores que 25, preservando clientes sem esse pedido.",
+          "hint": "Filtre p.total no ON.",
+          "solution": "LEFT JOIN pedidos p ON p.cliente_id=c.id AND p.total>25 mantém Ana com pedido 10 e Bia com NULL.",
+          "criteria": [
+            "Bia permanece no resultado.",
+            "Pedido 11 fica excluído do lado direito."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique a duplicação",
+          "prompt": "Um pedido de 50 tem dois itens. Por que SUM(p.total) após JOIN dos itens vira 100?",
+          "hint": "Identifique a granularidade do resultado intermediário.",
+          "solution": "O pedido aparece duas vezes, uma por item. Agregue itens por pedido antes ou calcule receita diretamente em pedidos; DISTINCT em totais não resolve pedidos com valores iguais.",
+          "criteria": [
+            "Mostra as duas linhas intermediárias.",
+            "Propõe correção sem SUM(DISTINCT total)."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Exija integridade",
+          "prompt": "Tente inserir pedido com cliente_id=999 em comando isolado.",
+          "hint": "A foreign key deve rejeitar órfãos.",
+          "solution": "INSERT INTO pedidos VALUES(12,999,10); falha com foreign_key_violation, SQLSTATE 23503.",
+          "criteria": [
+            "Registra erro de foreign key.",
+            "Não cria cliente fictício para esconder a falha."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/tutorial-join.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 8,
+      "level": 3,
+      "title": "EXISTS, subconsultas e ausência",
+      "goal": "Consultar existência sem multiplicar linhas externas.",
+      "theory": [
+        {
+          "title": "Pergunta de existência",
+          "text": "EXISTS retorna verdadeiro quando a subconsulta produz pelo menos uma linha. SELECT 1 é uma convenção: a informação relevante é haver linha, não o valor projetado. Uma correlação liga a consulta interna à linha externa por sua chave."
+        },
+        {
+          "title": "Anti-join e NULL",
+          "text": "NOT EXISTS expressa não haver filho correspondente e é robusto à presença de NULL na coluna projetada da subconsulta. NOT IN tem semântica de três valores: se não houver igualdade, um NULL na lista pode impedir que a condição seja verdadeira."
+        },
+        {
+          "title": "Custo deve ser medido",
+          "text": "Escritas SQL diferentes podem gerar planos semelhantes. Evite afirmar que uma subconsulta sempre executa uma vez por linha ou que JOIN é sempre mais rápido. Primeiro preserve a semântica, depois observe o plano e um volume representativo."
+        }
+      ],
+      "code": "CREATE TEMP TABLE clientes(id integer PRIMARY KEY,nome text);\nCREATE TEMP TABLE pedidos(cliente_id integer);\nINSERT INTO clientes VALUES(1,'Ana'),(2,'Bia');\nINSERT INTO pedidos VALUES(1),(1),(NULL);\nSELECT nome FROM clientes c WHERE NOT EXISTS(SELECT 1 FROM pedidos p WHERE p.cliente_id=c.id) ORDER BY nome;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Uma linha: Bia. O pedido sem cliente não elimina Bia do resultado.",
+      "quiz": {
+        "question": "Qual opção consulta clientes sem pedidos sem a armadilha de NULL de NOT IN?",
+        "options": [
+          "NOT EXISTS com correlação pela chave.",
+          "NOT IN sem verificar valores nulos.",
+          "JOIN sem condição.",
+          "COUNT(*) no WHERE sem agrupamento."
+        ],
+        "answer": 0,
+        "explanation": "NOT EXISTS testa a ausência de correspondência e não depende do valor projetado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compare as formas",
+          "prompt": "Execute id NOT IN(SELECT cliente_id FROM pedidos) e compare com NOT EXISTS.",
+          "hint": "Existe um NULL em pedidos.",
+          "solution": "NOT IN não seleciona Bia nessa amostra, pois a comparação pode ser desconhecida; NOT EXISTS retorna Bia.",
+          "criteria": [
+            "Registra os dois resultados.",
+            "Explica o papel do NULL."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Clientes com compra",
+          "prompt": "Retorne os clientes com ao menos um pedido, sem DISTINCT.",
+          "hint": "Use EXISTS em vez de JOIN.",
+          "solution": "SELECT nome FROM clientes c WHERE EXISTS(SELECT 1 FROM pedidos p WHERE p.cliente_id=c.id); retorna Ana uma vez.",
+          "criteria": [
+            "Ana aparece uma vez.",
+            "Não usa DISTINCT para corrigir multiplicação."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Índice candidato",
+          "prompt": "Proponha índice para a correlação e diga como verificar o ganho.",
+          "hint": "A busca interna usa cliente_id.",
+          "solution": "CREATE INDEX ON pedidos(cliente_id); compare EXPLAIN (ANALYZE,BUFFERS) em dados maiores. A amostra minúscula pode favorecer varredura sequencial.",
+          "criteria": [
+            "Índice na coluna correlacionada.",
+            "Não promete uso obrigatório do índice."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/functions-subquery.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 9,
+      "level": 3,
+      "title": "CTEs e views",
+      "goal": "Separar etapas de consulta e distinguir definição de armazenamento.",
+      "theory": [
+        {
+          "title": "Nomear etapas",
+          "text": "WITH dá nomes a resultados intermediários e pode tornar uma consulta longa legível. Uma CTE não recursiva e sem efeitos colaterais pode ser incorporada ao plano; não a trate automaticamente como tabela temporária materializada. MATERIALIZED e NOT MATERIALIZED influenciam decisões com custos diferentes."
+        },
+        {
+          "title": "Views comuns",
+          "text": "Uma view armazena uma consulta, não uma cópia independente de seus resultados. Consultar uma view observa os dados conforme a transação e as permissões aplicáveis. Uma materialized view armazena resultados que precisam de REFRESH e têm outro contrato de atualização."
+        },
+        {
+          "title": "Interfaces de consulta",
+          "text": "Projete colunas explicitamente em views que servem como contrato para consumidores. Alterar tabelas pode afetar dependências. Não use uma view comum como promessa genérica de segurança; avalie proprietário, privilégios e opções como security_invoker conforme o caso."
+        }
+      ],
+      "code": "CREATE TEMP TABLE vendas(cliente text,valor numeric);\nINSERT INTO vendas VALUES('Ana',30),('Ana',20),('Bia',10);\nCREATE TEMP VIEW totais AS SELECT cliente,sum(valor) AS total FROM vendas GROUP BY cliente;\nWITH elegiveis AS (SELECT cliente,total FROM totais WHERE total>=40)\nSELECT cliente,total FROM elegiveis ORDER BY cliente;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Uma linha: Ana|50.",
+      "quiz": {
+        "question": "Uma view comum mantém uma cópia estática dos dados?",
+        "options": [
+          "Sim, e atualiza apenas com REFRESH.",
+          "Não; guarda a definição da consulta.",
+          "Sim, sempre em arquivo CSV.",
+          "Sim, até desconectar o cliente."
+        ],
+        "answer": 1,
+        "explanation": "O armazenamento de resultados é característica de materialized views, não de views comuns."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Observe atualização",
+          "prompt": "Insira venda de 35 para Bia e consulte a view de novo.",
+          "hint": "A consulta da view usa as linhas atuais visíveis.",
+          "solution": "INSERT INTO vendas VALUES('Bia',35); SELECT * FROM totais ORDER BY cliente; mostra Ana=50 e Bia=45.",
+          "criteria": [
+            "Bia totaliza 45.",
+            "Não executa REFRESH numa view comum."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Dois passos",
+          "prompt": "Use duas CTEs para agregar vendas e depois selecionar totais acima de 20.",
+          "hint": "Separe GROUP BY do filtro final.",
+          "solution": "WITH soma AS(SELECT cliente,sum(valor) total FROM vendas GROUP BY cliente), maiores AS(SELECT * FROM soma WHERE total>20) SELECT * FROM maiores ORDER BY cliente;",
+          "criteria": [
+            "Consulta reproduz o total manual.",
+            "Explica a granularidade de cada etapa."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Materialização consciente",
+          "prompt": "Explique quando investigar MATERIALIZED numa CTE cara reutilizada duas vezes.",
+          "hint": "Compare repetição de trabalho e filtragem antecipada.",
+          "solution": "MATERIALIZED pode calcular uma vez e impedir certas otimizações; NOT MATERIALIZED pode permitir filtros mas repetir trabalho. Compare planos e buffers com dados representativos.",
+          "criteria": [
+            "Apresenta os dois custos.",
+            "Propõe comparação mensurável."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/queries-with.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 10,
+      "level": 4,
+      "title": "Funções de janela e frames",
+      "goal": "Calcular ranking e acumulados sem reduzir a granularidade das linhas.",
+      "theory": [
+        {
+          "title": "Agregação sobre linhas",
+          "text": "Uma janela calcula sobre um conjunto relacionado à linha corrente sem colapsar todas as linhas do grupo como GROUP BY. PARTITION BY divide esse conjunto; ORDER BY dentro de OVER define a ordem da janela, mas não substitui ORDER BY do resultado final."
+        },
+        {
+          "title": "Empates e ranking",
+          "text": "row_number sempre numera; rank deixa lacunas após empates; dense_rank não deixa lacunas. Defina se empates devem compartilhar posição e acrescente uma chave para desempatar quando precisa de uma única ordem estável. A escolha deve refletir a pergunta do relatório."
+        },
+        {
+          "title": "Frames explícitos",
+          "text": "Com ORDER BY, o frame padrão inclui pares que empatam na ordenação, o que pode surpreender em acumulados. ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW declara soma linha a linha. Se houver empates, uma ordenação única torna essa progressão determinística."
+        }
+      ],
+      "code": "WITH vendas(id,dia,valor) AS(VALUES(1,DATE '2026-10-01',10),(2,DATE '2026-10-01',20),(3,DATE '2026-10-02',5))\nSELECT id,valor,sum(valor) OVER(ORDER BY dia,id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS acumulado\nFROM vendas ORDER BY dia,id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "id 1:10|10; id 2:20|30; id 3:5|35.",
+      "quiz": {
+        "question": "Qual cláusula mantém cada venda e calcula um total acumulado?",
+        "options": [
+          "GROUP BY sem colunas.",
+          "HAVING valor.",
+          "SUM(valor) OVER com ordem e frame.",
+          "DISTINCT SUM(valor) sozinho."
+        ],
+        "answer": 2,
+        "explanation": "A janela preserva as linhas individuais e agrega no frame de cada uma."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Ranking com empate",
+          "prompt": "Calcule rank e dense_rank para pontuações 100,100,80.",
+          "hint": "Ordene pontuacao DESC dentro de OVER.",
+          "solution": "rank() OVER(ORDER BY pontuacao DESC) produz 1,1,3; dense_rank produz 1,1,2. Ordene a saída por pontuacao e id.",
+          "criteria": [
+            "Demonstra a lacuna do rank.",
+            "Define desempate da exibição."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Reinicie por região",
+          "prompt": "Acrescente região e reinicie a soma acumulada a cada região.",
+          "hint": "PARTITION BY regiao separa janelas.",
+          "solution": "sum(valor) OVER(PARTITION BY regiao ORDER BY dia,id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW).",
+          "criteria": [
+            "Acumulados de regiões não se misturam.",
+            "Usa frame explícito."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Último versus anterior",
+          "prompt": "Mostre a variação de valor em relação à venda anterior.",
+          "hint": "lag(valor) busca a linha anterior na janela.",
+          "solution": "valor-lag(valor) OVER(ORDER BY dia,id) produz NULL,10,-15 para os valores 10,20,5. A primeira linha não tem anterior; não substitua ausência por zero sem um contrato explícito.",
+          "criteria": [
+            "Resultado NULL,10,-15.",
+            "Explica o NULL inicial sem inventar zero."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/tutorial-window.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 11,
+      "level": 4,
+      "title": "LATERAL e consulta por linha",
+      "goal": "Buscar o filho mais recente preservando pais sem filhos.",
+      "theory": [
+        {
+          "title": "Correlação no FROM",
+          "text": "LATERAL permite que uma subconsulta no FROM use valores de itens que aparecem antes dela. Isso é útil para buscar os últimos N eventos de cada entidade e para expandir estruturas. A correlação deve estar clara no predicado pela chave do pai."
+        },
+        {
+          "title": "LEFT JOIN LATERAL",
+          "text": "LEFT JOIN LATERAL (...) ON true preserva pais quando a subconsulta retorna zero linhas. ORDER BY instante DESC,id DESC LIMIT 1 escolhe um filho com desempate previsível. Um índice com a chave do pai seguida da ordenação pode ajudar essa forma de acesso."
+        },
+        {
+          "title": "Alternativas",
+          "text": "DISTINCT ON e row_number também podem resolver último filho por pai. Compare sua legibilidade e planos; a melhor forma depende do volume de pais e da distribuição de filhos. LATERAL não é garantia automática de menor custo."
+        }
+      ],
+      "code": "CREATE TEMP TABLE clientes(id integer PRIMARY KEY);\nCREATE TEMP TABLE pedidos(id integer PRIMARY KEY,cliente_id integer,criado_em date);\nINSERT INTO clientes VALUES(1),(2);\nINSERT INTO pedidos VALUES(10,1,'2026-10-01'),(11,1,'2026-10-02');\nSELECT c.id AS cliente,p.id AS ultimo_pedido FROM clientes c\nLEFT JOIN LATERAL(SELECT id FROM pedidos WHERE cliente_id=c.id ORDER BY criado_em DESC,id DESC LIMIT 1) p ON true\nORDER BY c.id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "cliente 1 tem ultimo_pedido 11; cliente 2 tem NULL.",
+      "quiz": {
+        "question": "Por que usar LEFT JOIN LATERAL em vez de CROSS JOIN LATERAL aqui?",
+        "options": [
+          "Para ordenar automaticamente toda a saída.",
+          "Para ignorar o LIMIT.",
+          "Para impedir índices.",
+          "Para preservar clientes sem pedidos."
+        ],
+        "answer": 3,
+        "explanation": "A junção à esquerda mantém a linha do pai quando a subconsulta está vazia."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Dois últimos",
+          "prompt": "Altere LIMIT 1 para 2 e explique a granularidade resultante.",
+          "hint": "Cada pai pode gerar até duas linhas de filhos.",
+          "solution": "Cliente 1 gera pedidos 11 e 10; cliente 2 ainda gera uma linha com NULL. Ordene também o resultado final para exibição definida.",
+          "criteria": [
+            "Prevê três linhas totais.",
+            "Distingue ordem interna e final."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desempate",
+          "prompt": "Insira pedido 12 com a mesma data do 11 e preserve a escolha determinística.",
+          "hint": "id DESC já desempata datas iguais.",
+          "solution": "INSERT INTO pedidos VALUES(12,1,'2026-10-02'); a consulta seleciona 12 pela ordenação criado_em DESC,id DESC.",
+          "criteria": [
+            "Seleciona 12.",
+            "Explica por que ordenar somente data seria insuficiente."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Índice da busca",
+          "prompt": "Proponha índice para esse padrão de último pedido.",
+          "hint": "Cliente filtra; data e id ordenam.",
+          "solution": "CREATE INDEX ON pedidos(cliente_id,criado_em DESC,id DESC); meça com EXPLAIN e volume maior, sem assumir uso na amostra.",
+          "criteria": [
+            "Ordem das colunas justificada.",
+            "Inclui limite de validade do teste pequeno."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/queries-table-expressions.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 12,
+      "level": 4,
+      "title": "CTEs recursivas e hierarquias",
+      "goal": "Percorrer uma árvore finita e tratar possibilidade de ciclos.",
+      "theory": [
+        {
+          "title": "Âncora e passo",
+          "text": "WITH RECURSIVE combina um termo inicial e um termo que usa o resultado anterior. UNION ALL mantém ocorrências; uma condição de término precisa impedir crescimento indefinido. Num contador, um limite numérico resolve; numa hierarquia, ciclos requerem detecção específica."
+        },
+        {
+          "title": "Profundidade e caminho",
+          "text": "Um array de IDs visitados pode registrar o caminho. Antes de seguir uma aresta, rejeite um ID já presente no caminho. A cláusula CYCLE oferece suporte declarativo a detecção de ciclos em consultas adequadas. LIMIT externo não é substituto confiável para uma regra de término."
+        },
+        {
+          "title": "Contrato da árvore",
+          "text": "Defina raiz, órfãos e direção da relação. Uma foreign key autorreferente garante existência do pai, mas não garante ausência de ciclos. Teste árvore normal, nó sem pai e ciclo introduzido num laboratório; a aplicação deve decidir como reportar dados inválidos."
+        }
+      ],
+      "code": "WITH RECURSIVE contador(n) AS(\n VALUES(1)\n UNION ALL\n SELECT n+1 FROM contador WHERE n<5\n)\nSELECT n,n*n AS quadrado FROM contador ORDER BY n;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Cinco linhas: 1|1, 2|4, 3|9, 4|16, 5|25.",
+      "quiz": {
+        "question": "O que limita a recursão do exemplo?",
+        "options": [
+          "A condição n<5 no passo recursivo.",
+          "O nome contador.",
+          "ORDER BY no final.",
+          "O alias quadrado."
+        ],
+        "answer": 0,
+        "explanation": "O passo deixa de produzir linhas quando o limite é atingido."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Novo limite",
+          "prompt": "Gere os inteiros de 3 até 7, incluindo ambos.",
+          "hint": "Mude âncora e condição de avanço.",
+          "solution": "VALUES(3) como âncora e SELECT n+1 FROM contador WHERE n<7 produzem 3,4,5,6,7.",
+          "criteria": [
+            "Cinco valores sem 8.",
+            "Explica por que o teste usa o valor anterior."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Caminho sem ciclo",
+          "prompt": "Descreva a condição para visitar próximo_id num array caminho de inteiros.",
+          "hint": "Use =ANY para verificar pertinência.",
+          "solution": "Acrescente próximo_id com caminho||próximo_id e siga somente WHERE NOT(próximo_id=ANY(caminho)); inicialize caminho com o ID da raiz.",
+          "criteria": [
+            "Caminho começa com a raiz.",
+            "Um ID repetido interrompe aquela ramificação."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "FK não basta",
+          "prompt": "Mostre por que referências 1→2 e 2→1 não são impedidas por uma foreign key comum.",
+          "hint": "Ambos os pais existem.",
+          "solution": "A FK valida existência, não aciclicidade. Insira raízes provisórias e depois atualize para o ciclo no laboratório; a consulta precisa detecção e o domínio precisa uma política de prevenção.",
+          "criteria": [
+            "Explica existência versus estrutura.",
+            "Inclui caso de ciclo no plano de testes."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/queries-with.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 13,
+      "level": 5,
+      "title": "Atomicidade, COMMIT e savepoints",
+      "goal": "Agrupar mudanças e desfazer uma parte sem perder o contrato da operação.",
+      "theory": [
+        {
+          "title": "Unidade de negócio",
+          "text": "BEGIN inicia uma transação explícita e COMMIT confirma o conjunto; ROLLBACK desfaz suas mudanças ainda não confirmadas. Sem BEGIN, o servidor envolve cada instrução numa transação própria. O cliente pode iniciar transações implicitamente, então confira também o comportamento do driver."
+        },
+        {
+          "title": "Savepoint",
+          "text": "SAVEPOINT marca um ponto ao qual é possível voltar dentro da transação. Após um erro SQL numa transação, é necessário recuperar o estado com rollback apropriado antes de continuar. Um savepoint é útil para tentativa opcional, mas não deve dividir artificialmente uma operação que precisa ser atômica."
+        },
+        {
+          "title": "Efeitos externos",
+          "text": "Um rollback SQL não recolhe um e-mail já enviado nem desfaz uma chamada HTTP externa. Para integrar eventos, considere registrar uma outbox na mesma transação e publicar posteriormente com idempotência. Verifique invariantes, não apenas a ausência de mensagens de erro."
+        }
+      ],
+      "code": "CREATE TEMP TABLE contas(id integer PRIMARY KEY,saldo integer CHECK(saldo>=0));\nINSERT INTO contas VALUES(1,100),(2,50);\nBEGIN;\nUPDATE contas SET saldo=saldo-30 WHERE id=1;\nSAVEPOINT tentativa;\nUPDATE contas SET saldo=saldo+99 WHERE id=2;\nROLLBACK TO SAVEPOINT tentativa;\nUPDATE contas SET saldo=saldo+30 WHERE id=2;\nCOMMIT;\nSELECT * FROM contas ORDER BY id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Contas: 1|70 e 2|80; o total permanece 150.",
+      "quiz": {
+        "question": "ROLLBACK TO SAVEPOINT encerra toda a transação?",
+        "options": [
+          "Sim; equivale sempre a desconectar.",
+          "Não; desfaz mudanças posteriores ao savepoint e permite continuar.",
+          "Sim; apaga também os dados anteriores ao BEGIN.",
+          "Não; confirma as mudanças posteriores."
+        ],
+        "answer": 1,
+        "explanation": "O savepoint é um ponto de recuperação dentro de uma transação ainda aberta."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Desfaça tudo",
+          "prompt": "Troque COMMIT por ROLLBACK e confira os dois saldos.",
+          "hint": "As inserções ocorreram antes do BEGIN.",
+          "solution": "Após ROLLBACK os saldos voltam a 100 e 50; a tabela e suas linhas iniciais continuam na sessão.",
+          "criteria": [
+            "Confere ambos os saldos.",
+            "Explica o limite da transação."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Invariante",
+          "prompt": "Escreva uma consulta para verificar o total após transferência e explique seu limite.",
+          "hint": "SUM(saldo) verifica a amostra, mas não prova toda implementação.",
+          "solution": "SELECT sum(saldo) FROM contas; retorna 150. Teste também débito inválido, conta ausente e falha intermediária.",
+          "criteria": [
+            "Total 150 na amostra.",
+            "Lista três falhas além do caminho feliz."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Evento externo",
+          "prompt": "Proponha como evitar pedido confirmado sem evento registrado.",
+          "hint": "Registre o evento dentro da mesma transação do pedido.",
+          "solution": "Insira pedido e linha outbox na mesma transação; um worker publica eventos depois e usa ID único para consumo idempotente. SQL rollback sozinho não controla serviços externos.",
+          "criteria": [
+            "Outbox e pedido confirmam juntos.",
+            "Explica possibilidade de entrega duplicada."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/tutorial-transactions.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 14,
+      "level": 5,
+      "title": "MVCC, snapshots e isolamento",
+      "goal": "Distinguir visibilidade de versões e repetição de leituras.",
+      "theory": [
+        {
+          "title": "Versões de linhas",
+          "text": "MVCC mantém versões para que consultas vejam um snapshot consistente com seu isolamento. Leitores comuns não precisam bloquear escritores para obter consistência, mas isso não elimina bloqueios entre escritas, DDL ou locking reads. Uma transação longa pode reter versões antigas e atrasar sua limpeza."
+        },
+        {
+          "title": "Read committed e repeatable read",
+          "text": "O padrão Read Committed usa um novo snapshot por instrução; duas consultas numa mesma transação podem observar commits diferentes. Repeatable Read conserva o snapshot da transação para consultas sucessivas, com regras específicas para conflitos de escrita. Read Uncommitted é tratado como Read Committed no PostgreSQL."
+        },
+        {
+          "title": "Serializable e repetição",
+          "text": "Serializable busca um efeito equivalente a alguma execução serial, mas pode abortar uma transação com SQLSTATE 40001. O aplicativo deve repetir a transação inteira com limite e espera adequada. Não tente somente a última instrução nem repita efeitos externos sem idempotência."
+        }
+      ],
+      "code": "BEGIN ISOLATION LEVEL REPEATABLE READ;\nSHOW transaction_isolation;\nSELECT 10 AS leitura_inicial;\nSELECT 10 AS leitura_repetida;\nCOMMIT;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "transaction_isolation=repeatable read; ambas as consultas escalares retornam 10. O exemplo configura o isolamento, mas sozinho não demonstra concorrência.",
+      "quiz": {
+        "question": "Em Read Committed, quando é escolhido o snapshot de uma leitura comum?",
+        "options": [
+          "Uma única vez quando o servidor inicia.",
+          "Somente no COMMIT.",
+          "No início de cada instrução.",
+          "Uma vez por conexão para sempre."
+        ],
+        "answer": 2,
+        "explanation": "Duas instruções podem observar commits diferentes de outras transações."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Duas sessões reais",
+          "prompt": "Crie tabela persistente forge_mvcc(id int primary key,valor int) com (1,10). Na sessão A inicie Repeatable Read e leia; na B atualize para 20 e confirme; leia de novo na A.",
+          "hint": "O primeiro SELECT da A estabelece o snapshot.",
+          "solution": "A: BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT valor FROM forge_mvcc WHERE id=1; B: UPDATE forge_mvcc SET valor=20 WHERE id=1; A continua vendo 10 até COMMIT; depois vê 20. Remova a tabela após fechar transações.",
+          "criteria": [
+            "Registra a ordem dos comandos de ambas as sessões.",
+            "Comprova 10 dentro e 20 após a transação A."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Mude o isolamento",
+          "prompt": "Repita o roteiro anterior em Read Committed.",
+          "hint": "Cada instrução recebe novo snapshot.",
+          "solution": "Com B confirmada entre as leituras, A lê 10 e depois 20 mesmo sem encerrar sua transação.",
+          "criteria": [
+            "Mantém a mesma ordem do roteiro.",
+            "Explica a diferença sem chamar a leitura de suja."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Retry correto",
+          "prompt": "Descreva tratamento de SQLSTATE 40001 num serviço.",
+          "hint": "A unidade de repetição é a transação de negócio inteira.",
+          "solution": "Faça rollback, espere com jitter e limite de tentativas, inicie nova transação e releia os dados; use chave idempotente para efeitos e pedidos externos.",
+          "criteria": [
+            "Rollback antes da nova tentativa.",
+            "Limite de repetição e idempotência explícitos."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/transaction-iso.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 15,
+      "level": 5,
+      "title": "Bloqueios e reservas concorrentes",
+      "goal": "Usar locks e ordem consistente para proteger alterações disputadas.",
+      "theory": [
+        {
+          "title": "Escritas conflitantes",
+          "text": "Uma atualização de linha bloqueia escritas concorrentes incompatíveis até o fim da transação. SELECT FOR UPDATE permite bloquear linhas antes de uma sequência de decisões; uma consulta comum não faz o mesmo. Mantenha a transação curta e evite esperar entrada humana enquanto conserva locks."
+        },
+        {
+          "title": "Ordem e deadlock",
+          "text": "Duas transações que adquirem linhas em ordem oposta podem formar um ciclo de espera. O PostgreSQL detecta deadlock e aborta uma delas. Adquirir locks numa ordem estável, como ID crescente, reduz esse risco; ainda é preciso tratar o erro e repetir a unidade quando apropriado."
+        },
+        {
+          "title": "SKIP LOCKED",
+          "text": "SKIP LOCKED ignora linhas já bloqueadas e é útil em consumidores de uma fila, mas dá uma visão inconsistente para relatórios gerais. Defina lease, estado de processamento e recuperação do worker; retirar uma linha do conjunto momentaneamente não prova que o trabalho foi concluído."
+        }
+      ],
+      "code": "CREATE TEMP TABLE estoque(id integer PRIMARY KEY,qtd integer CHECK(qtd>=0));\nINSERT INTO estoque VALUES(1,5);\nBEGIN;\nSELECT id,qtd FROM estoque WHERE id=1 FOR UPDATE;\nUPDATE estoque SET qtd=qtd-2 WHERE id=1 AND qtd>=2 RETURNING qtd;\nCOMMIT;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "A leitura retorna id=1,qtd=5; a reserva retorna qtd=3. Tabela temporária é de uma sessão; use a tabela persistente do exercício para observar bloqueio entre sessões.",
+      "quiz": {
+        "question": "Qual prática ajuda a reduzir deadlocks ao alterar várias contas?",
+        "options": [
+          "Esperar entrada humana com a transação aberta.",
+          "Remover todos os timeouts.",
+          "Presumir que MVCC elimina locks de escrita.",
+          "Bloquear as contas numa ordem consistente de IDs."
+        ],
+        "answer": 3,
+        "explanation": "Uma ordem consistente reduz ciclos de espera entre transações."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Observe espera",
+          "prompt": "Crie forge_lock(id int primary key,qtd int) com (1,5). Na A faça BEGIN e SELECT FOR UPDATE; na B tente UPDATE da mesma linha.",
+          "hint": "Use SET lock_timeout='2s' na B para limitar a espera.",
+          "solution": "A mantém o lock; B falha após o timeout se A continuar aberta. Faça ROLLBACK nas duas sessões e remova forge_lock ao final.",
+          "criteria": [
+            "A tabela é persistente e visível às duas sessões.",
+            "Registra a espera ou timeout sem deixar transação aberta."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Reserva atômica",
+          "prompt": "Explique quando UPDATE ... WHERE qtd>=pedido RETURNING basta para uma reserva de uma linha.",
+          "hint": "A verificação e a mudança ocorrem na mesma instrução.",
+          "solution": "Para decrementar um único estoque, UPDATE estoque SET qtd=qtd-2 WHERE id=1 AND qtd>=2 RETURNING qtd evita separar leitura e escrita. Outras invariantes podem exigir transação maior.",
+          "criteria": [
+            "Interpreta zero linhas como recusa.",
+            "Expõe o limite de uma única linha/invariante."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Fila concorrente",
+          "prompt": "Justifique SKIP LOCKED para uma fila e um motivo para não usá-lo em relatório financeiro.",
+          "hint": "Linhas bloqueadas ficam temporariamente invisíveis ao consumidor.",
+          "solution": "Fila pode distribuir trabalhos não bloqueados; um relatório precisa contabilizar todas as linhas visíveis de modo coerente, não omitir valores porque outro worker os bloqueou.",
+          "criteria": [
+            "Distingue distribuição de trabalho e totalização.",
+            "Inclui recuperação de trabalho abandonado."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/explicit-locking.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 16,
+      "level": 6,
+      "title": "Índices B-tree e seletividade",
+      "goal": "Relacionar um índice às condições e à ordenação de uma consulta.",
+      "theory": [
+        {
+          "title": "Acesso e custo",
+          "text": "Um índice oferece caminhos alternativos para localizar linhas; não obriga o otimizador a escolhê-los. Um filtro que devolve grande parte da tabela pode ser mais barato por varredura sequencial. Cada índice consome espaço e precisa ser atualizado nas escritas."
+        },
+        {
+          "title": "Índice composto",
+          "text": "Num padrão cliente_id=? com ORDER BY criado_em DESC,id DESC, um B-tree começando por cliente_id e seguido dessas colunas pode evitar muita leitura e ordenação. A ordem das colunas deve ser justificada pelos predicados reais, não apenas pelos nomes do modelo."
+        },
+        {
+          "title": "Estatísticas",
+          "text": "ANALYZE atualiza estimativas de distribuição usadas no planejamento. Dados sintéticos pequenos ou uniformes não reproduzem toda carga real. Compare linhas estimadas e reais, buffers, tempo e resultado correto em condições documentadas; uma consulta rápida uma vez não estabelece um ganho estável."
+        }
+      ],
+      "code": "CREATE TEMP TABLE eventos(id integer PRIMARY KEY,cliente_id integer,criado_em timestamptz);\nINSERT INTO eventos SELECT n,n%100, TIMESTAMPTZ '2026-01-01 00:00+00'+n*INTERVAL '1 minute' FROM generate_series(1,10000) n;\nCREATE INDEX ON eventos(cliente_id,criado_em DESC,id DESC);\nANALYZE eventos;\nEXPLAIN SELECT id FROM eventos WHERE cliente_id=7 ORDER BY criado_em DESC,id DESC LIMIT 3;\nSELECT id FROM eventos WHERE cliente_id=7 ORDER BY criado_em DESC,id DESC LIMIT 3;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "O plano varia; a consulta retorna IDs 9907,9807,9707 nessa ordem. O índice é candidato ao filtro e à ordenação.",
+      "quiz": {
+        "question": "Criar um índice obriga seu uso em qualquer consulta sobre a coluna?",
+        "options": [
+          "Não; o planejador compara caminhos e custos estimados.",
+          "Sim, mesmo quando toda a tabela é lida.",
+          "Sim, e elimina a necessidade de estatísticas.",
+          "Não, porque índices servem apenas à integridade."
+        ],
+        "answer": 0,
+        "explanation": "Índices adicionam opções, mas uma varredura pode ser a escolha adequada."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Antes e depois",
+          "prompt": "Compare EXPLAIN (ANALYZE,BUFFERS) com e sem o índice secundário usando a mesma carga.",
+          "hint": "Mantenha a PK e remova somente o índice candidato.",
+          "solution": "Registre plano, linhas e buffers antes; crie o índice composto, ANALYZE e repita. Não compare apenas tempo de uma execução com cache diferente.",
+          "criteria": [
+            "Resultados 9907,9807,9707 preservados.",
+            "Relatório cita cache e custo de escrita."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Filtro amplo",
+          "prompt": "Troque o filtro por cliente_id>=0 e retire LIMIT.",
+          "hint": "A condição inclui praticamente todas as linhas.",
+          "solution": "O planejador pode preferir Seq Scan, pois o filtro aceita as 10000 linhas. Isso não demonstra que o índice esteja quebrado.",
+          "criteria": [
+            "Conta 10000 linhas.",
+            "Relaciona seletividade à escolha."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Custo do excesso",
+          "prompt": "Liste duas consequências de criar índices para todas as colunas.",
+          "hint": "Pense em escrita e armazenamento.",
+          "solution": "INSERT/UPDATE/DELETE mantêm mais estruturas; ocupam espaço, WAL e cache. Crie índices ligados a consultas e constraints justificadas.",
+          "criteria": [
+            "Cita custo de manutenção.",
+            "Cita espaço ou WAL e dá critério de seleção."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/indexes.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 17,
+      "level": 6,
+      "title": "Índices parciais, expressões e GIN",
+      "goal": "Escolher estruturas para subconjuntos e operadores específicos.",
+      "theory": [
+        {
+          "title": "Predicado parcial",
+          "text": "Um índice parcial inclui somente linhas que atendem seu predicado. Pode ser útil para a pequena fração de pedidos abertos, mas a consulta precisa permitir ao planejador inferir o predicado. Um plano genérico parametrizado pode não provar um predicado que depende do valor do parâmetro."
+        },
+        {
+          "title": "Expressão indexada",
+          "text": "Um índice sobre lower(email) atende buscas pela mesma expressão, com requisitos de imutabilidade da função indexada. Ele não faz qualquer comparação textual tornar-se automaticamente sem distinção de caixa. Se a expressão representa regra de identidade, avalie também unicidade e collation."
+        },
+        {
+          "title": "GIN e operadores",
+          "text": "GIN é útil a estruturas com múltiplos componentes, como jsonb, arrays e tsvector. A classe de operadores define quais operações são apoiadas. Um índice que acelera contenção JSON não equivale a uma validação de schema e pode tornar escritas mais caras."
+        }
+      ],
+      "code": "CREATE TEMP TABLE usuarios(id integer PRIMARY KEY,email text,ativo boolean);\nINSERT INTO usuarios VALUES(1,'Ana@Exemplo.test',true),(2,'Bia@Exemplo.test',false);\nCREATE INDEX ON usuarios(lower(email)) WHERE ativo;\nSELECT id FROM usuarios WHERE ativo AND lower(email)='ana@exemplo.test';\nCREATE TEMP TABLE docs(id integer,atributos jsonb);\nINSERT INTO docs VALUES(1,'{\"cor\":\"azul\"}'),(2,'{\"cor\":\"verde\"}');\nCREATE INDEX ON docs USING gin(atributos);\nSELECT id FROM docs WHERE atributos @> '{\"cor\":\"azul\"}'::jsonb;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "As duas consultas retornam id=1. O planejador pode ignorar os índices nessa amostra de duas linhas.",
+      "quiz": {
+        "question": "Qual consulta corresponde ao índice parcial lower(email) WHERE ativo?",
+        "options": [
+          "WHERE email=valor em qualquer linha.",
+          "WHERE ativo AND lower(email)=valor.",
+          "WHERE NOT ativo AND email=valor.",
+          "Qualquer WHERE com função de texto."
+        ],
+        "answer": 1,
+        "explanation": "O predicado ativo e a expressão indexada precisam corresponder ao padrão de busca."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Identidade normalizada",
+          "prompt": "Imponha unicidade de lower(email) somente para usuários ativos.",
+          "hint": "Use CREATE UNIQUE INDEX com o mesmo predicado.",
+          "solution": "CREATE UNIQUE INDEX ON usuarios(lower(email)) WHERE ativo; tente novo usuário ativo com ANA@EXEMPLO.TEST e registre a violação.",
+          "criteria": [
+            "Duplicata ativa é rejeitada.",
+            "Explica por que inativos ficam fora da regra."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Operador JSON",
+          "prompt": "Busque documentos contendo cor azul e tamanho M após adicionar esses atributos.",
+          "hint": "@> verifica contenção do fragmento.",
+          "solution": "WHERE atributos @> '{\"cor\":\"azul\",\"tamanho\":\"M\"}'::jsonb seleciona documentos contendo ambos os pares, inclusive com outras chaves.",
+          "criteria": [
+            "Exige as duas propriedades.",
+            "Não compara o documento inteiro por igualdade."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Plano parametrizado",
+          "prompt": "Explique por que um índice parcial WHERE estado='aberto' pode não servir a estado=$1 num plano genérico.",
+          "hint": "O plano não conhece o valor de $1 ao provar o predicado.",
+          "solution": "Sem conhecer o parâmetro, o planejador não pode concluir que todas as linhas procuradas estão no índice parcial; compare planos custom e generic antes de decidir.",
+          "criteria": [
+            "Identifica a prova do predicado.",
+            "Evita afirmar que parâmetros sempre impedem índices."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/indexes-partial.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 18,
+      "level": 6,
+      "title": "EXPLAIN ANALYZE e investigação",
+      "goal": "Comparar estimativas, execução e buffers com segurança.",
+      "theory": [
+        {
+          "title": "Árvore do plano",
+          "text": "EXPLAIN mostra uma árvore de operações. Cost é estimativa em unidades de custo, não milissegundos. Rows é a estimativa de cardinalidade do nó. Leia desde as folhas para entender acessos, junções, agregações e ordenações antes de atribuir a lentidão a uma única linha."
+        },
+        {
+          "title": "Medições reais",
+          "text": "EXPLAIN ANALYZE executa a instrução e acrescenta medidas reais; em nós repetidos, considere loops ao interpretar trabalho. BUFFERS distingue acessos lógicos e leituras observadas, mas não é um retrato completo de todo o armazenamento. Diferenças grandes entre estimativas e realidade sugerem investigar estatísticas e distribuição."
+        },
+        {
+          "title": "Execução com cuidado",
+          "text": "ANALYZE numa instrução UPDATE realmente atualiza. Num laboratório, BEGIN e ROLLBACK podem conter mudanças transacionais, mas não tornam qualquer efeito externo reversível. Teste consultas representativas em ambiente controlado e preserve evidências antes de alterar parâmetros globais."
+        }
+      ],
+      "code": "CREATE TEMP TABLE numeros(n integer);\nINSERT INTO numeros SELECT generate_series(1,10000);\nANALYZE numeros;\nEXPLAIN (ANALYZE,BUFFERS) SELECT count(*) FROM numeros WHERE n BETWEEN 100 AND 199;\nSELECT count(*) AS quantidade FROM numeros WHERE n BETWEEN 100 AND 199;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "O resultado funcional é quantidade=100. Tempos, custos, buffers e plano são variáveis; não copie números esperados como requisito de aprovação.",
+      "quiz": {
+        "question": "EXPLAIN ANALYZE de UPDATE apenas estima a atualização?",
+        "options": [
+          "Sim, ANALYZE impede qualquer escrita.",
+          "Sim, porque todo EXPLAIN é somente leitura.",
+          "Não; executa o UPDATE e mede sua execução.",
+          "Não; executa apenas o WHERE e nunca a escrita."
+        ],
+        "answer": 2,
+        "explanation": "ANALYZE acrescenta medidas reais e, portanto, executa a instrução."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Separe custo e tempo",
+          "prompt": "No seu plano marque um cost e um actual time e explique suas unidades.",
+          "hint": "Cost é abstrato; actual time é duração medida em ms.",
+          "solution": "Relate os valores observados e não converta diretamente cost em ms. Estimativas dependem de parâmetros e estatísticas, medidas dependem da execução.",
+          "criteria": [
+            "Cita ambos os campos reais.",
+            "Não trata cost como duração."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Cardinalidade",
+          "prompt": "Crie índice em n e compare planos para n=7777 e n>0.",
+          "hint": "Um filtro é seletivo e o outro inclui toda a tabela.",
+          "solution": "A igualdade devolve 1 linha; n>0 devolve 10000. O índice pode atender a igualdade e ser preterido na consulta ampla.",
+          "criteria": [
+            "Confere 1 e 10000.",
+            "Explica os acessos observados sem forçar plano."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "DML no laboratório",
+          "prompt": "Meça UPDATE numeros SET n=n+1 WHERE n=1 sem persistir a mudança.",
+          "hint": "Use BEGIN, EXPLAIN ANALYZE e ROLLBACK.",
+          "solution": "BEGIN; EXPLAIN (ANALYZE,BUFFERS) UPDATE numeros SET n=n+1 WHERE n=1; ROLLBACK; depois confirme que n=1 continua existindo.",
+          "criteria": [
+            "Rollback executado.",
+            "Demonstra que o UPDATE foi executado antes de desfeito."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/using-explain.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 19,
+      "level": 7,
+      "title": "JSONB com contratos",
+      "goal": "Consultar atributos variáveis sem abandonar regras de integridade.",
+      "theory": [
+        {
+          "title": "JSON e JSONB",
+          "text": "json preserva o texto de entrada; jsonb armazena uma representação processada que facilita operadores e índices e não conserva detalhes como espaços ou ordem de chaves. Use colunas relacionais para identidades e regras frequentes e JSONB para variação cujo contrato você consegue explicar."
+        },
+        {
+          "title": "Ausência e conversão",
+          "text": "O operador -> devolve JSON; ->> devolve texto. Uma chave ausente e JSON null podem produzir resultados parecidos ao extrair texto, embora tenham significados diferentes. Use existência de chave, jsonb_typeof e testes IS NULL conforme a pergunta; converter texto inválido para número falha."
+        },
+        {
+          "title": "Validação proporcional",
+          "text": "Ter JSONB não significa aceitar qualquer documento. CHECK pode validar tipo do documento e campos obrigatórios; validações mais completas podem pertencer à aplicação com testes de compatibilidade. Indexe operadores de busca reais e não um documento enorme por hábito."
+        }
+      ],
+      "code": "CREATE TEMP TABLE produtos(id integer PRIMARY KEY,atributos jsonb NOT NULL CHECK(jsonb_typeof(atributos)='object'));\nINSERT INTO produtos VALUES(1,'{\"cor\":\"azul\",\"peso\":2}'),(2,'{\"cor\":null}'),(3,'{}');\nSELECT id,atributos ? 'cor' AS tem_chave,atributos->>'cor' AS cor FROM produtos ORDER BY id;\nSELECT id FROM produtos WHERE atributos @> '{\"cor\":\"azul\"}'::jsonb;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "id1: tem_chave=t,cor=azul; id2: t,cor=NULL; id3: f,cor=NULL; contenção retorna id1.",
+      "quiz": {
+        "question": "Qual operador devolve o conteúdo de uma propriedade como texto?",
+        "options": [
+          "->.",
+          "@>.",
+          "? sempre devolve texto.",
+          "->>."
+        ],
+        "answer": 3,
+        "explanation": "->> extrai texto; -> conserva um valor JSON."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Diferencie nulos",
+          "prompt": "Mostre como distinguir produto 2 de produto 3 quanto à chave cor.",
+          "hint": "Teste atributos ? 'cor'.",
+          "solution": "O teste de existência retorna t para 2 e f para 3; jsonb_typeof(atributos->'cor') retorna texto 'null' para 2 e SQL NULL para a chave ausente.",
+          "criteria": [
+            "Distingue presença e conteúdo.",
+            "Não usa apenas ->> para concluir presença."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Peso numérico",
+          "prompt": "Selecione produtos com peso maior que 1 quando o schema garante número ou ausência.",
+          "hint": "Extraia texto e faça cast numeric.",
+          "solution": "WHERE (atributos->>'peso')::numeric>1 seleciona 1. Sem garantia de tipo, adicione validação antes de aceitar documentos para evitar cast inválido.",
+          "criteria": [
+            "Retorna id1.",
+            "Expõe a pré-condição do cast."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Atualização pontual",
+          "prompt": "Mude apenas a cor do produto 1 para verde.",
+          "hint": "jsonb_set recebe caminho text[] e novo valor JSONB.",
+          "solution": "UPDATE produtos SET atributos=jsonb_set(atributos,'{cor}','\"verde\"'::jsonb) WHERE id=1; peso permanece 2.",
+          "criteria": [
+            "Cor vira verde.",
+            "Peso não é perdido."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/functions-json.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 20,
+      "level": 7,
+      "title": "Busca textual e GIN",
+      "goal": "Indexar e consultar lexemas com configuração linguística explícita.",
+      "theory": [
+        {
+          "title": "Texto não é substring",
+          "text": "Busca textual transforma texto em lexemas e usa regras de configuração, como remoção de palavras comuns e radicalização. to_tsvector produz a representação pesquisável e tsquery representa uma consulta. Não espere que toda busca textual tenha a mesma semântica de ILIKE."
+        },
+        {
+          "title": "Configuração consistente",
+          "text": "Use a mesma configuração ao gerar vetores e consultas. Declarar portuguese explicitamente evita depender de default_text_search_config da sessão. Uma coluna gerada pode manter o vetor a partir do texto e um índice GIN pode apoiar o operador @@."
+        },
+        {
+          "title": "Relevância e limites",
+          "text": "ts_rank e funções relacionadas calculam relevância conforme seus argumentos, mas não são probabilidades de verdade. Ordene também por ID para resultados estáveis. Teste acentos, plural, palavras comuns e entradas vazias, documentando o comportamento observado na versão usada."
+        }
+      ],
+      "code": "CREATE TEMP TABLE artigos(id integer PRIMARY KEY,titulo text,\n busca tsvector GENERATED ALWAYS AS(to_tsvector('portuguese'::regconfig,coalesce(titulo,''))) STORED);\nINSERT INTO artigos(id,titulo) VALUES(1,'Aprender PostgreSQL'),(2,'Curso de Python');\nCREATE INDEX ON artigos USING gin(busca);\nSELECT id,titulo FROM artigos WHERE busca @@ plainto_tsquery('portuguese','PostgreSQL') ORDER BY id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Uma linha: 1|Aprender PostgreSQL. O uso do índice depende do plano e do volume.",
+      "quiz": {
+        "question": "Por que fixar portuguese tanto no vetor quanto na consulta?",
+        "options": [
+          "Para usar processamento linguístico consistente.",
+          "Para traduzir automaticamente qualquer texto.",
+          "Para eliminar a necessidade de índice.",
+          "Para transformar relevância em porcentagem correta."
+        ],
+        "answer": 0,
+        "explanation": "Configurações diferentes podem normalizar termos de formas incompatíveis."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Duas palavras",
+          "prompt": "Use plainto_tsquery para buscar aprender e PostgreSQL e descreva a relação entre termos.",
+          "hint": "plainto_tsquery normalmente conecta termos significativos com AND.",
+          "solution": "plainto_tsquery('portuguese','aprender PostgreSQL') exige os lexemas significativos da entrada; consulte o valor gerado para conferir a normalização.",
+          "criteria": [
+            "Inspeciona a tsquery.",
+            "Confere artigo1 e não promete substring literal."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Vetor atualizado",
+          "prompt": "Atualize o título do artigo 2 para PostgreSQL e Python e refaça a busca.",
+          "hint": "A coluna STORED gerada é recalculada na escrita.",
+          "solution": "UPDATE artigos SET titulo='PostgreSQL e Python' WHERE id=2; a pesquisa PostgreSQL passa a retornar IDs 1 e 2.",
+          "criteria": [
+            "Dois artigos encontrados.",
+            "Não atualiza a coluna gerada manualmente."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Ranking estável",
+          "prompt": "Ordene a busca por relevância e use id para desempatar.",
+          "hint": "ts_rank aceita tsvector e tsquery.",
+          "solution": "Use WITH q AS(SELECT plainto_tsquery('portuguese','PostgreSQL') x) SELECT id,ts_rank(busca,x) r FROM artigos,q WHERE busca@@x ORDER BY r DESC,id;",
+          "criteria": [
+            "Calcula rank sobre a mesma consulta.",
+            "Acrescenta desempate por id."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/textsearch.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 21,
+      "level": 7,
+      "title": "Arrays e intervalos",
+      "goal": "Usar operadores estruturados e testar fronteiras de ranges.",
+      "theory": [
+        {
+          "title": "Coleções pequenas",
+          "text": "Arrays preservam uma sequência de valores de um mesmo tipo. Podem ser úteis para tags simples, mas não substituem automaticamente uma relação de muitos para muitos com integridade por elemento. Se cada item tem atributos ou precisa de foreign key própria, modele uma tabela associativa."
+        },
+        {
+          "title": "Ranges e limites",
+          "text": "Um range representa intervalo com limites inclusivos ou exclusivos. O formato [inicio,fim) inclui o início e exclui o fim, permitindo períodos adjacentes sem sobreposição. O operador @> testa contenção e && testa sobreposição. Datas discretas e instantes têm detalhes de representação próprios."
+        },
+        {
+          "title": "Integridade de sobreposição",
+          "text": "Uma exclusion constraint com GiST pode impedir sobreposições segundo operadores compatíveis. Combinar recurso e intervalo pode exigir a extensão btree_gist e permissões de instalação. Não declare uma validação de aplicativo concorrente equivalente a uma constraint aplicada no banco."
+        }
+      ],
+      "code": "SELECT ARRAY['sql','go'] @> ARRAY['sql'] AS contem_tag;\nSELECT daterange(DATE '2026-10-01',DATE '2026-11-01','[)') @> DATE '2026-10-31' AS inclui_outubro;\nSELECT daterange('2026-10-01','2026-11-01','[)') && daterange('2026-11-01','2026-12-01','[)') AS sobrepoe;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "contem_tag=t; inclui_outubro=t; sobrepoe=f.",
+      "quiz": {
+        "question": "Dois ranges [01/10,01/11) e [01/11,01/12) se sobrepõem?",
+        "options": [
+          "Sim, sempre compartilham o dia 01/11.",
+          "Não; o limite superior do primeiro é exclusivo.",
+          "Sim, porque ambos usam daterange.",
+          "Não é possível representar limite exclusivo."
+        ],
+        "answer": 1,
+        "explanation": "O ponto de encontro pertence somente ao segundo intervalo."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste a fronteira",
+          "prompt": "Verifique a inclusão de 01/11/2026 no primeiro range.",
+          "hint": "Use @> com DATE explícito.",
+          "solution": "SELECT daterange('2026-10-01','2026-11-01','[)') @> DATE '2026-11-01'; retorna f.",
+          "criteria": [
+            "Usa o mesmo range.",
+            "Relaciona f ao limite superior exclusivo."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Expanda tags",
+          "prompt": "Transforme ARRAY['sql','go'] em duas linhas.",
+          "hint": "unnest é uma função que devolve conjunto.",
+          "solution": "SELECT tag FROM unnest(ARRAY['sql','go']) AS t(tag) ORDER BY tag; produz go e sql.",
+          "criteria": [
+            "Duas linhas.",
+            "Ordenação explícita para exibição."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Modele inscrição",
+          "prompt": "Explique por que alunos e cursos com data de matrícula pedem tabela associativa em vez de array de IDs.",
+          "hint": "A relação tem atributo próprio e exige referência.",
+          "solution": "Crie matriculas(aluno_id REFERENCES alunos,curso_id REFERENCES cursos,matriculado_em timestamptz,PRIMARY KEY(aluno_id,curso_id)); cada associação passa a ter integridade e dados próprios.",
+          "criteria": [
+            "Duas foreign keys e chave da associação.",
+            "Data pertence à matrícula."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/rangetypes.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 22,
+      "level": 8,
+      "title": "Funções SQL e contratos",
+      "goal": "Encapsular cálculos sem esconder efeitos ou volatilidade.",
+      "theory": [
+        {
+          "title": "Contrato de função",
+          "text": "Uma função SQL tem tipos de entrada e saída e pode devolver valor ou conjunto. Nomes de argumentos ajudam a leitura; qualificar nomes evita ambiguidade com colunas. Declare comportamento para NULL, limites e precisão e teste o contrato com valores de borda."
+        },
+        {
+          "title": "Volatilidade é promessa",
+          "text": "IMMUTABLE promete que o mesmo conjunto de argumentos sempre produz o mesmo resultado, independentemente de estado do banco. STABLE e VOLATILE permitem dependências diferentes. Não marque uma função que lê tabela ou relógio como IMMUTABLE para tornar um índice possível."
+        },
+        {
+          "title": "Privilégios e resolução",
+          "text": "Funções executam com privilégios do chamador por padrão. SECURITY DEFINER altera o contexto e exige controle rigoroso de search_path e execução concedida; não é atalho comum para liberar acesso. Comece por funções pequenas e observáveis, com schema explícito."
+        }
+      ],
+      "code": "CREATE TEMP TABLE forge_pg_inicializacao(dummy integer);\nCREATE FUNCTION pg_temp.total_item(qtd integer,preco numeric) RETURNS numeric\nLANGUAGE sql IMMUTABLE STRICT\nAS $$ SELECT qtd*preco $$;\nSELECT pg_temp.total_item(3,12.50) AS total,pg_temp.total_item(NULL,12.50) IS NULL AS nulo;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "total=37.50; nulo=t. A função fica no schema temporário da sessão.",
+      "quiz": {
+        "question": "O que STRICT significa nesse contrato de função?",
+        "options": [
+          "A função sempre proíbe números negativos.",
+          "A função passa a executar como superuser.",
+          "Se um argumento é NULL, retorna NULL sem executar o corpo.",
+          "A função é automaticamente otimizada por índice."
+        ],
+        "answer": 2,
+        "explanation": "STRICT define propagação de NULL; validação de domínio é outra regra."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Casos de borda",
+          "prompt": "Teste quantidade zero, quantidade 2 e preço 0.10, e quantidade NULL.",
+          "hint": "Use três chamadas da função.",
+          "solution": "Os resultados são 0,0.20 e NULL. Se negativos devem falhar, acrescente regra explícita em outro contrato em vez de presumir que STRICT os rejeita.",
+          "criteria": [
+            "Três casos documentados.",
+            "Distingue NULL e validação de faixa."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Volatilidade",
+          "prompt": "Classifique uma função que consulta o preço atual numa tabela.",
+          "hint": "O resultado pode mudar sem mudar os argumentos.",
+          "solution": "Ela não é IMMUTABLE; avalie STABLE se só lê dados conforme o snapshot da instrução e atende seus requisitos. Volatilidade é contrato semântico, não ranking de velocidade.",
+          "criteria": [
+            "Rejeita IMMUTABLE com motivo.",
+            "Explica dependência do estado do banco."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Tabela de resultados",
+          "prompt": "Escreva uma consulta com VALUES para testar três pares de entrada.",
+          "hint": "CROSS JOIN ou chamada na projeção aplica a função.",
+          "solution": "SELECT qtd,preco,pg_temp.total_item(qtd,preco) FROM(VALUES(0,2.00::numeric),(2,0.10),(3,12.50)) t(qtd,preco); confira 0,0.20,37.50.",
+          "criteria": [
+            "Três linhas verificáveis.",
+            "Todos os resultados conferidos."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/xfunc-sql.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 23,
+      "level": 8,
+      "title": "PL/pgSQL, exceções e regras",
+      "goal": "Escrever uma função procedural pequena com erro de domínio explícito.",
+      "theory": [
+        {
+          "title": "Quando usar procedimento",
+          "text": "PL/pgSQL acrescenta variáveis, condições, laços e tratamento de exceção ao SQL. Muitas operações em lote continuam mais simples como uma única instrução SQL. Use fluxo procedural quando ele expressa uma regra real, não para substituir toda agregação por um laço linha a linha."
+        },
+        {
+          "title": "Erros claros",
+          "text": "RAISE EXCEPTION interrompe a operação e pode incluir SQLSTATE. Uma mensagem de domínio deve permitir identificar a regra, sem incluir segredos. EXCEPTION pode recuperar certos erros, mas capturar WHEN OTHERS e devolver sucesso transforma falhas de integridade em dados enganosos."
+        },
+        {
+          "title": "Transação do chamador",
+          "text": "Uma função chamada por SELECT participa da transação do chamador e não confirma trabalho independentemente. Um erro aborta a instrução e afeta o estado da transação. Procedures e seus controles têm regras próprias; não presuma que uma função possa executar COMMIT."
+        }
+      ],
+      "code": "CREATE TEMP TABLE forge_pg_inicializacao(dummy integer);\nCREATE FUNCTION pg_temp.validar_qtd(q integer) RETURNS integer LANGUAGE plpgsql AS $$\nBEGIN\n IF q IS NULL OR q<=0 THEN\n  RAISE EXCEPTION 'quantidade deve ser positiva' USING ERRCODE='22023';\n END IF;\n RETURN q;\nEND;\n$$;\nSELECT pg_temp.validar_qtd(3) AS quantidade;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Uma linha: quantidade=3. A chamada com 0 no exercício falha de modo intencional.",
+      "quiz": {
+        "question": "Uma função PL/pgSQL chamada por SELECT pode confirmar seus dados com COMMIT?",
+        "options": [
+          "Sim, toda função confirma automaticamente.",
+          "Sim, se tiver uma variável local.",
+          "Sim, porque RAISE inicia outra conexão.",
+          "Não; participa da transação do chamador."
+        ],
+        "answer": 3,
+        "explanation": "Controle transacional de procedures tem regras próprias; uma função não é uma transação autônoma."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste inválido",
+          "prompt": "Chame a função com zero em comando isolado e registre SQLSTATE.",
+          "hint": "A função emite ERRCODE 22023.",
+          "solution": "SELECT pg_temp.validar_qtd(0); falha com invalid_parameter_value, 22023. Se estiver dentro de BEGIN, faça ROLLBACK antes de continuar.",
+          "criteria": [
+            "Registra erro esperado.",
+            "Recupera transação caso aberta."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Rejeite NULL",
+          "prompt": "Explique por que a condição inclui q IS NULL explicitamente.",
+          "hint": "q<=0 com q NULL produz desconhecido.",
+          "solution": "IF só entra quando a condição é verdadeira; NULL OR unknown continuaria desconhecido sem IS NULL. O teste explícito rejeita ausência.",
+          "criteria": [
+            "Relaciona IF à lógica de três valores.",
+            "Demonstra chamada com NULL."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Evite loop",
+          "prompt": "Some o valor de 10000 vendas e explique por que um loop PL/pgSQL é desnecessário.",
+          "hint": "SUM expressa a operação em conjunto.",
+          "solution": "SELECT sum(valor) FROM vendas; deixa o banco planejar a agregação, evita código e transições linha a linha sem uma regra procedural adicional.",
+          "criteria": [
+            "Consulta em conjunto.",
+            "Não afirma que todo loop é proibido."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/plpgsql.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 24,
+      "level": 8,
+      "title": "Triggers e auditoria transacional",
+      "goal": "Registrar mudanças com um trigger de propósito limitado.",
+      "theory": [
+        {
+          "title": "Momento e granularidade",
+          "text": "Triggers podem executar antes ou depois e por linha ou instrução. NEW existe para INSERT/UPDATE e OLD para UPDATE/DELETE. Um trigger por linha vê uma mudança específica; um trigger por instrução tem outro contrato. Deixe momento, operação e granularidade explícitos."
+        },
+        {
+          "title": "Auditoria na mesma transação",
+          "text": "Um trigger AFTER que insere uma linha de auditoria participa da transação principal. Se a transação é desfeita, a auditoria também é desfeita. Isso registra alterações confirmadas, mas não é um log externo inviolável de todas as tentativas nem substitui controle de acesso."
+        },
+        {
+          "title": "Efeitos escondidos",
+          "text": "Triggers aumentam o comportamento que não aparece na instrução original. Evite chamadas externas e lógica pesada; documente dependências e teste operações em lote. Um trigger de UPDATE não cobre INSERT e DELETE automaticamente: cada evento precisa ser configurado e implementado."
+        }
+      ],
+      "code": "CREATE TEMP TABLE produtos(id integer PRIMARY KEY,preco numeric);\nCREATE TEMP TABLE auditoria(produto_id integer,antes numeric,depois numeric);\nCREATE FUNCTION pg_temp.auditar_preco() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n INSERT INTO pg_temp.auditoria VALUES(NEW.id,OLD.preco,NEW.preco);\n RETURN NEW;\nEND;\n$$;\nCREATE TRIGGER preco_alterado AFTER UPDATE OF preco ON produtos FOR EACH ROW\nWHEN(OLD.preco IS DISTINCT FROM NEW.preco) EXECUTE FUNCTION pg_temp.auditar_preco();\nINSERT INTO produtos VALUES(1,10);\nUPDATE produtos SET preco=12 WHERE id=1;\nUPDATE produtos SET preco=12 WHERE id=1;\nSELECT * FROM auditoria;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Uma linha de auditoria: produto_id=1,antes=10,depois=12. A segunda atualização não muda o preço e o WHEN evita novo registro.",
+      "quiz": {
+        "question": "Se a transação da atualização for desfeita, o registro de auditoria desse trigger permanece?",
+        "options": [
+          "Não; a inserção do trigger é transacional e também é desfeita.",
+          "Sim, porque AFTER confirma antes.",
+          "Sim, toda auditoria é autônoma.",
+          "Depende apenas do nome da tabela."
+        ],
+        "answer": 0,
+        "explanation": "O trigger executa dentro da mesma transação da instrução que o acionou."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Rollback auditado",
+          "prompt": "Abra BEGIN, mude preço para 20, leia auditoria e execute ROLLBACK.",
+          "hint": "A linha temporária de auditoria é visível dentro da transação.",
+          "solution": "Durante a transação haverá segundo registro; após ROLLBACK restará apenas 10→12 e preço=12.",
+          "criteria": [
+            "Confere preço e contagem após rollback.",
+            "Explica visibilidade antes da confirmação."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Evite falso evento",
+          "prompt": "Explique o papel de IS DISTINCT FROM na cláusula WHEN.",
+          "hint": "A comparação também trata NULL de forma definida.",
+          "solution": "O trigger só dispara seu corpo quando preço realmente muda, inclusive entre NULL e valor; <> não oferece o mesmo resultado com NULL.",
+          "criteria": [
+            "Distingue alteração da coluna e alteração de valor.",
+            "Menciona a semântica de NULL."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Amplie conscientemente",
+          "prompt": "Descreva o que adaptar para auditar DELETE e INSERT.",
+          "hint": "NEW e OLD não estão presentes em todas as operações.",
+          "solution": "Inclua eventos correspondentes e use TG_OP para escolher OLD.id no DELETE e NEW.id no INSERT/UPDATE; armazene operação e campos disponíveis. Teste cada ramo e lote.",
+          "criteria": [
+            "Não acessa NEW no DELETE sem tratamento.",
+            "Inclui três operações no plano de testes."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/triggers.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 25,
+      "level": 9,
+      "title": "Roles, GRANT e menor privilégio",
+      "goal": "Separar identidade de login, propriedade e acesso de aplicação.",
+      "theory": [
+        {
+          "title": "Role e propriedade",
+          "text": "Roles existem no cluster, enquanto tabelas pertencem a bancos e schemas. Uma role pode ter LOGIN ou funcionar como grupo de privilégios. O proprietário de um objeto tem poderes diferentes dos de um usuário que recebeu SELECT; a aplicação cotidiana não deve precisar ser dona das tabelas."
+        },
+        {
+          "title": "Camadas de acesso",
+          "text": "Conectar ao banco, usar um schema e ler uma tabela são permissões distintas. GRANT SELECT numa tabela não concede automaticamente acesso a todo schema nem a tabelas futuras. DEFAULT PRIVILEGES depende de quem criará os objetos e não corrige retroativamente permissões existentes."
+        },
+        {
+          "title": "Teste como destinatário",
+          "text": "Permissões devem ser verificadas sob a role real. Um teste como superuser ignora restrições importantes. O laboratório cria uma role NOLOGIN e usa SET LOCAL ROLE somente dentro de uma transação descartável; isso demonstra privilégios, não configura autenticação ou TLS da aplicação."
+        }
+      ],
+      "code": "BEGIN;\nCREATE ROLE forge_pg_leitor NOLOGIN;\nCREATE TABLE public.forge_pg_permissoes(id integer PRIMARY KEY,nome text);\nINSERT INTO public.forge_pg_permissoes VALUES(1,'Livro');\nGRANT USAGE ON SCHEMA public TO forge_pg_leitor;\nGRANT SELECT ON public.forge_pg_permissoes TO forge_pg_leitor;\nSET LOCAL ROLE forge_pg_leitor;\nSELECT current_user,id,nome FROM public.forge_pg_permissoes;\nRESET ROLE;\nROLLBACK;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_ADMIN_LOCAL -d forge_pg -f aula.sql",
+      "expected": "current_user=forge_pg_leitor e linha 1|Livro. ROLLBACK remove os objetos e a role criados. Exige uma role administrativa local capaz de criar role e trocar para ela.",
+      "quiz": {
+        "question": "GRANT SELECT numa tabela dá à role o direito de alterar seu schema?",
+        "options": [
+          "Sim, SELECT concede propriedade.",
+          "Não; concede apenas o privilégio especificado.",
+          "Sim, qualquer acesso implica superuser.",
+          "Não, mas permite apagar o banco inteiro."
+        ],
+        "answer": 1,
+        "explanation": "Conceda somente o conjunto necessário e teste cada operação sob a role destinatária."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Negue escrita",
+          "prompt": "Antes do RESET ROLE, tente UPDATE na tabela em comando separado e registre a falha.",
+          "hint": "A role recebeu SELECT, não UPDATE.",
+          "solution": "UPDATE public.forge_pg_permissoes SET nome='Outro' WHERE id=1; deve falhar com insufficient_privilege (42501). Execute ROLLBACK após o erro para limpar a transação do laboratório.",
+          "criteria": [
+            "Teste executado como forge_pg_leitor.",
+            "Escrita rejeitada e limpeza transacional feita."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Matriz de acesso",
+          "prompt": "Desenhe privilégios para migrador, aplicação e relatório.",
+          "hint": "Propriedade e leitura não precisam da mesma role.",
+          "solution": "Migrador controla DDL sob processo próprio; aplicação recebe DML necessário; relatório recebe SELECT em objetos aprovados. Nenhuma role de serviço exige SUPERUSER por padrão.",
+          "criteria": [
+            "Três responsabilidades distintas.",
+            "Indica schema e tabelas abrangidos."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Objetos futuros",
+          "prompt": "Explique por que uma tabela nova do migrador pode não ser legível pelo relatório.",
+          "hint": "GRANT existente não é uma regra automática para novos objetos.",
+          "solution": "Configure ALTER DEFAULT PRIVILEGES FOR ROLE role_criadora IN SCHEMA schema_alvo GRANT SELECT ON TABLES TO role_relatorio; e trate tabelas já existentes separadamente. Teste com o criador correto.",
+          "criteria": [
+            "Identifica a role criadora.",
+            "Distingue permissões futuras e atuais."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/user-manag.html",
+      "caution": "Execute somente no cluster local descartável usando a role administrativa configurada. Nomes forge_pg_leitor e forge_pg_permissoes devem estar livres. Se ocorrer erro, ROLLBACK limpa o que foi criado nesta transação.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 26,
+      "level": 9,
+      "title": "Row-Level Security e contexto confiável",
+      "goal": "Testar isolamento por linha sob uma role sem bypass.",
+      "theory": [
+        {
+          "title": "Duas camadas",
+          "text": "RLS filtra quais linhas uma role pode acessar, mas não substitui GRANT de tabela e schema. ENABLE ROW LEVEL SECURITY ativa políticas; sem política aplicável a regra é negar acesso normal. USING regula linhas visíveis ou modificáveis e WITH CHECK regula novos valores gravados."
+        },
+        {
+          "title": "Bypass importa",
+          "text": "Superusers e roles BYPASSRLS ignoram RLS. O proprietário normalmente também ignora, a menos que FORCE ROW LEVEL SECURITY o sujeite; superuser continua tendo bypass. Por isso testar o SELECT como administrador não comprova isolamento de uma aplicação."
+        },
+        {
+          "title": "Contexto do tenant",
+          "text": "O exemplo fixa tenant_id=1 para uma role de laboratório. Uma aplicação compartilhada precisa mapear identidade autenticada a contexto confiável e testar leitura e escrita de outros tenants. Uma variável de sessão que qualquer cliente pode alterar não constitui, sozinha, uma fronteira de autorização."
+        }
+      ],
+      "code": "BEGIN;\nCREATE ROLE forge_pg_tenant1 NOLOGIN;\nCREATE TABLE public.forge_pg_rls(id integer PRIMARY KEY,tenant_id integer NOT NULL,dado text);\nINSERT INTO public.forge_pg_rls VALUES(1,1,'A'),(2,2,'B');\nALTER TABLE public.forge_pg_rls ENABLE ROW LEVEL SECURITY;\nCREATE POLICY tenant_um ON public.forge_pg_rls TO forge_pg_tenant1\n USING(tenant_id=1) WITH CHECK(tenant_id=1);\nGRANT USAGE ON SCHEMA public TO forge_pg_tenant1;\nGRANT SELECT,INSERT ON public.forge_pg_rls TO forge_pg_tenant1;\nSET LOCAL ROLE forge_pg_tenant1;\nSELECT id,tenant_id,dado FROM public.forge_pg_rls ORDER BY id;\nRESET ROLE;\nROLLBACK;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_ADMIN_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Sob forge_pg_tenant1 aparece somente 1|1|A. O registro do tenant 2 fica invisível; ROLLBACK remove o laboratório criado.",
+      "quiz": {
+        "question": "Qual teste comprova melhor a política de leitura desse exemplo?",
+        "options": [
+          "SELECT como superuser.",
+          "SELECT como dono sem FORCE.",
+          "SELECT sob forge_pg_tenant1, sem propriedade nem BYPASSRLS.",
+          "Apenas verificar que a policy tem um nome."
+        ],
+        "answer": 2,
+        "explanation": "O contexto de execução precisa estar sujeito às políticas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Escrita cruzada",
+          "prompt": "Sob a role tenant1, tente inserir linha id=3,tenant_id=2.",
+          "hint": "WITH CHECK também limita novas linhas.",
+          "solution": "INSERT INTO public.forge_pg_rls VALUES(3,2,'C'); deve falhar por política RLS. Faça ROLLBACK para limpar após o erro.",
+          "criteria": [
+            "Tentativa usa a role sem bypass.",
+            "Nenhuma linha do tenant2 é inserida."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Teste positivo",
+          "prompt": "No mesmo laboratório refeito, insira linha id=3,tenant_id=1.",
+          "hint": "A role já recebeu INSERT e a política permite tenant1.",
+          "solution": "A inserção é permitida; o SELECT sob tenant1 passa a mostrar IDs 1 e 3. O rollback final desfaz todos os objetos.",
+          "criteria": [
+            "Demonstra caso permitido e negado.",
+            "Não interpreta ausência de GRANT como prova da policy."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Contexto manipulável",
+          "prompt": "Explique o risco de policy baseada apenas num SET app.tenant que o usuário pode mudar.",
+          "hint": "O valor precisa vir de uma identidade validada por uma camada confiável.",
+          "solution": "Se o próprio cliente escolhe qualquer tenant, ele troca de domínio e a policy deixa de impor a autorização pretendida. Restrinja o canal de acesso e o vínculo identidade-contexto e teste abuso.",
+          "criteria": [
+            "Identifica quem pode alterar o contexto.",
+            "Exige teste de leitura e escrita cruzadas."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/ddl-rowsecurity.html",
+      "caution": "Este script requer role administrativa local para criar a role; o SELECT é feito após SET LOCAL ROLE para remover o bypass. Não use um banco compartilhado. Os nomes do laboratório devem estar livres.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 27,
+      "level": 9,
+      "title": "Parâmetros e fronteiras de SQL",
+      "goal": "Separar valores de entrada da estrutura da instrução.",
+      "theory": [
+        {
+          "title": "Estrutura e valores",
+          "text": "SQL injection surge quando texto de entrada é concatenado à estrutura SQL. Parâmetros vinculados fazem o driver enviar valores separadamente. Um valor como D'Ávila deve ser tratado como dado, não como parte de uma expressão SQL. Escapar manualmente todas as entradas é um contrato frágil."
+        },
+        {
+          "title": "PREPARE e driver",
+          "text": "O exemplo usa PREPARE/EXECUTE do servidor para mostrar tipos e placeholders $1. Drivers oferecem APIs próprias de binding, inclusive sem PREPARE explícito. A sintaxe de placeholder no código cliente depende do driver; não copie $1 cegamente para uma API que usa outro formato."
+        },
+        {
+          "title": "Identificadores e limites",
+          "text": "Um parâmetro representa um valor, não o nome de uma tabela ou uma palavra ORDER BY. Para escolher uma coluna ou direção, use uma lista permitida de identificadores e composição segura específica do driver. Binding também não substitui autorização, limites de paginação e timeout."
+        }
+      ],
+      "code": "CREATE TEMP TABLE clientes(id integer PRIMARY KEY,nome text);\nINSERT INTO clientes VALUES(1,'D''Ávila'),(2,'Ana');\nPREPARE buscar_nome(text) AS SELECT id,nome FROM clientes WHERE nome=$1 ORDER BY id;\nEXECUTE buscar_nome('D''Ávila');\nDEALLOCATE buscar_nome;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Uma linha: 1|D'Ávila. As aspas duplicadas são a representação de um literal SQL neste arquivo; no aplicativo vincule o valor pela API do driver.",
+      "quiz": {
+        "question": "Um parâmetro vinculado pode substituir diretamente o nome de uma tabela?",
+        "options": [
+          "Sim, qualquer parte do SQL aceita $1.",
+          "Sim, e concede acesso automaticamente.",
+          "Não; parâmetros servem apenas para números.",
+          "Não; ele representa um valor, não a estrutura SQL."
+        ],
+        "answer": 3,
+        "explanation": "Identificadores dinâmicos precisam de seleção permitida e composição segura própria."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Entrada maliciosa",
+          "prompt": "Explique o resultado de procurar literalmente o nome x' OR 1=1 -- com binding.",
+          "hint": "A entrada inteira continua sendo um valor.",
+          "solution": "A consulta busca esse texto como nome e, na amostra, devolve zero linhas. Não transforma OR em operador da instrução quando o driver vincula corretamente.",
+          "criteria": [
+            "Mantém o texto como dado.",
+            "Não constrói uma string SQL por concatenação."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ordenação permitida",
+          "prompt": "Projete uma API que aceite ordenar por nome ou id e recuse outro campo.",
+          "hint": "Mapeie escolhas externas a SQL previamente aprovado.",
+          "solution": "Use mapa {nome: fragmento identificador nome, id: fragmento identificador id}; rejeite demais valores e escolha ASC/DESC de outra lista. Continue vinculando filtros de valores.",
+          "criteria": [
+            "Duas colunas permitidas.",
+            "Entrada desconhecida é rejeitada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Tipo do parâmetro",
+          "prompt": "Troque a busca por WHERE id=$1 com PREPARE(integer) e use EXECUTE com 2.",
+          "hint": "Declare o tipo que corresponde à coluna.",
+          "solution": "PREPARE buscar_id(integer) AS SELECT nome FROM clientes WHERE id=$1; EXECUTE buscar_id(2); retorna Ana; DEALLOCATE buscar_id;.",
+          "criteria": [
+            "Retorna Ana.",
+            "Explica separação entre instrução e valor."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/sql-prepare.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 28,
+      "level": 10,
+      "title": "Particionamento declarativo",
+      "goal": "Roteiar eventos por intervalo e compreender limites de unicidade.",
+      "theory": [
+        {
+          "title": "Tabela lógica e partes",
+          "text": "Uma tabela particionada organiza dados em partições conforme uma chave. Consultas continuam podendo usar a tabela pai, e partition pruning pode eliminar partições incompatíveis com o filtro. Particionar adiciona manutenção e não transforma qualquer consulta em consulta rápida."
+        },
+        {
+          "title": "Limites e unicidade",
+          "text": "Partições RANGE usam início inclusivo e fim exclusivo. Defina o destino de eventos fora das janelas criadas. Uma PRIMARY KEY ou UNIQUE no pai particionado precisa incluir todas as colunas da chave de partição em condições suportadas; id global sozinho não recebe automaticamente unicidade entre partições."
+        },
+        {
+          "title": "Operação planejada",
+          "text": "Crie partições futuras antes da chegada dos dados, teste limites e acompanhe tamanho e quantidade. Anexar e remover partições envolve locks e validações. Retenção por remoção de partição é eficiente em certos cenários, mas precisa respeitar backup e requisitos do domínio."
+        }
+      ],
+      "code": "CREATE TEMP TABLE eventos(ocorrido_em date NOT NULL,id integer NOT NULL,PRIMARY KEY(ocorrido_em,id)) PARTITION BY RANGE(ocorrido_em);\nCREATE TEMP TABLE eventos_out PARTITION OF eventos FOR VALUES FROM('2026-10-01') TO('2026-11-01');\nCREATE TEMP TABLE eventos_nov PARTITION OF eventos FOR VALUES FROM('2026-11-01') TO('2026-12-01');\nINSERT INTO eventos VALUES('2026-10-31',1),('2026-11-01',2);\nSELECT tableoid::regclass AS particao,ocorrido_em,id FROM eventos ORDER BY ocorrido_em,id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "31/10 é roteado para eventos_out e 01/11 para eventos_nov. Os nomes podem vir qualificados por schema temporário.",
+      "quiz": {
+        "question": "Por que a PK do pai inclui ocorrido_em?",
+        "options": [
+          "Porque a chave de unicidade do pai precisa contemplar a chave de partição.",
+          "Porque toda PK exige uma data.",
+          "Porque id inteiro não pode ser indexado.",
+          "Porque datas são sempre únicas."
+        ],
+        "answer": 0,
+        "explanation": "Sem a chave de partição não se garante a unicidade global do pai por esses índices de partição."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Fora da janela",
+          "prompt": "Tente inserir evento de 01/12/2026 em comando isolado.",
+          "hint": "Nenhuma partição cobre dezembro.",
+          "solution": "A inserção falha por ausência de partição compatível. Crie partição dezembro ou defina uma DEFAULT com estratégia de manutenção consciente.",
+          "criteria": [
+            "Registra a falha.",
+            "Não muda silenciosamente a data para caber."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Pruning",
+          "prompt": "Use EXPLAIN numa consulta de outubro.",
+          "hint": "Filtre diretamente ocorrido_em por intervalo compatível.",
+          "solution": "EXPLAIN SELECT * FROM eventos WHERE ocorrido_em>=DATE '2026-10-01' AND ocorrido_em<DATE '2026-11-01'; inspecione se a partição novembro foi eliminada.",
+          "criteria": [
+            "Consulta filtra a chave.",
+            "Registra partições efetivamente consideradas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "ID repetido",
+          "prompt": "Insira id=1 em novembro com outra data e explique se a PK impede.",
+          "hint": "A PK é a tupla ocorrido_em,id.",
+          "solution": "A combinação diferente é permitida. Se o domínio exige id global único, planeje geração e garantia em outro desenho; não alegue que essa PK o assegura.",
+          "criteria": [
+            "Reconhece a combinação distinta.",
+            "Documenta o requisito de identidade global."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/ddl-partitioning.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 29,
+      "level": 10,
+      "title": "VACUUM, ANALYZE e transações longas",
+      "goal": "Distinguir limpeza de versões, estatísticas e compactação física.",
+      "theory": [
+        {
+          "title": "Versões mortas",
+          "text": "UPDATE e DELETE deixam versões que podem ser removidas quando nenhuma transação precisa enxergá-las. VACUUM marca espaço para reutilização e cuida de estruturas essenciais à manutenção. Transações antigas podem impedir a remoção de versões; apenas aumentar a frequência de vacuum não resolve a causa."
+        },
+        {
+          "title": "Rotina versus reescrita",
+          "text": "VACUUM comum não garante devolver espaço ao sistema operacional. VACUUM FULL reescreve a tabela e exige bloqueio forte, espaço adicional e planejamento. ANALYZE coleta estatísticas para o planejador; VACUUM e ANALYZE têm propósitos diferentes embora possam ser combinados."
+        },
+        {
+          "title": "Autovacuum e evidência",
+          "text": "Autovacuum atende tabelas persistentes conforme configurações e carga; tabelas temporárias precisam de manutenção manual pela sessão. Contadores de estatísticas são estimativas e podem levar tempo a refletir ações. Meça transações longas, linhas mortas estimadas e frequência antes de alterar parâmetros."
+        }
+      ],
+      "code": "CREATE TEMP TABLE amostra(id integer PRIMARY KEY,valor integer);\nINSERT INTO amostra SELECT n,n FROM generate_series(1,1000) n;\nDELETE FROM amostra WHERE id<=400;\nVACUUM (ANALYZE) amostra;\nSELECT count(*) AS linhas_atuais FROM amostra;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "linhas_atuais=600. VACUUM deve rodar fora de um bloco BEGIN; estatísticas físicas não têm valores fixos prometidos.",
+      "quiz": {
+        "question": "VACUUM comum sempre encolhe o arquivo da tabela no disco?",
+        "options": [
+          "Sim, é equivalente a VACUUM FULL.",
+          "Não; em geral libera espaço para reutilização interna.",
+          "Sim, e nunca adquire locks.",
+          "Não, porque só muda o nome da tabela."
+        ],
+        "answer": 1,
+        "explanation": "Reescrita e devolução de espaço têm outros custos e procedimentos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Separe comandos",
+          "prompt": "Explique por que VACUUM dentro de BEGIN falha.",
+          "hint": "VACUUM não pode executar num bloco transacional explícito.",
+          "solution": "Finalize a transação de DML e execute VACUUM em instrução própria no psql, sem envolver todo o arquivo em --single-transaction.",
+          "criteria": [
+            "Identifica o erro de contexto.",
+            "Propõe sequência com commit antes do VACUUM."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Estatísticas não são dados",
+          "prompt": "Compare COUNT(*) com n_live_tup para uma tabela persistente do laboratório.",
+          "hint": "Um é resultado da consulta, o outro é estimativa estatística.",
+          "solution": "Consulte pg_stat_user_tables e explique atrasos/estimativas; use COUNT(*) para a contagem visível exata da sua consulta, considerando seu snapshot.",
+          "criteria": [
+            "Distingue contagem e estimativa.",
+            "Não exige igualdade imediata dos contadores."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Transação antiga",
+          "prompt": "Diga o que investigar se versões mortas crescem mesmo com autovacuum ativo.",
+          "hint": "Procure transações e snapshots mantidos por muito tempo.",
+          "solution": "Observe xact_start e estado em pg_stat_activity, slots e retenção apropriada ao cenário; corrija sessões idle in transaction e transações longas antes de recorrer a VACUUM FULL.",
+          "criteria": [
+            "Relaciona retenção ao snapshot.",
+            "Não propõe encerrar qualquer sessão sem diagnóstico."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/routine-vacuuming.html",
+      "caution": "Não execute o arquivo com --single-transaction: VACUUM não pode rodar em um bloco BEGIN.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 30,
+      "level": 10,
+      "title": "Migrações em etapas",
+      "goal": "Evoluir schema com validação e impacto de bloqueio conhecidos.",
+      "theory": [
+        {
+          "title": "Evolução compatível",
+          "text": "Aplicações e bancos podem ser atualizados em momentos diferentes. O padrão expandir, migrar dados e só então contrair permite compatibilidade temporária entre versões. Uma migração deve ter precondições, limites de espera e um procedimento operacional se falhar."
+        },
+        {
+          "title": "Validação progressiva",
+          "text": "CHECK NOT VALID passa a verificar novas escritas sem fazer a validação inicial completa dos dados antigos. VALIDATE CONSTRAINT verifica o conjunto existente depois. O tipo de lock e a duração dependem da operação; testar em escala reduz surpresa, mas não elimina a necessidade de janela e monitoramento."
+        },
+        {
+          "title": "DDL também tem custo",
+          "text": "Muitas mudanças são transacionais, mas nem todas as ferramentas e operações podem entrar no mesmo bloco. CREATE INDEX CONCURRENTLY, por exemplo, tem restrições e pode deixar índice inválido após falha. Não agrupe toda migração sob uma regra universal de rollback."
+        }
+      ],
+      "code": "CREATE TEMP TABLE produtos(id integer PRIMARY KEY,preco numeric);\nINSERT INTO produtos VALUES(1,10),(2,20);\nALTER TABLE produtos ADD CONSTRAINT preco_valido CHECK(preco>=0) NOT VALID;\nALTER TABLE produtos VALIDATE CONSTRAINT preco_valido;\nSELECT conname,convalidated FROM pg_constraint WHERE conrelid='pg_temp.produtos'::regclass AND conname='preco_valido';\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "preco_valido|t. A validação foi concluída sobre a amostra existente.",
+      "quiz": {
+        "question": "Uma CHECK NOT VALID ignora também todas as novas escritas?",
+        "options": [
+          "Sim, é só comentário.",
+          "Sim, até reiniciar o servidor.",
+          "Não; ela verifica novas inserções e atualizações, mas ainda não certificou os dados antigos.",
+          "Não; verifica apenas SELECT."
+        ],
+        "answer": 2,
+        "explanation": "NOT VALID adia a varredura inicial, não desliga a regra para novas mudanças."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Dado legado ruim",
+          "prompt": "Refaça o exemplo com uma linha antiga de preço -1 antes de adicionar a constraint.",
+          "hint": "Adicionar NOT VALID pode funcionar; validar deve detectar o legado.",
+          "solution": "ADD CHECK NOT VALID passa; VALIDATE falha enquanto -1 existir. Corrija o dado pela regra de negócio e valide novamente.",
+          "criteria": [
+            "Distingue criação e validação.",
+            "Corrige sem ocultar a falha."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Nome de coluna",
+          "prompt": "Planeje trocar nome_cliente por nome sem quebrar uma versão antiga durante o deploy.",
+          "hint": "Uma renomeação imediata pode quebrar leitores antigos.",
+          "solution": "Adicione nome, mantenha compatibilidade de escrita, copie dados em lotes, mude leitores/escritores e só depois remova nome_cliente. Documente consistência entre colunas durante a transição.",
+          "criteria": [
+            "Separa expansão e contração.",
+            "Inclui estratégia de sincronização e retirada."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Limite de lock",
+          "prompt": "Defina limite de espera de bloqueio para uma migração de laboratório.",
+          "hint": "SET lock_timeout evita espera indefinida por lock.",
+          "solution": "SET lock_timeout='2s'; execute a alteração controlada e trate timeout como migração não aplicada; não a marque como sucesso. Teste novamente após investigar o bloqueador.",
+          "criteria": [
+            "Timeout explícito.",
+            "Resultado da migração é registrado corretamente."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/sql-altertable.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 31,
+      "level": 11,
+      "title": "Dump lógico e restauração verificada",
+      "goal": "Produzir um arquivo de backup e conferir a restauração em banco separado.",
+      "theory": [
+        {
+          "title": "O que o dump cobre",
+          "text": "pg_dump exporta um banco num snapshot consistente e não inclui todos os objetos globais do cluster, como roles. O formato custom -Fc é lido por pg_restore, não por psql como se fosse texto SQL. Para laboratório, ferramentas da mesma série 18 evitam confusão de compatibilidade."
+        },
+        {
+          "title": "Destino independente",
+          "text": "Restaurar em outro banco permite verificar o conteúdo sem sobrescrever o original. --no-owner e --no-acl tornam a demonstração independente das roles de origem, mas não preservam a configuração completa de segurança; ela precisa de inventário e teste próprios em uma recuperação real."
+        },
+        {
+          "title": "Evidência de recuperação",
+          "text": "Arquivo gerado com exit code zero é apenas uma etapa. Confira restauração, contagem, somas, constraints e consulta funcional, além do tempo até uso. Replicação não substitui esse histórico: uma exclusão acidental pode ser propagada a todas as réplicas."
+        }
+      ],
+      "code": "CREATE SCHEMA forge_pg_backup;\nCREATE TABLE forge_pg_backup.amostra(id integer PRIMARY KEY,valor integer NOT NULL);\nINSERT INTO forge_pg_backup.amostra VALUES(1,10),(2,20);\nSELECT count(*) AS linhas,sum(valor) AS total FROM forge_pg_backup.amostra;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Preparação SQL retorna linhas=2,total=30. Depois execute o roteiro de terminal dos exercícios para criar e testar o arquivo; este SELECT sozinho não produz backup.",
+      "quiz": {
+        "question": "Qual ferramenta restaura um arquivo criado com pg_dump -Fc?",
+        "options": [
+          "psql -f diretamente no arquivo binário.",
+          "VACUUM.",
+          "CREATE INDEX.",
+          "pg_restore."
+        ],
+        "answer": 3,
+        "explanation": "O formato custom é um arquivo de archive interpretado pelo pg_restore."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Gere e inspecione",
+          "prompt": "No terminal, exporte forge_pg em formato custom e liste o conteúdo.",
+          "hint": "Use pg_dump -Fc -f e depois pg_restore --list.",
+          "solution": "pg_dump -h localhost -U SUA_ROLE_LOCAL -d forge_pg -Fc -f forge_pg.dump\npg_restore --list forge_pg.dump\nConfira que forge_pg_backup.amostra aparece. Use credenciais locais sem gravar senha em arquivos.",
+          "criteria": [
+            "Arquivo existe e ferramenta termina com sucesso.",
+            "Lista contém schema e tabela esperados."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Restaure separado",
+          "prompt": "Crie forge_pg_restaurado vazio e restaure o dump sem propriedade nem ACL.",
+          "hint": "A role usada precisa de CREATEDB ou administrador cria o destino.",
+          "solution": "createdb -h localhost -U SUA_ROLE_ADMIN_LOCAL forge_pg_restaurado\npg_restore -h localhost -U SUA_ROLE_ADMIN_LOCAL -d forge_pg_restaurado --no-owner --no-acl --exit-on-error forge_pg.dump\nConecte ao destino e consulte count(*)=2,sum(valor)=30 na amostra.",
+          "criteria": [
+            "Destino é diferente de forge_pg.",
+            "Conta e soma restauradas conferem."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Contrato real",
+          "prompt": "Liste o que falta preservar ao usar --no-owner --no-acl.",
+          "hint": "As roles e os privilégios não são recriados por esse roteiro.",
+          "solution": "Inventarie roles, grants, extensões, parâmetros, segredos externos e configuração operacional; obtenha backup global apropriado e valide permissões no destino. Não trate o laboratório como recuperação completa do cluster.",
+          "criteria": [
+            "Cita roles e privilégios.",
+            "Inclui teste funcional e tempo de recuperação."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/app-pgdump.html",
+      "caution": "Usa schema persistente forge_pg_backup novo e dois bancos locais. Exige espaço em disco e role com leitura dos objetos para dump; criação do destino exige CREATEDB. Não execute sobre origem de produção. Para repetir, use novo laboratório limpo em vez de apagar objetos desconhecidos.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 32,
+      "level": 11,
+      "title": "WAL, arquivamento e PITR",
+      "goal": "Desenhar recuperação por ponto no tempo com uma cadeia completa de evidências.",
+      "theory": [
+        {
+          "title": "Log e durabilidade",
+          "text": "WAL registra mudanças necessárias à recuperação antes da gravação definitiva das páginas de dados. Sua existência local atende crash recovery, mas não significa que exista um arquivo histórico independente para qualquer instante. Arquivamento precisa copiar e preservar os segmentos necessários com monitoramento de falhas."
+        },
+        {
+          "title": "Base mais cadeia",
+          "text": "PITR combina um backup físico de base com WAL suficiente até o alvo. Se um segmento necessário falta, a cadeia pode ficar incompleta. Configure retenção, verificação de integridade e teste de restauração em instância isolada; planeje também tabelas auxiliares, versões e timelines."
+        },
+        {
+          "title": "Objetivos mensuráveis",
+          "text": "RPO é a perda de dados aceitável em tempo ou eventos; RTO é o tempo de retorno ao serviço. Um desenho atende esses objetivos apenas depois de um ensaio com falha e recuperação. O SQL desta aula é diagnóstico: não habilita archive_mode nem demonstra PITR funcionando."
+        }
+      ],
+      "code": "SHOW wal_level;\nSHOW archive_mode;\nSELECT pg_is_in_recovery() AS em_recuperacao;\nSELECT archived_count,failed_count,last_archived_wal,last_failed_wal FROM pg_stat_archiver;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Valores dependem do servidor. Num laboratório primário comum em_recuperacao=f e archive_mode pode estar off. Contadores zero ou NULL não provam que há backup recuperável.",
+      "quiz": {
+        "question": "O que é necessário, em termos gerais, para PITR físico?",
+        "options": [
+          "Backup de base válido e os segmentos WAL necessários até o alvo.",
+          "Somente um SELECT de pg_stat_archiver.",
+          "Somente uma réplica atualizada.",
+          "Somente pg_dump sem qualquer outra estratégia."
+        ],
+        "answer": 0,
+        "explanation": "A recuperação reexecuta uma cadeia de WAL sobre uma base compatível."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Defina objetivos",
+          "prompt": "Para pedidos fictícios, proponha RPO de 5 minutos e RTO de 30 minutos e um teste de aceitação.",
+          "hint": "O teste deve medir perda e tempo, não só existência de arquivos.",
+          "solution": "Gere eventos com IDs/instantes, simule perda no laboratório isolado, restaure até alvo e compare IDs esperados; cronometre até a aplicação voltar a consultar. Aceite somente se perda<=5min e retorno<=30min.",
+          "criteria": [
+            "Duas medidas e limites explícitos.",
+            "Teste usa destino isolado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Cadeia incompleta",
+          "prompt": "Explique o efeito de um segmento WAL ausente antes do alvo.",
+          "hint": "A reprodução pode depender de todos os segmentos intermediários.",
+          "solution": "A recuperação não pode simplesmente pular a lacuna e prometer consistência no alvo; procure cópia válida, limite a recuperação ao que é possível e registre RPO real.",
+          "criteria": [
+            "Reconhece dependência sequencial.",
+            "Não promete recuperação além da evidência."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Roteiro administrativo",
+          "prompt": "Esboce as etapas de um laboratório PITR real sem alterar a instância atual.",
+          "hint": "Inclua base, arquivamento, alvo e validação.",
+          "solution": "Provisione cluster descartável e diretórios separados; configure wal_level/archiving conforme documentação e reinícios exigidos; obtenha base consistente com pg_basebackup; gere e arquive WAL; restaure em outro diretório com recovery.signal, restore_command e alvo; valide dados e logs antes de promover.",
+          "criteria": [
+            "Inclui diretórios e instâncias separados.",
+            "Identifica que exige configuração, arquivos e ensaio além de SQL."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/continuous-archiving.html",
+      "caution": "A aula apresenta inspeção e projeto de laboratório; não afirma ter habilitado nem executado PITR. Setup físico exige administração local e procedimentos oficiais específicos ao sistema operacional.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 33,
+      "level": 11,
+      "title": "Replicação física, lógica e failover",
+      "goal": "Comparar mecanismos de réplica e suas responsabilidades operacionais.",
+      "theory": [
+        {
+          "title": "Duas representações",
+          "text": "Replicação física transmite WAL para manter uma cópia física compatível do cluster; replicação lógica transmite mudanças de objetos publicados para assinantes com regras específicas. A escolha depende de migração, leitura, compatibilidade e escopo, não apenas da palavra réplica."
+        },
+        {
+          "title": "Lag, slots e limites",
+          "text": "Réplicas assíncronas podem atrasar. Slots ajudam a reter WAL necessário ao consumidor, mas podem ampliar uso de disco se o consumidor não avança. Replicação lógica não transporta automaticamente toda evolução de schema e sequences; inventarie limitações da versão e o procedimento de migração."
+        },
+        {
+          "title": "Failover é um processo",
+          "text": "Ter uma réplica não decide automaticamente quem pode aceitar escrita com segurança. Promoção, prevenção de dois primários, redirecionamento, monitoramento e teste de falha fazem parte do desenho. Uma exclusão válida pode replicar: retenha backups independentes para recuperação histórica."
+        }
+      ],
+      "code": "SELECT pg_is_in_recovery() AS em_recuperacao;\nSELECT application_name,state,sync_state FROM pg_stat_replication ORDER BY application_name;\nSELECT slot_name,slot_type,active,restart_lsn FROM pg_replication_slots ORDER BY slot_name;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Num servidor sem replicação configurada, a primeira consulta retorna f e as outras podem retornar zero linhas. Isso indica ausência de conexões/slots observados, não alta disponibilidade comprovada.",
+      "quiz": {
+        "question": "Uma réplica que recebeu um DELETE acidental substitui um backup histórico?",
+        "options": [
+          "Sim, réplicas não replicam DELETE.",
+          "Não; ela pode ter propagado a mesma exclusão.",
+          "Sim, qualquer lag é um backup confiável.",
+          "Sim, se a consulta usa ORDER BY."
+        ],
+        "answer": 1,
+        "explanation": "Continuidade e recuperação histórica exigem estratégias complementares."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Escolha mecanismo",
+          "prompt": "Compare cópia física para standby e réplica lógica de um subconjunto de tabelas.",
+          "hint": "Pense em escopo e representação, não só desempenho.",
+          "solution": "Standby físico acompanha o cluster compatível via WAL; publicação lógica seleciona objetos e exige schema e configuração do assinante conforme regras. Liste limitações de DDL e sequences antes de planejar migração.",
+          "criteria": [
+            "Distingue cluster e objetos publicados.",
+            "Cita ao menos uma limitação operacional."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Slot parado",
+          "prompt": "Explique o risco de slot inativo com restart_lsn antigo.",
+          "hint": "WAL retido pode ocupar disco.",
+          "solution": "Investigue consumidor, lag e retenção; estime espaço e recupere o fluxo. Remover o slot sem plano pode exigir ressincronização; não o apague só para zerar um indicador.",
+          "criteria": [
+            "Relaciona retenção ao disco.",
+            "Explica consequência de remover o slot."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Critério de HA",
+          "prompt": "Escreva teste de failover real em laboratório com duas instâncias.",
+          "hint": "Desligar o primário é só uma parte do teste.",
+          "solution": "Confirme replicação e dados, interrompa primário, promova candidato sob coordenação, impeça escrita do antigo primário, redirecione cliente, verifique perda e duração e ensaie reintegração. O SELECT desta aula não executa essas etapas.",
+          "criteria": [
+            "Inclui prevenção de dois primários.",
+            "Mede RPO/RTO e valida cliente."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/logical-replication.html",
+      "caution": "Inspeção somente: não cria publication/subscription, slot nem standby. Para visualizar detalhes globais podem ser necessários privilégios de monitoramento. Não interpretar resultado vazio como falha do SQL.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 34,
+      "level": 12,
+      "title": "Monitoramento e diagnóstico de bloqueios",
+      "goal": "Usar atividade observável para formular e testar hipóteses.",
+      "theory": [
+        {
+          "title": "Estado é contexto",
+          "text": "pg_stat_activity mostra sessões e consultas com detalhes conforme privilégios. active indica uma instrução em andamento; idle in transaction indica transação aberta sem instrução ativa. Uma sessão lenta pode estar esperando lock ou I/O; olhar apenas duração não identifica a causa."
+        },
+        {
+          "title": "Relação de bloqueio",
+          "text": "wait_event_type e wait_event descrevem espera observada, e pg_blocking_pids identifica bloqueadores de uma sessão. Recolha o horário, PID e transação antes de agir, pois sessões e estados mudam. Consultas podem conter dados sensíveis; limite retenção e acesso aos diagnósticos."
+        },
+        {
+          "title": "Investigue antes de encerrar",
+          "text": "Cancelar uma consulta e terminar uma sessão têm efeitos distintos e exigem autorização operacional. Uma transação pode ficar abortada até rollback do cliente. A aplicação deve liberar conexões e tratar erros; matar indiscriminadamente sessões pode ampliar a indisponibilidade."
+        }
+      ],
+      "code": "SELECT pid,application_name,state,wait_event_type,wait_event,pg_blocking_pids(pid) AS bloqueadores\nFROM pg_stat_activity WHERE datname=current_database() ORDER BY pid;\nSELECT count(*) AS minhas_sessoes FROM pg_stat_activity WHERE datname=current_database() AND usename=current_user;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Pelo menos a sessão que executa a consulta aparece, conforme permissões e atividade. PIDs, quantidade e esperas variam; não há um número fixo para copiar.",
+      "quiz": {
+        "question": "idle in transaction indica o quê?",
+        "options": [
+          "Um servidor sem nenhuma conexão.",
+          "Uma transação já confirmada e desconectada.",
+          "Uma sessão com transação aberta e sem instrução ativa naquele momento.",
+          "Um índice inválido obrigatoriamente."
+        ],
+        "answer": 2,
+        "explanation": "Esse estado pode manter locks ou snapshots e precisa ser avaliado com sua duração e contexto."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Ache o bloqueador",
+          "prompt": "Reproduza o roteiro de duas sessões da aula 15 e inspecione pg_blocking_pids da sessão esperando.",
+          "hint": "Execute monitoramento numa terceira conexão se necessário.",
+          "solution": "Registre PID da espera e array de bloqueadores; confira se corresponde à sessão A. Use rollback para encerrar o laboratório.",
+          "criteria": [
+            "Relaciona os PIDs ao roteiro real.",
+            "Limpa transações abertas."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Histórico versus instante",
+          "prompt": "Explique por que pg_stat_activity sozinho não mede os últimos sete dias de consultas.",
+          "hint": "A view mostra atividade corrente, não um arquivo completo de eventos.",
+          "solution": "Use coleta histórica e métricas apropriadas; pg_stat_statements pode fornecer agregados se instalado/configurado, mas também tem janela, resets e limites.",
+          "criteria": [
+            "Distingue snapshot e histórico.",
+            "Não afirma que extensão está instalada por padrão."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Runbook de espera",
+          "prompt": "Descreva três evidências a coletar antes de cancelar uma sessão.",
+          "hint": "Inclua quem espera, quem bloqueia e desde quando.",
+          "solution": "Registre PID/role/application_name, xact_start/query_start e wait_event com pg_blocking_pids; identifique o dono da operação e o impacto antes de escolher cancelamento.",
+          "criteria": [
+            "Três evidências concretas.",
+            "Distingue cancelar consulta e terminar conexão."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/monitoring-stats.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 35,
+      "level": 12,
+      "title": "Conexões, timeouts e cancelamento",
+      "goal": "Definir limites de recursos e limpar estado transacional corretamente.",
+      "theory": [
+        {
+          "title": "Conexões custam recursos",
+          "text": "Cada conexão PostgreSQL tem recursos e estado; um pool limita concorrência e reutiliza conexões. O tamanho deve considerar capacidade do banco e tempo das transações. Multiplicar instâncias da aplicação multiplica o total potencial de conexões se o limite só existe por processo."
+        },
+        {
+          "title": "Timeouts diferentes",
+          "text": "statement_timeout limita duração de instrução no servidor; lock_timeout limita espera por lock; idle_in_transaction_session_timeout trata sessões paradas com transação aberta. Timeout de aquisição do pool e timeout de rede do cliente são outras camadas. Configure de modo coerente e registre qual limite foi atingido."
+        },
+        {
+          "title": "SET LOCAL e limpeza",
+          "text": "SET LOCAL vale até o fim da transação e evita vazar certa configuração para outro usuário de uma conexão reutilizada. Após erro numa transação, faça rollback antes de devolver ao pool. Cancelamento não deve ser interpretado como confirmação do resultado; idempotência ajuda a resolver resultados incertos."
+        }
+      ],
+      "code": "BEGIN;\nSET LOCAL statement_timeout='2s';\nSET LOCAL lock_timeout='500ms';\nSHOW statement_timeout;\nSHOW lock_timeout;\nSELECT 42 AS resposta;\nCOMMIT;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "Dentro da transação, statement_timeout=2s e lock_timeout=500ms; resposta=42. As configurações locais retornam ao estado anterior após COMMIT.",
+      "quiz": {
+        "question": "Por que SET LOCAL ajuda em conexões reutilizadas?",
+        "options": [
+          "Porque cria uma conexão exclusiva nova.",
+          "Porque desliga todos os locks.",
+          "Porque confirma automaticamente a transação.",
+          "Porque a configuração vale apenas até o fim da transação."
+        ],
+        "answer": 3,
+        "explanation": "O escopo local reduz vazamento de estado quando a transação é encerrada corretamente."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Provoque timeout",
+          "prompt": "Num laboratório, use SET statement_timeout='100ms' e SELECT pg_sleep(1), depois restaure o limite.",
+          "hint": "O objetivo é observar erro, não medir um benchmark.",
+          "solution": "SET statement_timeout='100ms'; SELECT pg_sleep(1); gera cancelamento por timeout; RESET statement_timeout;. Se houver BEGIN aberto, execute ROLLBACK antes de continuar.",
+          "criteria": [
+            "Registra o cancelamento.",
+            "Restaura configuração e transação."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Conte o total",
+          "prompt": "Uma aplicação tem 8 instâncias com pool máximo de 20. Calcule o teto potencial.",
+          "hint": "O limite por processo se multiplica.",
+          "solution": "8*20=160 conexões de aplicação, além de administração, migrações e outros serviços. Compare com capacidade e reserva do banco; mais conexões não garantem mais vazão.",
+          "criteria": [
+            "Resultado 160.",
+            "Inclui outros consumidores e reserva."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Conexão limpa",
+          "prompt": "Defina o que fazer após erro SQL numa transação antes de devolver ao pool.",
+          "hint": "Não basta capturar exceção no código.",
+          "solution": "Faça rollback, libere recursos e confirme que a conexão está utilizável; descarte conexões quebradas segundo o driver. Preserve contexto suficiente para retry idempotente da operação se permitido.",
+          "criteria": [
+            "Rollback explícito.",
+            "Não retorna sessão abortada ao próximo usuário."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/runtime-config-client.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 36,
+      "level": 12,
+      "title": "Projeto final: pedidos verificáveis",
+      "goal": "Consolidar integridade, relatório e plano operacional num sistema reproduzível.",
+      "theory": [
+        {
+          "title": "Entrega de desenvolvimento",
+          "text": "O projeto reúne clientes, produtos, pedidos e itens com chaves, tipos e constraints. Declare como o preço do item é congelado no momento da compra e como o estoque é reservado. Um relatório deve mostrar uma granularidade definida sem duplicar o total do pedido por cada item."
+        },
+        {
+          "title": "Entrega operacional",
+          "text": "Inclua migrações, dados fictícios, permissões e consultas-alvo. Registre planos de consultas importantes, roteiro de disputa concorrente e uma restauração em banco separado. Replicação e PITR entram como desenho e, se houver infraestrutura local, como ensaios explicitamente documentados."
+        },
+        {
+          "title": "Defesa técnica",
+          "text": "A conclusão exige explicar por que o modelo preserva regras, quais medições sustentam índices e onde a validação ficou limitada. XP representa atividades verificadas na trilha, não certifica experiência de produção. Traga ao chat schema, consulta, resultado esperado e observado para uma revisão pontual."
+        }
+      ],
+      "code": "CREATE TEMP TABLE pedidos(id integer PRIMARY KEY,cliente text NOT NULL);\nCREATE TEMP TABLE itens(pedido_id integer REFERENCES pedidos(id),produto text,quantidade integer CHECK(quantidade>0),preco_unitario numeric(10,2) CHECK(preco_unitario>=0));\nINSERT INTO pedidos VALUES(1,'Ana'),(2,'Bia');\nINSERT INTO itens VALUES(1,'Livro',2,30),(1,'Caderno',1,10);\nSELECT p.id,p.cliente,coalesce(sum(i.quantidade*i.preco_unitario),0) AS total\nFROM pedidos p LEFT JOIN itens i ON i.pedido_id=p.id GROUP BY p.id,p.cliente ORDER BY p.id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "psql -X -v ON_ERROR_STOP=1 -h localhost -U SUA_ROLE_LOCAL -d forge_pg -f aula.sql",
+      "expected": "1|Ana|70.00 e 2|Bia|0. O exemplo é uma fatia didática; o projeto precisa completar modelo, nulabilidade, chaves e estados do domínio.",
+      "quiz": {
+        "question": "Qual evidência sustenta melhor a conclusão do projeto?",
+        "options": [
+          "Reprodução do schema, casos de falha, testes de concorrência e restauração com resultados conferidos.",
+          "Somente uma captura de XP.",
+          "Somente um SELECT que retorna 1.",
+          "Uma lista de índices sem consultas-alvo."
+        ],
+        "answer": 0,
+        "explanation": "O projeto precisa de evidências que liguem as regras e riscos a comportamentos observados."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Complete integridade",
+          "prompt": "Corrija nulabilidade e chave dos itens, definindo um número de linha por pedido.",
+          "hint": "Uma linha deve ser identificável mesmo se o mesmo produto se repetir.",
+          "solution": "Use linha integer NOT NULL, PRIMARY KEY(pedido_id,linha), pedido_id NOT NULL, produto NOT NULL, quantidade NOT NULL CHECK(quantidade>0) e preco_unitario NOT NULL CHECK(preco_unitario>=0). Justifique se o domínio permite repetir produto.",
+          "criteria": [
+            "Chave por pedido e linha.",
+            "Campos obrigatórios e constraints testados."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Preço histórico",
+          "prompt": "Explique por que o item precisa registrar preço da compra em vez de consultar apenas o preço atual do produto.",
+          "hint": "O catálogo pode mudar depois da confirmação.",
+          "solution": "preco_unitario do item é um snapshot do contrato comercial; alterar produto.preco depois não deve reescrever receita histórica. Use regras de autorização e estado para evitar edição indevida de pedidos confirmados.",
+          "criteria": [
+            "Preserva total histórico após mudança no catálogo.",
+            "Define quando itens podem ser alterados."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Dossiê para revisão",
+          "prompt": "Monte um README com instalação, teste de reserva, índice e restauração.",
+          "hint": "Inclua comandos, versões, dados e resultados observados.",
+          "solution": "Entregue DDL/seeds, consulta-alvo e plano antes/depois, roteiro de duas sessões, matriz de roles, dump/restauração e relatório de limites. Separe ensaios executados de desenhos ainda não ensaiados.",
+          "criteria": [
+            "Outro aluno consegue reproduzir a entrega.",
+            "Marca explicitamente cenários não executados."
+          ]
+        }
+      ],
+      "source": "https://www.postgresql.org/docs/18/tutorial.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    }
+  ]
+}

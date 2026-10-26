@@ -1,0 +1,456 @@
+{
+  "courseId": "bancos",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Cadastro e busca com integridade",
+      "scenario": "Uma biblioteca cadastra exemplares e empréstimos. Cada empréstimo referencia um leitor existente; devolvido_em NULL significa aberto. A busca precisa listar abertos de um leitor em ordem estável.",
+      "requiredLessons": [
+        3,
+        4,
+        5,
+        7,
+        8,
+        9
+      ],
+      "skills": [
+        "Identidade e referências",
+        "Ausência e filtros",
+        "Ordenação determinística"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "A consulta usa leitor_id=7 AND devolvido_em=NULL e não encontra o empréstimo aberto. A FK existe e está ativa. Qual correção preserva o significado do modelo?",
+          "options": [
+            "Manter a referência por leitor_id e usar devolvido_em IS NULL no filtro.",
+            "Trocar NULL pela string NULL em todos os registros.",
+            "Remover a FK, pois ela impede consultas de empréstimos abertos.",
+            "Retirar o filtro de leitor e ordenar apenas por devolvido_em."
+          ],
+          "answer": 0,
+          "explanation": "A FK valida a referência, enquanto IS NULL testa ausência. Comparação =NULL não produz o verdadeiro exigido por WHERE.",
+          "reviewLessons": [
+            5,
+            8
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Dois leitores chamados Ana precisam ser cadastrados, mas a mesma matrícula não pode aparecer duas vezes. Qual desenho atende às duas regras?",
+          "options": [
+            "Nome como única chave, removendo a matrícula.",
+            "ID estável como chave e matrícula obrigatória com UNIQUE; nome pode repetir.",
+            "Matrícula sem NOT NULL ou UNIQUE porque já existe uma coluna id.",
+            "Um campo nome_matricula sem restrição e deduplicação somente na tela."
+          ],
+          "answer": 1,
+          "explanation": "Identidade e unicidade de negócio são regras distintas. O ID não torna dispensável a proteção da matrícula.",
+          "reviewLessons": [
+            3,
+            4
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Há dois empréstimos abertos no mesmo dia. A tela pede os primeiros dez do leitor 7. Qual consulta descreve uma página previsível?",
+          "options": [
+            "LIMIT 10 sem ORDER BY, porque inserção define a ordem para sempre.",
+            "Ordenar só pelo nome do leitor e aceitar qualquer empate.",
+            "Filtrar leitor 7 e abertos, ordenar por data e por id como desempate, depois limitar.",
+            "Aplicar OR leitor_id=7 fora dos parênteses para ampliar a busca."
+          ],
+          "answer": 2,
+          "explanation": "Filtro define o conjunto e ordem com desempate define a página. Limitar sem uma sequência estável não significa pegar os primeiros segundo a regra.",
+          "reviewLessons": [
+            7,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Relatório que não multiplica fatos",
+      "scenario": "O relatório deve mostrar todos os leitores, inclusive sem empréstimos, e contar somente empréstimos válidos. O nome de uma categoria foi repetido em cada livro e ficou contraditório.",
+      "requiredLessons": [
+        10,
+        11,
+        13,
+        14,
+        16,
+        17
+      ],
+      "skills": [
+        "Granularidade",
+        "Junção externa",
+        "Normalização"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "Depois de LEFT JOIN, um leitor sem empréstimos aparece com COUNT(*)=1. Como contar empréstimos mantendo esse leitor com zero?",
+          "options": [
+            "Trocar LEFT JOIN por INNER JOIN para fazer o zero aparecer.",
+            "Somar o ID do leitor para corrigir a contagem.",
+            "Adicionar DISTINCT ao nome e remover GROUP BY.",
+            "Usar COUNT da chave não nula do empréstimo e agrupar pela identidade do leitor."
+          ],
+          "answer": 3,
+          "explanation": "A linha preservada pela junção externa existe mesmo sem filho. COUNT da chave direita ignora a parte nula e responde à granularidade desejada.",
+          "reviewLessons": [
+            10,
+            14
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Para manter leitores sem movimento e relacionar apenas empréstimos válidos, onde deve ficar a condição da tabela de empréstimos?",
+          "options": [
+            "No ON da relação externa, quando o objetivo é restringir correspondências sem eliminar os leitores.",
+            "Sempre em WHERE e.status=valido, mesmo que isso elimine os NULL da junção.",
+            "Em HAVING leitor_id IS NULL para todos os grupos.",
+            "Em ORDER BY, pois ordenar também filtra linhas."
+          ],
+          "answer": 0,
+          "explanation": "O filtro em WHERE sobre a parte direita pode remover a linha preservada. A posição do predicado precisa corresponder à intenção do relatório.",
+          "reviewLessons": [
+            11,
+            14
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "O código de categoria determina seu nome, mas livros do mesmo código guardam nomes diferentes. Qual alteração elimina a causa da divergência?",
+          "options": [
+            "Copiar o nome da categoria para mais tabelas.",
+            "Criar categoria(id,nome) e referenciá-la nos livros, mantendo o nome na fonte determinada pela categoria.",
+            "Renomear cada livro para que todos os campos sejam diferentes.",
+            "Usar SELECT DISTINCT para esconder qualquer contradição sem mudar o modelo."
+          ],
+          "answer": 1,
+          "explanation": "A dependência código→nome pertence à categoria. Separá-la evita anomalias de atualização; DISTINCT apenas muda uma apresentação.",
+          "reviewLessons": [
+            16,
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Reserva que suporta falha e repetição",
+      "scenario": "Ao emprestar um exemplar, o sistema registra uma operação identificada e reduz disponibilidade. Uma falha pode acontecer entre as etapas ou depois de o cliente perder a resposta.",
+      "requiredLessons": [
+        19,
+        20,
+        22,
+        23,
+        25,
+        27
+      ],
+      "skills": [
+        "Escrita condicional",
+        "Atomicidade",
+        "Idempotência"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "A baixa de disponibilidade mudou uma linha, mas o INSERT do empréstimo falhou. Qual protocolo evita conservar apenas a baixa?",
+          "options": [
+            "Confirmar a baixa e ignorar o erro do INSERT.",
+            "Repetir somente o último SELECT até parecer correto.",
+            "Colocar os efeitos na mesma transação e desfazê-la quando qualquer etapa obrigatória falhar.",
+            "Usar um alias diferente no UPDATE para criar rollback automático."
+          ],
+          "answer": 2,
+          "explanation": "Escrita condicional protege a regra local; a transação reúne os efeitos obrigatórios. Falha intermediária deve preservar a unidade de negócio.",
+          "reviewLessons": [
+            20,
+            25
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "A operação req-8 foi confirmada, mas a resposta se perdeu. O cliente reenvia a mesma chave e mesmo conteúdo. Qual desenho reduz duplicação de efeitos?",
+          "options": [
+            "Gerar outra chave a cada timeout e executar novamente.",
+            "Ignorar toda violação de chave, inclusive com conteúdo divergente.",
+            "Guardar a chave só na memória do navegador após receber resposta.",
+            "Guardar a chave única e o resultado junto dos efeitos; reconhecer a repetição e devolver o resultado original."
+          ],
+          "answer": 3,
+          "explanation": "O registro idempotente precisa sobreviver à resposta perdida e estar coordenado aos efeitos. A mesma chave com outro conteúdo exige tratamento de conflito.",
+          "reviewLessons": [
+            19,
+            27
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Uma CTE calcula total_por_leitor e uma subconsulta calcula a média global desses totais. O objetivo é listar leitores acima dessa média. O que deve ser comparado?",
+          "options": [
+            "Cada total por leitor com a média dos totais, conservando a granularidade por leitor nas duas etapas.",
+            "Cada linha de empréstimo com o maior ID de leitor.",
+            "O nome da CTE com uma string que contenha a média.",
+            "A média global com a quantidade de colunas do resultado."
+          ],
+          "answer": 0,
+          "explanation": "CTE nomeia a etapa e subconsulta define o conjunto de referência. Alterar a granularidade de uma das medidas muda a pergunta de negócio.",
+          "reviewLessons": [
+            22,
+            23
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Busca evolutiva e recuperação",
+      "scenario": "A biblioteca terá busca parametrizada, páginas por cursor e alteração de esquema sem perda de histórico. Uma cópia precisa ser recuperada em destino separado antes da entrega.",
+      "requiredLessons": [
+        28,
+        29,
+        30,
+        31,
+        32,
+        34
+      ],
+      "skills": [
+        "Índices medidos",
+        "Binding e cursor",
+        "Migração e restore"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "prompt": "A página ordena por titulo,id. O título vem da entrada do usuário e o cursor só guarda id. Qual correção atende segurança e estabilidade?",
+          "options": [
+            "Concatenar o título na SQL e usar qualquer id como cursor.",
+            "Vincular os valores e carregar titulo e id no cursor, com predicado que reproduza a ordem.",
+            "Usar placeholder para o nome de toda cláusula ORDER BY e omitir desempate.",
+            "Substituir a paginação por LIMIT sem ordem."
+          ],
+          "answer": 1,
+          "explanation": "Parâmetros protegem os valores e o cursor precisa representar a ordem completa. Segurança e definição da fronteira são responsabilidades diferentes.",
+          "reviewLessons": [
+            30,
+            31
+          ]
+        },
+        {
+          "id": "q2",
+          "prompt": "Um índice foi adicionado e o plano mudou. Isso basta para anunciar ganho de tempo na base real?",
+          "options": [
+            "Sim, qualquer uso de índice é sempre mais rápido.",
+            "Sim, o texto de EXPLAIN equivale a milissegundos garantidos.",
+            "Não; confirme o mesmo resultado e meça com dados e carga representativos, registrando custos de manutenção.",
+            "Não, porque índices nunca podem melhorar consulta."
+          ],
+          "answer": 2,
+          "explanation": "O plano mostra a estratégia escolhida. A melhoria precisa de medição comparável e consideração do custo de escrita.",
+          "reviewLessons": [
+            28,
+            29
+          ]
+        },
+        {
+          "id": "q3",
+          "prompt": "Uma coluna obrigatória será acrescentada a dados antigos e há um arquivo de backup recém-criado. Qual evidência falta antes de considerar o procedimento recuperável?",
+          "options": [
+            "Apenas renomear o backup com a palavra aprovado.",
+            "Apagar a origem para obrigar o restore a funcionar.",
+            "Confiar que qualquer ALTER possui rollback idêntico em todos os bancos.",
+            "Validar os dados anteriores na migração e abrir uma restauração separada com consultas de conferência."
+          ],
+          "answer": 3,
+          "explanation": "Migração precisa considerar linhas existentes; recuperação precisa ser demonstrada no destino. Criar uma cópia não prova sua utilidade.",
+          "reviewLessons": [
+            32,
+            34
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Biblioteca com empréstimos e recuperação",
+    "scenario": "Implemente o banco de uma biblioteca pequena com leitores, títulos, exemplares, empréstimos e devoluções. Entregue um laboratório reproduzível; não use dados pessoais reais.",
+    "requirements": [
+      "Modelo íntegro: entidades, chaves e cardinalidades documentadas; referências inexistentes e duplicações de negócio são rejeitadas.",
+      "Operação atômica: empréstimo e baixa de disponibilidade confirmam juntos ou são desfeitos; tentativa concorrente não produz disponibilidade negativa.",
+      "Identidade de operação: repetição da mesma requisição não cria outro empréstimo e conteúdo divergente tem tratamento explícito.",
+      "Consultas corretas: listar leitores sem movimento, circulação por período e página com desempate, sem multiplicar medidas de entidades.",
+      "Integração e evolução: cliente com valores parametrizados, migração versionada e casos positivos e negativos de integridade.",
+      "Recuperação demonstrada: cópia consistente, reabertura em destino separado, comparação de dados e registro de RPO/RTO pretendidos e medidos."
+    ],
+    "deliverables": [
+      "DDL e dicionário de dados com regras e decisões do modelo.",
+      "Scripts de fixture e consultas com resultados esperados.",
+      "Cliente, migrações e roteiro de testes reproduzível em banco novo.",
+      "Runbook de cópia e restauração com evidências do destino e limitações."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Modelo íntegro",
+        "description": "Modelo íntegro: entidades, chaves e cardinalidades documentadas; referências inexistentes e duplicações de negócio são rejeitadas.",
+        "reviewLessons": [
+          3,
+          4,
+          5,
+          6,
+          16,
+          17
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Operação atômica",
+        "description": "Operação atômica: empréstimo e baixa de disponibilidade confirmam juntos ou são desfeitos; tentativa concorrente não produz disponibilidade negativa.",
+        "reviewLessons": [
+          20,
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Identidade de operação",
+        "description": "Identidade de operação: repetição da mesma requisição não cria outro empréstimo e conteúdo divergente tem tratamento explícito.",
+        "reviewLessons": [
+          19,
+          25,
+          27
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Consultas corretas",
+        "description": "Consultas corretas: listar leitores sem movimento, circulação por período e página com desempate, sem multiplicar medidas de entidades.",
+        "reviewLessons": [
+          10,
+          11,
+          13,
+          14,
+          24,
+          30
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Integração e evolução",
+        "description": "Integração e evolução: cliente com valores parametrizados, migração versionada e casos positivos e negativos de integridade.",
+        "reviewLessons": [
+          31,
+          32,
+          33
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Recuperação demonstrada",
+        "description": "Recuperação demonstrada: cópia consistente, reabertura em destino separado, comparação de dados e registro de RPO/RTO pretendidos e medidos.",
+        "reviewLessons": [
+          34,
+          35,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Empréstimo válido e repetido",
+        "setup": "Um exemplar disponível e leitor existente; nenhuma operação req-1 registrada.",
+        "input": "Solicitar um empréstimo e repetir req-1 com o mesmo conteúdo.",
+        "expected": "Um empréstimo ativo, uma baixa e o mesmo resultado identificado nas duas respostas.",
+        "reviewLessons": [
+          19,
+          20,
+          25,
+          27
+        ]
+      },
+      {
+        "title": "Falha entre efeitos",
+        "setup": "Fixture com disponibilidade 1 e erro injetado após a baixa, antes do registro final.",
+        "input": "Executar a operação e provocar falha controlada na segunda etapa.",
+        "expected": "A transação é desfeita; disponibilidade e quantidade de empréstimos permanecem como antes.",
+        "reviewLessons": [
+          20,
+          25,
+          26,
+          33
+        ]
+      },
+      {
+        "title": "Restaurar e consultar",
+        "setup": "Cópia gerada após dados conhecidos e destino de laboratório vazio.",
+        "input": "Abrir a cópia em outro destino e rodar contagens, totalizações e verificação de referências.",
+        "expected": "Destino abre, preserva os marcadores e atende aos invariantes; duração e ponto recuperado são registrados.",
+        "reviewLessons": [
+          32,
+          33,
+          34,
+          36
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "prompt": "O relatório de leitores está correto, mas uma transferência parcial ficou gravada após erro. O projeto pode ser aprovado só pela consulta?",
+        "options": [
+          "Não; precisa corrigir a unidade transacional e provar rollback do estado.",
+          "Sim, relatórios substituem testes de escrita.",
+          "Sim, basta esconder a linha na tela.",
+          "Não, porque consultas nunca são parte do projeto."
+        ],
+        "answer": 0,
+        "explanation": "Correção de leitura não compensa uma invariante violada na escrita. O teste precisa examinar estado após a falha.",
+        "reviewLessons": [
+          25,
+          27,
+          33
+        ]
+      },
+      {
+        "id": "q2",
+        "prompt": "O backup abriu, mas há referência órfã e contagem divergente da origem conhecida. Qual é o próximo passo?",
+        "options": [
+          "Marcar sucesso porque o arquivo abriu.",
+          "Investigar a origem da divergência e revisar integridade/procedimento de cópia antes de declarar recuperação válida.",
+          "Excluir a conferência de FKs para obter ok.",
+          "Somar manualmente uma linha no relatório sem reparar os dados."
+        ],
+        "answer": 1,
+        "explanation": "Reabertura é necessária, mas a recuperação também precisa preservar o estado e as regras esperadas.",
+        "reviewLessons": [
+          5,
+          33,
+          34
+        ]
+      },
+      {
+        "id": "q3",
+        "prompt": "Um projeto escolheu guardar um total derivado para acelerar a tela. Qual entrega justifica essa decisão?",
+        "options": [
+          "Apenas a frase desnormalização é mais rápida.",
+          "Remover os fatos para ninguém encontrar divergência.",
+          "Medição da necessidade e política de atualização/reconciliação comparada aos fatos de origem.",
+          "Adicionar DISTINCT a toda consulta e dispensar testes."
+        ],
+        "answer": 2,
+        "explanation": "Redundância intencional exige origem verificável, custo medido e manutenção explícita.",
+        "reviewLessons": [
+          18,
+          28,
+          29
+        ]
+      }
+    ]
+  }
+}

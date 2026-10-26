@@ -1,0 +1,471 @@
+{
+  "courseId": "logica",
+  "combos": [
+    {
+      "title": "Orçamento com unidades e regras de decisão",
+      "scenario": "Um orçamento recebe quantidade textual e preço em centavos. Há faixas de desconto e uma condição de bloqueio; o algoritmo deve classificar fronteiras sem confundir formato, unidade e significado.",
+      "requiredLessons": [
+        3,
+        4,
+        5,
+        6,
+        8,
+        9
+      ],
+      "skills": [
+        "Contrato",
+        "Conversão e unidades",
+        "Decisões compostas"
+      ],
+      "questions": [
+        {
+          "prompt": "A quantidade chega como \"3\" e o preço é 1250 centavos. Qual sequência corresponde ao contrato de um total numérico?",
+          "options": [
+            "Converter e validar a quantidade, calcular 3×1250 e apresentar 3750 centavos ou uma conversão monetária explicitada.",
+            "Concatenar \"3\" e \"1250\" e chamar o texto de total.",
+            "Dividir o preço por 100 antes de definir como tratar frações e unidades.",
+            "Aceitar qualquer texto porque possui pelo menos um caractere."
+          ],
+          "answer": 0,
+          "explanation": "Formato textual não é quantidade validada. O cálculo precisa conservar uma unidade conhecida e tratar a conversão antes de operar.",
+          "reviewLessons": [
+            4,
+            5,
+            6
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "A regra dá desconto especial a quantidade>=10, mas o primeiro ramo testa quantidade>=5 e encerra a decisão. O que acontece com quantidade 10 e como corrigir?",
+          "options": [
+            "Ela executa automaticamente todos os ramos e soma os descontos.",
+            "Ela entra na faixa mais ampla primeiro; ordenar pela condição específica ou tornar as faixas disjuntas preserva o desconto especial.",
+            "A ordem dos ramos nunca altera a classificação.",
+            "É preciso remover todos os testes de fronteira."
+          ],
+          "answer": 1,
+          "explanation": "Uma decisão que escolhe o primeiro ramo verdadeiro precisa de prioridade coerente. O valor de fronteira 10 distingue a regra correta da incorreta.",
+          "reviewLessons": [
+            6,
+            8,
+            9
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "O requisito é: cliente ativo E (pedido pago OU crédito aprovado). Qual decomposição deixa o bloqueio claro?",
+          "options": [
+            "Usar (ativo E pago) OU crédito aprovado, permitindo inativo com crédito.",
+            "Validar somente pago e ignorar os outros dados.",
+            "Verificar ativo e agrupar pago OU crédito aprovado como a segunda condição composta.",
+            "Trocar E por OU em todas as relações para aceitar mais pedidos."
+          ],
+          "answer": 2,
+          "explanation": "O agrupamento define o alcance da exigência de ativo. Uma tabela de decisão deve incluir o cliente inativo com crédito para detectar o erro.",
+          "reviewLessons": [
+            3,
+            8,
+            9
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-1"
+    },
+    {
+      "title": "Resumo de movimentos com término e funções",
+      "scenario": "Um algoritmo percorre movimentos, calcula quantidade e total e oferece uma função de consulta. Dados vazios e todos negativos precisam de saídas definidas; a consulta não deve mudar a lista.",
+      "requiredLessons": [
+        10,
+        11,
+        12,
+        15,
+        16,
+        18
+      ],
+      "skills": [
+        "Repetição",
+        "Ausência",
+        "Funções e efeitos"
+      ],
+      "questions": [
+        {
+          "prompt": "Um while repete enquanto pendentes>0, mas um ramo de erro não reduz pendentes nem sai. Que propriedade precisa ser garantida?",
+          "options": [
+            "O laço terminará porque o computador executa rápido.",
+            "Basta aumentar o valor inicial de pendentes.",
+            "Transformar o contador em texto garante a parada.",
+            "Em todo caminho repetido deve haver progresso para o término ou uma saída definida, mantendo contagem e estado coerentes."
+          ],
+          "answer": 3,
+          "explanation": "A condição inicial não prova término. Uma medida de progresso deve aproximar o algoritmo da saída em cada caminho relevante.",
+          "reviewLessons": [
+            10,
+            11,
+            12
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "O algoritmo procura o maior valor inicializando maior=0. Para [-8,-3,-10] ele retorna 0. Qual contrato corrige esse caso e o vazio?",
+          "options": [
+            "Inicializar a partir de um elemento válido quando existir e representar explicitamente ausência para a coleção vazia.",
+            "Manter 0 porque todo máximo é não negativo.",
+            "Escolher sempre a última posição sem comparar.",
+            "Usar um número negativo fixo sem conhecer os limites do domínio."
+          ],
+          "answer": 0,
+          "explanation": "A inicialização precisa pertencer ao domínio observado ou usar um estado de ausência explícito. Um valor legítimo não deve servir de sentinela ambígua.",
+          "reviewLessons": [
+            12,
+            15,
+            16
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A função resumo recebe a lista de movimentos e remove valores negativos durante a consulta. O chamador descobre a lista menor. Qual mudança torna o efeito claro?",
+          "options": [
+            "Supor que mudar o nome do parâmetro faz cópia automática.",
+            "Produzir um resultado separado sem alterar a entrada, ou declarar explicitamente uma operação de transformação que modifica a coleção.",
+            "Guardar a lista numa variável global para evitar a surpresa.",
+            "Ignorar a mudança porque funções nunca têm efeitos."
+          ],
+          "answer": 1,
+          "explanation": "Contrato de função inclui efeitos sobre dados compartilhados. Separar consulta de transformação facilita prever e testar o comportamento.",
+          "reviewLessons": [
+            15,
+            16,
+            18
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-2"
+    },
+    {
+      "title": "Cadastro, validação e escolha de busca",
+      "scenario": "Um cadastro possui identificadores estáveis, saldos e um relatório de frequência por código. Consultas podem usar busca binária apenas quando a pré-condição de ordenação é verdadeira.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        23,
+        26,
+        27
+      ],
+      "skills": [
+        "Identidade",
+        "Validação antes do efeito",
+        "Agrupamento e pré-condições"
+      ],
+      "questions": [
+        {
+          "prompt": "O registro ID 42 está na posição 0 da lista. A busca retorna 0 e o chamador interpreta como não encontrado. Qual contrato evita essa ambiguidade?",
+          "options": [
+            "Renumerar todo ID conforme a posição toda vez que consultar.",
+            "Considerar que posição 0 nunca contém dados.",
+            "Distinguir identificador de posição e representar ausência explicitamente, sem usar uma posição válida como sentinela indistinguível.",
+            "Alterar o registro encontrado para provar que existe."
+          ],
+          "answer": 2,
+          "explanation": "Posição e identidade têm significados diferentes. O protocolo de retorno deve conservar a primeira posição válida e distinguir a falta de resultado.",
+          "reviewLessons": [
+            19,
+            20
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "Uma confirmação já reduz o saldo antes de descobrir quantidade negativa ou estado não permitido. Como conservar o estado em uma recusa?",
+          "options": [
+            "Alterar e imprimir erro depois, sem restaurar nada.",
+            "Remover a validação de negativos para evitar a falha.",
+            "Conferir somente se o texto do ID é longo.",
+            "Validar tipo, faixa, identidade e regra da operação antes da alteração, e tratar o conjunto de mudanças como uma decisão coerente."
+          ],
+          "answer": 3,
+          "explanation": "Recusar é um comportamento que deve preservar o estado previsto. Validação tardia pode deixar efeito parcial mesmo quando o algoritmo informa erro.",
+          "reviewLessons": [
+            19,
+            20,
+            21
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "O relatório agrupa ocorrências por código, mas guarda os pares na ordem de chegada. Pode aplicar busca binária por código só porque o agrupamento já terminou?",
+          "options": [
+            "Não; a coleção precisa estar ordenada pela mesma chave/comparação da busca, ou deve ser escolhida outra estrutura de consulta adequada.",
+            "Sim, agrupar automaticamente ordena qualquer representação.",
+            "Sim, busca binária funciona em qualquer ordem com o mesmo resultado.",
+            "Não, porque códigos nunca podem ser comparados."
+          ],
+          "answer": 0,
+          "explanation": "Agrupamento e ordenação são propriedades diferentes. A redução de candidatos da busca binária só é válida quando sua pré-condição corresponde à coleção.",
+          "reviewLessons": [
+            19,
+            23,
+            26,
+            27
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-3"
+    },
+    {
+      "title": "Estados, hierarquia e confirmação repetível",
+      "scenario": "Uma ordem contém grupos e subgrupos de itens. O algoritmo soma a hierarquia, valida transições e confirma a baixa uma única vez por operação. Contraexemplos e testes de fronteira devem sustentar a explicação.",
+      "requiredLessons": [
+        28,
+        29,
+        30,
+        31,
+        34,
+        35
+      ],
+      "skills": [
+        "Recursão",
+        "Invariantes",
+        "Estados e idempotência"
+      ],
+      "questions": [
+        {
+          "prompt": "Uma função soma subgrupos recursivamente, mas chama a si mesma sempre com o mesmo nó. Qual combinação de critérios demonstra término e resultado?",
+          "options": [
+            "Apenas usar uma função com o nome recursiva.",
+            "Caso-base para folhas/vazio e redução para subproblemas menores, com regra de soma que inclua cada item uma vez e tratamento de ciclos se o domínio os permitir.",
+            "Esperar que a execução pare quando o total ficar grande.",
+            "Ignorar filhos para evitar chamadas, mesmo quando o requisito inclui a hierarquia."
+          ],
+          "answer": 1,
+          "explanation": "Recursão exige um caso simples e uma redução real. A estrutura pode ser árvore ou grafo; isso muda o cuidado necessário com revisitas.",
+          "reviewLessons": [
+            28,
+            29,
+            30
+          ],
+          "id": "q1"
+        },
+        {
+          "prompt": "A transição permite confirmar somente ordem ABERTA e quantidade até o saldo. Que conjunto pequeno distingue regras de estado e fronteira?",
+          "options": [
+            "Testar apenas uma ordem ABERTA com saldo muito alto.",
+            "Usar somente nomes diferentes com a mesma quantidade válida.",
+            "Testar ABERTA com quantidade abaixo, igual e acima do saldo, além de tentar confirmar uma ordem já CONFIRMADA.",
+            "Testar só a velocidade do algoritmo em lista vazia."
+          ],
+          "answer": 2,
+          "explanation": "Partições e fronteiras exercitam decisões diferentes. A tentativa no estado final verifica que a transição não está liberada indiscriminadamente.",
+          "reviewLessons": [
+            30,
+            31,
+            34
+          ],
+          "id": "q2"
+        },
+        {
+          "prompt": "A mesma operação de confirmação chega novamente depois da primeira baixa. Qual regra expressa idempotência no modelo?",
+          "options": [
+            "Criar uma identidade nova para cada repetição automática.",
+            "Subtrair novamente e apenas esconder a segunda mensagem.",
+            "Marcar qualquer pedido como novo quando estiver CONFIRMADO.",
+            "Reconhecer a identidade e o conteúdo da operação já aplicada e devolver seu resultado sem realizar a baixa outra vez."
+          ],
+          "answer": 3,
+          "explanation": "Repetir uma solicitação não deve repetir um efeito já aplicado. Identidade da operação, estado e conteúdo precisam participar da decisão.",
+          "reviewLessons": [
+            30,
+            34,
+            35
+          ],
+          "id": "q3"
+        }
+      ],
+      "id": "combo-4"
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Algoritmo verificável de ordens e estoque",
+    "scenario": "Especifique e implemente uma solução pequena para cadastrar itens, abrir ordens e confirmar baixas. Use pseudocódigo preciso e o Python simples da trilha para demonstrar os casos, sem exigir serviços externos.",
+    "requirements": [
+      "Definir campos, unidades, tipos aceitos, faixas e resultados de sucesso/recusa antes de implementar.",
+      "Representar itens e ordens por identificadores estáveis e estados com transições permitidas explícitas.",
+      "Validar todas as condições antes do efeito e preservar o estado quando a ordem não puder ser confirmada.",
+      "Reconhecer uma confirmação já aplicada e impedir segunda baixa para a mesma operação, incluindo conflito de conteúdo.",
+      "Justificar as estruturas e buscas usadas, seus limites, término e invariantes, sem prometer tempos exatos só pela complexidade.",
+      "Entregar testes de fronteira, vazio, ausência, repetição e estado inválido, guardando contraexemplos como regressões."
+    ],
+    "deliverables": [
+      "Especificação de dados, operações e tabela de transições.",
+      "Pseudocódigo e implementação simples com funções de contrato definido.",
+      "Tabela de testes com entrada, resultado previsto, observado e justificativa.",
+      "Relatório de invariantes, término, escolhas e contraexemplos corrigidos."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Contrato de entrada",
+        "description": "Definir campos, unidades, tipos aceitos, faixas e resultados de sucesso/recusa antes de implementar.",
+        "reviewLessons": [
+          1,
+          3,
+          4,
+          5,
+          20
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Identidade e estado",
+        "description": "Representar itens e ordens por identificadores estáveis e estados com transições permitidas explícitas.",
+        "reviewLessons": [
+          19,
+          22,
+          34
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Alteração coerente",
+        "description": "Validar todas as condições antes do efeito e preservar o estado quando a ordem não puder ser confirmada.",
+        "reviewLessons": [
+          20,
+          21,
+          30,
+          34
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Repetição controlada",
+        "description": "Reconhecer uma confirmação já aplicada e impedir segunda baixa para a mesma operação, incluindo conflito de conteúdo.",
+        "reviewLessons": [
+          21,
+          30,
+          35
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Algoritmos explicáveis",
+        "description": "Justificar as estruturas e buscas usadas, seus limites, término e invariantes, sem prometer tempos exatos só pela complexidade.",
+        "reviewLessons": [
+          16,
+          17,
+          23,
+          26,
+          27,
+          28,
+          30
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Evidências de correção",
+        "description": "Entregar testes de fronteira, vazio, ausência, repetição e estado inválido, guardando contraexemplos como regressões.",
+        "reviewLessons": [
+          15,
+          31,
+          32,
+          33,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Confirmação e repetição",
+        "setup": "Item A possui 5 unidades; ordem O está ABERTA e operação op-1 é inédita.",
+        "input": "Confirmar 2 unidades; repetir op-1 com os mesmos dados.",
+        "expected": "Saldo 3, ordem CONFIRMADA e somente uma baixa; a repetição devolve o resultado anterior.",
+        "reviewLessons": [
+          19,
+          21,
+          34,
+          35
+        ]
+      },
+      {
+        "title": "Recusa preserva estado",
+        "setup": "Saldo 5, ordem ABERTA e nenhum efeito aplicado.",
+        "input": "Tentar quantidade -1, 0 e 6 em cenários separados.",
+        "expected": "Cada tentativa é recusada por sua regra; saldo 5 e ordem ABERTA permanecem.",
+        "reviewLessons": [
+          20,
+          21,
+          31,
+          32
+        ]
+      },
+      {
+        "title": "Identidade e ausência",
+        "setup": "Lista começa na posição 0 com item ID 42 e também contém outros IDs.",
+        "input": "Consultar ID 42 e depois um ID inexistente.",
+        "expected": "Primeiro item é encontrado corretamente; ausência é retorno explícito e nenhuma consulta altera o cadastro.",
+        "reviewLessons": [
+          19,
+          22,
+          30,
+          33
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "prompt": "Os exemplos escolhidos passam, mas não há justificativa de término do while. Que revisão ainda é necessária?",
+        "options": [
+          "Definir uma medida de progresso ou saída em todo caminho relevante e testar um contraexemplo que antes não avançava.",
+          "Aumentar a velocidade do computador.",
+          "Renomear o laço para finito.",
+          "Remover o caso de erro do enunciado."
+        ],
+        "answer": 0,
+        "explanation": "Testes finitos ajudam a encontrar falhas, mas o raciocínio de término precisa explicar a repetição.",
+        "reviewLessons": [
+          11,
+          30,
+          31
+        ],
+        "id": "q1"
+      },
+      {
+        "prompt": "O algoritmo imprime \"recusado\", mas já diminuiu o saldo. Esse caso atende ao contrato de recusa sem efeito?",
+        "options": [
+          "Sim, a mensagem determina sozinha o estado.",
+          "Não; a verificação precisa ocorrer antes da alteração ou a unidade deve ser desfeita de modo definido e testado.",
+          "Sim, qualquer recusa pode debitar uma unidade.",
+          "Não, porque mensagens de erro são proibidas."
+        ],
+        "answer": 1,
+        "explanation": "O estado observado é parte do resultado do algoritmo, além da saída textual.",
+        "reviewLessons": [
+          20,
+          21,
+          32
+        ],
+        "id": "q2"
+      },
+      {
+        "prompt": "Uma função passa a chamar busca binária, mas a entrada pode chegar em qualquer ordem. Qual evidência precisa mudar?",
+        "options": [
+          "Apenas o nome da função no relatório.",
+          "O tempo previsto deve ser declarado zero.",
+          "A pré-condição de ordenação deve ser satisfeita e testada, ou a escolha de busca precisa ser revista.",
+          "Toda consulta deve apagar o cadastro antes."
+        ],
+        "answer": 2,
+        "explanation": "A correção do algoritmo depende das hipóteses sob as quais ele foi escolhido.",
+        "reviewLessons": [
+          26,
+          27,
+          30,
+          33
+        ],
+        "id": "q3"
+      }
+    ]
+  }
+}

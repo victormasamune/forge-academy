@@ -1,0 +1,480 @@
+{
+  "courseId": "redis",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Perfil, participação e cache",
+      "scenario": "Um painel guarda perfil em hash, participação única em set e um resumo em cache com validade. O número de acessos precisa crescer sem atualização perdida.",
+      "requiredLessons": [
+        2,
+        4,
+        5,
+        6,
+        7,
+        9
+      ],
+      "skills": [
+        "Modelo por chave",
+        "Contagem e participação",
+        "TTL e invalidação"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Usar INCR para acessos e um set de IDs para a participação única, conforme cada pergunta.",
+            "Usar SADD no nome de todos os acessos e esperar contagem de visitas repetidas.",
+            "Manter GET/SET e adicionar um TTL depois de cada leitura.",
+            "Trocar a chave por um hash e continuar com leitura/regravação sem coordenação."
+          ],
+          "answer": 0,
+          "prompt": "Dois clientes leem o contador 8 e ambos gravam 9. Qual mudança resolve a atualização perdida sem confundir acessos com participantes únicos?",
+          "explanation": "Contagem de eventos e cardinalidade de membros são fatos diferentes. A operação de incremento precisa ocorrer atomicamente no servidor.",
+          "reviewLessons": [
+            5,
+            7,
+            9
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "O nome antigo prova que HSET nunca executa.",
+            "TTL não sincroniza imediatamente; aplique a política de invalidação/atualização e trate miss consultando a fonte definida.",
+            "TTL garante que todo dado será sempre o mais novo até expirar.",
+            "Um GET ausente confirma automaticamente que o usuário foi excluído da origem."
+          ],
+          "answer": 1,
+          "prompt": "O perfil mudou na origem, mas o cache ainda mostra o nome antigo antes de seu TTL. Qual conclusão e ação correspondem ao padrão cache-aside?",
+          "explanation": "Prazo de validade, atualização e inexistência no domínio têm significados distintos. Defina o atraso permitido e a recuperação de um miss.",
+          "reviewLessons": [
+            4,
+            6,
+            7
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "O prazo sempre aumenta exatamente um segundo.",
+            "SET simples conserva qualquer TTL em todas as circunstâncias.",
+            "O TTL pode ser removido; escolha explicitamente EX/PX ou KEEPTTL conforme a intenção e confira a validade depois.",
+            "A chave se transforma num set por causa da palavra SET."
+          ],
+          "answer": 2,
+          "prompt": "Uma atualização usa SET simples numa chave que possuía prazo. Que efeito no ciclo de vida precisa ser verificado?",
+          "explanation": "Escrever o valor e manter validade não são uma suposição segura sem opções apropriadas. Teste os códigos de TTL e o comportamento do cache.",
+          "reviewLessons": [
+            2,
+            4,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Pontuação e reserva de operação",
+      "scenario": "Uma aplicação soma pontos e limita requisições. Ela deve distinguir operação nova, repetição e conflito, sem atribuir rollback geral a qualquer bloco Redis.",
+      "requiredLessons": [
+        10,
+        13,
+        14,
+        16,
+        17,
+        18
+      ],
+      "skills": [
+        "Sorted set",
+        "Atomicidade e limites",
+        "Idempotência e janela"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Sim, qualquer erro de EXEC reverte tudo como uma transação SQL.",
+            "Sim, um score numérico obriga rollback de toda a instância.",
+            "Não, porque MULTI nunca executa qualquer comando.",
+            "Não; precisa interpretar as respostas e o contrato de erro, pois Redis não fornece rollback geral de comandos já executados."
+          ],
+          "answer": 3,
+          "prompt": "Um bloco MULTI/EXEC altera uma chave e depois encontra erro de tipo em outro comando. O cliente pode assumir que a alteração anterior foi desfeita?",
+          "explanation": "Execução sem intercalação não significa desfazer geral após erro. Planeje tipos, validações e as respostas possíveis de cada operação.",
+          "reviewLessons": [
+            10,
+            13,
+            16
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Executar a decisão de incrementar e definir o prazo apropriado numa operação/script atômico com argumentos validados.",
+            "Usar um sorted set sem regra de prazo e declarar o problema resolvido.",
+            "Fazer WATCH numa conexão e EXEC em outra.",
+            "Esperar que o cliente retorne para sempre antes de tratar o estado."
+          ],
+          "answer": 0,
+          "prompt": "O limitador faz INCR e só depois envia PEXPIRE numa segunda requisição; o cliente cai entre elas. Qual desenho reduz a janela de contador sem expiração?",
+          "explanation": "A sequência separada permite falha entre efeitos. A unidade atômica deve validar antes de escrever e ainda reconhecer seus limites de erro e persistência.",
+          "reviewLessons": [
+            14,
+            16,
+            17
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "A operação será lembrada para sempre porque seu nome é único na aplicação.",
+            "A proteção é limitada à retenção; após o prazo, a mesma identidade pode ser tratada como nova se não existir outra fonte de decisão.",
+            "O ranking recompõe automaticamente todas as identidades expiradas.",
+            "TTL transforma a deduplicação em commit distribuído entre sistemas."
+          ],
+          "answer": 1,
+          "prompt": "A deduplicação guarda a operação por 120 segundos e devolve resultado salvo. Uma repetição chega depois de a chave expirar. Qual contrato precisa estar explícito?",
+          "explanation": "Identidade precisa de retenção compatível com o protocolo de retries. Não prometa exatamente uma vez indefinidamente por guardar uma chave temporária.",
+          "reviewLessons": [
+            10,
+            17,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Eventos, reentrega e cópia recuperada",
+      "scenario": "Uma solicitação entra num Stream, é processada por um grupo e também gera aviso em Pub/Sub. Um worker pode cair depois do efeito e antes do reconhecimento.",
+      "requiredLessons": [
+        19,
+        20,
+        21,
+        22,
+        24,
+        27
+      ],
+      "skills": [
+        "Stream e grupo",
+        "ACK e reclaim",
+        "Fonte recuperável"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Afirmar que XAUTOCLAIM cancela automaticamente qualquer efeito do worker antigo.",
+            "Executar o efeito novamente sempre, pois XACK desliga duplicações.",
+            "Reconhecer a operação já aplicada e evitar duplicar o efeito na reentrega, respeitando o protocolo do destino.",
+            "Apagar toda a origem antes de conferir a operação."
+          ],
+          "answer": 2,
+          "prompt": "O worker aplicou o efeito e caiu antes de XACK. Outro worker reivindicou a pendência. Qual comportamento deve ser suportado?",
+          "explanation": "A pendência pode ser reentregue. Posse de mensagem e conclusão do efeito são estados diferentes; o destino precisa de idempotência/coordenação adequadas.",
+          "reviewLessons": [
+            20,
+            21,
+            24
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Usar GET no nome do canal para recuperar todo o histórico.",
+            "Assumir que PUBLISH conserva cada mensagem até todos se reconectarem.",
+            "Considerar a contagem de assinantes uma prova de efeito concluído.",
+            "Reconsultar a fonte de estado ou um fluxo retido com cursor/protocolo apropriado, usando o sinal apenas como aviso."
+          ],
+          "answer": 3,
+          "prompt": "O cliente perdeu a conexão Pub/Sub durante uma atualização. Como o painel pode recuperar seu estado sem depender de replay inexistente no canal?",
+          "explanation": "Pub/Sub é efêmero e não mantém replay para o assinante ausente. A retomada precisa de fonte e retenção próprias.",
+          "reviewLessons": [
+            19,
+            22,
+            24
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Prova a recuperação local daquele estado; não prova retenção de todos os eventos futuros nem tolerância à perda da máquina.",
+            "Prova exatamente uma vez para qualquer efeito HTTP externo.",
+            "Prova replicação geográfica mesmo sem outro host.",
+            "Não prova nada, porque consultar o destino é irrelevante."
+          ],
+          "answer": 0,
+          "prompt": "Um RDB foi aberto num processo isolado e o marcador do destino confere. O que essa evidência prova e o que ainda não prova?",
+          "explanation": "O alcance do teste precisa corresponder à falha ensaiada. Confira também os eventos e cursores esperados no ponto da cópia.",
+          "reviewLessons": [
+            19,
+            24,
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Acesso, manutenção e topologia",
+      "scenario": "O serviço cresce. Uma conta de leitura acessa prefixos próprios, a manutenção percorre chaves e a arquitetura considera réplicas e distribuição por slots.",
+      "requiredLessons": [
+        28,
+        29,
+        32,
+        33,
+        34,
+        35
+      ],
+      "skills": [
+        "ACL e transporte",
+        "Iteração e memória",
+        "Replicação e slots"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Sim, uma senha automaticamente limita comandos e cifra toda rede.",
+            "Não; confirme comandos/chaves autorizados, operações recusadas e proteção do transporte como verificações separadas.",
+            "Sim, o prefixo da chave autentica o usuário.",
+            "Não, porque ACL não permite limitar leitura."
+          ],
+          "answer": 1,
+          "prompt": "A conta usa senha, mas pode executar CONFIG e ler qualquer prefixo; o teste não verificou TLS. O requisito de acesso restrito foi demonstrado?",
+          "explanation": "Identidade, autorização e transporte cobrem fronteiras diferentes. Testar só uma leitura permitida não demonstra menor privilégio.",
+          "reviewLessons": [
+            28,
+            29
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Encerrar no primeiro lote vazio e contar cada repetição como chave nova.",
+            "Usar COUNT como número exato de resultados obrigatórios e ignorar o cursor.",
+            "Continuar pelo cursor até zero e tratar repetição/mudança de chaves, sem assumir que TTL garante presença até o fim.",
+            "Assumir que chave com TTL nunca pode sair por pressão de memória."
+          ],
+          "answer": 2,
+          "prompt": "SCAN devolveu zero chaves e cursor não zero durante limpeza por prefixo. Ao mesmo tempo, chaves com TTL podem sofrer eviction. Qual protocolo é coerente?",
+          "explanation": "SCAN não fornece um snapshot nem lotes uniformes. Expiração e eviction podem alterar o conjunto; a tarefa precisa tolerar a evolução observada.",
+          "reviewLessons": [
+            32,
+            33
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "A tag espalha o grupo por todos os slots e a réplica nunca fica atrasada.",
+            "Sentinel automaticamente fragmenta cada valor em todos os nós.",
+            "TTL converte a réplica em confirmação síncrona sem perda.",
+            "A tag concentra esse grupo num slot e a réplica pode observar estado anterior; nenhum desses recursos garante distribuição uniforme e leitura sempre atual."
+          ],
+          "answer": 3,
+          "prompt": "Todas as chaves usam a tag {global} em Cluster e uma réplica assíncrona está atrasada. Qual interpretação evita duas promessas incorretas?",
+          "explanation": "Hash tags agrupam chaves e replicação assíncrona tem atraso. Escolha a unidade de atomicidade e a topologia pelo requisito medido.",
+          "reviewLessons": [
+            34,
+            35
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Painel de atendimento com processamento recuperável",
+    "scenario": "Entregue um serviço fictício de solicitações com perfis, prioridade de atendimento, métricas e processamento de eventos. Use Redis conscientemente como estrutura de dados e fonte/cópia conforme o contrato documentado, sem confundir sinal de tela com confirmação durável de trabalho.",
+    "requirements": [
+      "Definir nomes, tipos e unidade de acesso para perfis, participação, prioridade e cache com prazos explícitos.",
+      "Aplicar operações condicionais e incrementos sem atualização perdida, com identidade/conteúdo de operação e retenção de deduplicação documentados.",
+      "Processar eventos de Stream por grupo com ACK no ponto definido, limite de tentativas, tratamento de pendências e reentrega idempotente.",
+      "Separar contas administrativas e de aplicação, demonstrando comandos/chaves permitidos e recusados e o transporte realmente testado.",
+      "Registrar métricas com intervalo, iterar manutenção por SCAN corretamente e escolher política de memória/eviction compatível com cada tipo de dado.",
+      "Gerar e reabrir uma cópia em processo isolado, conferir dados e eventos esperados e justificar limites de persistência, replicação e eventual Cluster/Sentinel."
+    ],
+    "deliverables": [
+      "Contrato de chaves e scripts/cliente do serviço com dados fictícios e versão do Redis.",
+      "Roteiros de operação, consumidor e casos de duplicata, conflito, limite e falha.",
+      "Relatório de acesso, memória, iteração, métricas e interpretação de resultados variáveis.",
+      "Runbook de cópia e recuperação com marcador no destino, estado dos eventos, RPO/RTO e decisão de topologia."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Modelo por estrutura",
+        "description": "Cada chave tem tipo, identidade, unidade e ciclo de vida compatíveis com as consultas.",
+        "reviewLessons": [
+          2,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Atomicidade e repetição",
+        "description": "A unidade da operação e sua retenção são testadas sem prometer rollback ou deduplicação ilimitada.",
+        "reviewLessons": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Processamento recuperável",
+        "description": "O protocolo distingue entrega, posse, efeito, ACK, retenção e retomada.",
+        "reviewLessons": [
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Acesso e evolução",
+        "description": "ACL, transporte e versões têm verificações e transição documentadas.",
+        "reviewLessons": [
+          28,
+          29,
+          30
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Operação observável",
+        "description": "Métricas, SCAN e memória possuem unidades e tratamento de situações não uniformes.",
+        "reviewLessons": [
+          31,
+          32,
+          33
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Estado recuperado e topologia",
+        "description": "O destino é aberto e conferido; réplicas, Sentinel e Cluster são descritos no escopo realmente ensaiado.",
+        "reviewLessons": [
+          25,
+          26,
+          27,
+          34,
+          35,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Operação repetida e conflito",
+        "setup": "Prepare chaves vazias próprias do laboratório e uma identidade de solicitação com conteúdo conhecido.",
+        "input": "Aplique a mesma operação duas vezes dentro da retenção e depois tente a mesma identidade com conteúdo incompatível.",
+        "expected": "O efeito válido ocorre uma vez no prazo definido; a repetição devolve a decisão anterior e o conflito é tratado explicitamente, sem alterar o estado indevidamente.",
+        "reviewLessons": [
+          5,
+          10,
+          16,
+          18
+        ]
+      },
+      {
+        "title": "Queda antes do ACK",
+        "setup": "Crie Stream e grupo, consuma uma entrada e aplique um efeito identificável sem reconhecer a mensagem.",
+        "input": "Interrompa o consumidor de ensaio, reivindique a pendência após o limiar escolhido e processe a reentrega.",
+        "expected": "O efeito não é duplicado; a entrada tem conclusão/ACK conforme o protocolo e tentativas são observadas. A prova vale sob retenção e persistência ensaiadas.",
+        "reviewLessons": [
+          19,
+          20,
+          21,
+          24
+        ]
+      },
+      {
+        "title": "Cópia e reabertura",
+        "setup": "Crie perfil, prioridade e eventos de referência e preserve o ponto da cópia segundo o modo escolhido.",
+        "input": "Abra a cópia em instância isolada e consulte marcadores, ranking e estados de fluxo previstos nesse ponto.",
+        "expected": "O destino contém o estado documentado e suas regras; perda possível, retenção e duração são registradas. Não se conclui alta disponibilidade a partir de uma cópia local.",
+        "reviewLessons": [
+          25,
+          26,
+          27,
+          34,
+          35
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "options": [
+          "Não; é necessário uma fonte/reconciliação ou retenção que preserve o trabalho devido, pois deduplicação não recria evento ausente.",
+          "Sim, a chave da operação reconstrói qualquer payload apagado.",
+          "Sim, XACK restaura automaticamente entradas aparadas.",
+          "Não, porque idempotência significa sempre duplicar."
+        ],
+        "answer": 0,
+        "prompt": "O consumidor é idempotente, mas o Stream foi aparado antes de ele ler um evento. A deduplicação basta para recuperar o trabalho perdido?",
+        "explanation": "Retenção e repetição tratam falhas diferentes. O protocolo precisa preservar ou reconstruir o que ainda deve ser processado.",
+        "reviewLessons": [
+          18,
+          19,
+          21,
+          24
+        ]
+      },
+      {
+        "id": "q2",
+        "options": [
+          "Sim, EVAL é uma transação distribuída universal.",
+          "Não; a fronteira entre sistemas exige recuperação e idempotência próprias, com estado da operação documentado.",
+          "Sim, TTL confirma e desfaz qualquer chamada externa.",
+          "Não, porque Lua não pode ler chaves."
+        ],
+        "answer": 1,
+        "prompt": "Uma reserva foi gravada pelo script e o efeito HTTP externo falhou. O projeto pode afirmar que a atomicidade Redis desfez automaticamente todos os sistemas?",
+        "explanation": "A unidade atômica do Redis não inclui um serviço remoto. Planeje o próximo passo e a repetição sem confundir resposta local com efeito externo concluído.",
+        "reviewLessons": [
+          13,
+          16,
+          18,
+          24,
+          36
+        ]
+      },
+      {
+        "id": "q3",
+        "options": [
+          "Apenas um nome mais longo para a instância.",
+          "Nada, porque abrir um RDB prova todas as garantias de produção.",
+          "Os limites de perda, retenção e visibilidade, além da evidência positiva da cópia recuperada.",
+          "Remover os testes para não precisar de limites."
+        ],
+        "answer": 2,
+        "prompt": "O relatório mostra backup reaberto, mas não registra configuração de persistência, prazo da deduplicação ou atraso da réplica. O que falta para avaliar as garantias?",
+        "explanation": "Recuperação e consistência têm janelas específicas. Relate o estado que foi preservado e as condições em que repetição ou leitura antiga ainda podem ocorrer.",
+        "reviewLessons": [
+          18,
+          25,
+          26,
+          27,
+          34
+        ]
+      }
+    ]
+  }
+}

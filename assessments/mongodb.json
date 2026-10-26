@@ -1,0 +1,480 @@
+{
+  "courseId": "mongodb",
+  "combos": [
+    {
+      "id": "combo-1",
+      "title": "Consulta e atualização de estoque",
+      "scenario": "Uma coleção de produtos guarda SKU, quantidade e preço com representação definida. A API precisa consultar uma página estável e baixar estoque sem uma sequência vulnerável de leitura e regravação.",
+      "requiredLessons": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "skills": [
+        "BSON e projeção",
+        "Filtro e ordem",
+        "Escrita condicional"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Uma atualização atômica com filtro por estoque suficiente e decremento, verificando matchedCount/modificação antes de anunciar sucesso.",
+            "Ler 5 em cada cliente e ambos gravarem 1 sem condição.",
+            "Converter o estoque para texto e ordenar por nome.",
+            "Usar uma projeção que esconda estoque e concluir que não há disputa."
+          ],
+          "answer": 0,
+          "prompt": "Um produto tem estoque 5 e duas requisições tentam retirar 4. Qual operação local ao documento evita que ambas aprovem a partir de uma leitura antiga?",
+          "explanation": "A condição precisa fazer parte da escrita sobre o documento. Conferir o resultado distingue a baixa aplicada de uma condição que deixou de ser atendida.",
+          "reviewLessons": [
+            3,
+            4,
+            7
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Assumir que null sempre significa a string literal null.",
+            "Combinar os testes de presença/tipo adequados ao domínio e conferir a projeção, sem tratar as duas situações como sempre idênticas.",
+            "Usar sort para tornar o campo obrigatório.",
+            "Trocar o nome da coleção e manter o mesmo filtro sem teste."
+          ],
+          "answer": 1,
+          "prompt": "A consulta {devolvidoEm:null} também pode encontrar documentos sem o campo. Se a regra distingue ausência de campo e valor null, o que revisar?",
+          "explanation": "Null e ausência têm semânticas de consulta próprias. Uma projeção também pode ocultar o campo, portanto diferencie armazenamento, filtro e resultado.",
+          "reviewLessons": [
+            2,
+            4,
+            5
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Confiar na ordem natural como garantia permanente.",
+            "Remover o filtro de categoria para evitar empates.",
+            "Acrescentar um desempate único à ordem e carregar os componentes relevantes na fronteira da página.",
+            "Usar limit como substituto de qualquer sort."
+          ],
+          "answer": 2,
+          "prompt": "A página ordena só por categoria, que se repete. Qual melhoria é necessária antes de usar limite/cursor como fronteira estável?",
+          "explanation": "Limitar não define uma ordem. Campos repetidos exigem desempate quando a paginação precisa de uma sequência determinística.",
+          "reviewLessons": [
+            4,
+            5,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-2",
+      "title": "Modelo, validação e relatório sem multiplicação",
+      "scenario": "O catálogo tem pedidos com itens e referências a clientes. O relatório deve contar pedidos e unidades corretamente, e documentos inválidos precisam ser recusados conforme um contrato declarado.",
+      "requiredLessons": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "skills": [
+        "Padrão de acesso",
+        "Schema validation",
+        "Agregação e cardinalidade"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "$unwind sempre reduz tudo a uma única linha.",
+            "Toda referência a cliente impede qualquer duplicação em agregação.",
+            "Uma validação JSON Schema recalcula automaticamente relatórios.",
+            "O total do pedido pode ser contado três vezes; preserve a granularidade ou reagrupe a medida correta antes de somar."
+          ],
+          "answer": 3,
+          "prompt": "Cada pedido possui três itens e o pipeline aplica $unwind antes de somar um campo total do pedido. Qual risco precisa ser corrigido?",
+          "explanation": "Desdobrar itens muda a quantidade de documentos do fluxo. A medida precisa corresponder à unidade contada e à etapa em que é agregada.",
+          "reviewLessons": [
+            10,
+            13,
+            14
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "A referência não ganhou integridade referencial automática; é preciso um protocolo de validação/manutenção coerente com a regra do domínio.",
+            "$lookup cria o cliente faltante automaticamente.",
+            "Guardar um ID equivale sempre a uma foreign key SQL obrigatória.",
+            "Um array vazio prova falha do servidor, sem considerar os dados."
+          ],
+          "answer": 0,
+          "prompt": "A aplicação inseriu clienteId inexistente e $lookup retornou um array vazio. Qual conclusão respeita o modelo MongoDB?",
+          "explanation": "Referenciar e relacionar dados não cria por si só uma constraint entre coleções. Defina criação, exclusão e tratamento de referências sem correspondência.",
+          "reviewLessons": [
+            10,
+            11,
+            15
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Apenas imprimir a variável para que o servidor a adote.",
+            "Aplicar a validação à coleção pelo comando apropriado e executar casos válidos e inválidos, verificando erro e estado final.",
+            "Adicionar $lookup ao objeto e assumir que isso ativa o schema.",
+            "Guardar o schema no README e chamar isso de validação aplicada."
+          ],
+          "answer": 1,
+          "prompt": "Foi declarada uma variável JavaScript contendo $jsonSchema, mas nenhuma coleção recebeu validator. O teste de inserção inválida passou. O que falta fazer e comprovar?",
+          "explanation": "Uma representação no cliente não muda a configuração da coleção. A evidência precisa vir do validator ativo e do comportamento de escrita observado.",
+          "reviewLessons": [
+            10,
+            11,
+            12
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-3",
+      "title": "Índices, transação e repetição",
+      "scenario": "Uma operação cria um pedido e reserva estoque em outro documento. A aplicação utiliza índices e precisa lidar com concorrência e resultado incerto após falha de comunicação.",
+      "requiredLessons": [
+        19,
+        20,
+        22,
+        25,
+        26,
+        27
+      ],
+      "skills": [
+        "Índices e custo",
+        "Transação entre documentos",
+        "Concerns e idempotência"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Um standalone sem sessão, confiando que dois updateOne sempre formam uma transação.",
+            "Somente um índice composto, que confirma todas as escritas juntas.",
+            "Uma topologia que suporte transações, uso da mesma sessão e tratamento explícito de commit/abort e erros.",
+            "Aumentar limit na consulta e concluir atomicidade global."
+          ],
+          "answer": 2,
+          "prompt": "Duas alterações em documentos diferentes devem confirmar juntas. Qual combinação é necessária no laboratório, além da lógica de validação?",
+          "explanation": "Atomicidade de um documento não se expande automaticamente para vários. Transação tem pré-requisitos de topologia e contexto de sessão.",
+          "reviewLessons": [
+            19,
+            25,
+            26
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Criar sempre outro pedido com novo ID após qualquer timeout.",
+            "Assumir que timeout significa rollback garantido.",
+            "Remover o índice único para que a repetição não cause erro.",
+            "Identidade única da operação, comparação do conteúdo e tratamento de retry/resultado incerto conforme a API, sem repetir efeitos cegamente."
+          ],
+          "answer": 3,
+          "prompt": "O cliente recebeu timeout ao confirmar e não sabe se o pedido foi aplicado. Qual protocolo reduz o risco de uma segunda reserva indevida?",
+          "explanation": "Incerteza de comunicação não prova ausência de commit. A identidade da operação e a interpretação dos erros permitem distinguir repetição legítima de nova ação.",
+          "reviewLessons": [
+            20,
+            25,
+            26,
+            27
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Distribuição/volume representativos, trabalho de leitura e custo de escrita, preservando o resultado correto da consulta.",
+            "Apenas o tamanho do nome do índice.",
+            "Nada, qualquer IXSCAN garante a mesma latência em qualquer sistema.",
+            "Remover todos os demais filtros para obter um número menor."
+          ],
+          "answer": 0,
+          "prompt": "Um índice foi criado e explain de uma coleção pequena parece favorável. O que ainda precisa ser medido antes de prometer desempenho em outra carga?",
+          "explanation": "Estratégia de acesso não é tempo garantido. Compare a mesma pergunta e registre execução, cardinalidade e os custos impostos às escritas.",
+          "reviewLessons": [
+            19,
+            20,
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combo-4",
+      "title": "Acesso, evolução e retomada",
+      "scenario": "A API recebe filtros externos, evolui documentos versionados e publica alterações por change streams. Um operador prepara uma cópia BSON para recuperação em outra base.",
+      "requiredLessons": [
+        28,
+        29,
+        31,
+        33,
+        35,
+        36
+      ],
+      "skills": [
+        "Consulta controlada",
+        "Migração e eventos",
+        "Recuperação"
+      ],
+      "questions": [
+        {
+          "id": "q1",
+          "options": [
+            "Confiar em JSON válido como autorização para qualquer consulta.",
+            "Construir filtros a partir de campos/operadores permitidos e usar uma conta com privilégios limitados à função.",
+            "Usar conta administrativa para que todo operador funcione.",
+            "Mudar apenas a extensão do arquivo para .js."
+          ],
+          "answer": 1,
+          "prompt": "A API aceita um objeto do usuário e o repassa inteiro como filtro, incluindo operadores inesperados. Qual revisão combina validação e autorização?",
+          "explanation": "Formato válido não significa intenção autorizada. A fronteira da API deve controlar estrutura e valores, e a identidade do banco deve limitar efeitos.",
+          "reviewLessons": [
+            28,
+            29,
+            36
+          ]
+        },
+        {
+          "id": "q2",
+          "options": [
+            "Assumir que qualquer token recria eventos apagados para sempre.",
+            "Apagar o estado de todos os usuários sem diagnóstico.",
+            "Tratar a impossibilidade de retomar daquele ponto e executar uma estratégia definida de reconciliação/reconstrução, sem prometer replay ilimitado.",
+            "Tratar uma migração de schema como garantia de retenção infinita."
+          ],
+          "answer": 2,
+          "prompt": "O consumidor guardou um resume token, mas ficou parado além do histórico disponível. Qual comportamento precisa existir?",
+          "explanation": "Retomada depende do histórico e do estado do fluxo. Versionamento e deduplicação ajudam, mas não recuperam dados que já não estão disponíveis.",
+          "reviewLessons": [
+            31,
+            33,
+            35
+          ]
+        },
+        {
+          "id": "q3",
+          "options": [
+            "Apenas renomear o arquivo para sucesso.archive.",
+            "Assumir que contar arquivos prova equivalência de todos os dados.",
+            "Abrir um change stream e concluir que isso testa qualquer backup.",
+            "Conferir tipos, índices/regras necessários e resultados de domínio no destino, além dos logs da ferramenta."
+          ],
+          "answer": 3,
+          "prompt": "Uma cópia foi restaurada em outra base e os documentos aparecem, mas tipos BSON e invariantes não foram conferidos. Qual etapa falta?",
+          "explanation": "A restauração deve produzir o estado utilizável esperado. Ferramenta concluída e dados presentes não bastam para afirmar todos os contratos do projeto.",
+          "reviewLessons": [
+            31,
+            35,
+            36
+          ]
+        }
+      ]
+    }
+  ],
+  "finalProject": {
+    "id": "final",
+    "title": "Agenda de oficinas com inscrições idempotentes",
+    "scenario": "Construa a persistência de oficinas, participantes e inscrições com vagas limitadas. O sistema precisa distinguir pedido novo, repetição idêntica e conflito; consultar relatórios e provar recuperação com dados fictícios.",
+    "requirements": [
+      "Definir documentos e relações a partir das consultas, com tipos BSON e validators aplicados às coleções.",
+      "Reservar vaga e registrar inscrição de forma consistente; quando houver múltiplos documentos, usar transação na topologia apropriada.",
+      "Identificar a operação por chave única, comparar conteúdo em repetições e tratar falhas/resultado incerto com política limitada.",
+      "Criar consultas paginadas e relatórios de inscrições sem duplicar medidas após $unwind/$lookup; justificar os índices com explain e dados de teste.",
+      "Construir filtros permitidos na API e separar a identidade de aplicação da conta administrativa, demonstrando ações recusadas.",
+      "Versionar a evolução dos documentos e ensaiar retomada/reconciliação de eventos e backup BSON restaurado em base separada."
+    ],
+    "deliverables": [
+      "Scripts de coleções, validators, índices e fixtures, com versão/topologia do laboratório.",
+      "Cliente ou roteiro funcional das operações, entradas, consultas e respostas esperadas.",
+      "Relatório de testes de concorrência, duplicata, recusa, explicação dos planos e limites de retomada.",
+      "Runbook de migração, backup/restauração e conferência do destino, com logs e resultados reais."
+    ],
+    "rubric": [
+      {
+        "id": "r1",
+        "title": "Modelo e contrato",
+        "description": "A granularidade e os tipos são definidos e a validação está aplicada, não só declarada no cliente.",
+        "reviewLessons": [
+          2,
+          3,
+          10,
+          11,
+          12
+        ]
+      },
+      {
+        "id": "r2",
+        "title": "Consistência da inscrição",
+        "description": "Vagas e inscrição têm unidade de trabalho comprovada, com casos sem capacidade e erro intermediário.",
+        "reviewLessons": [
+          7,
+          25,
+          26
+        ]
+      },
+      {
+        "id": "r3",
+        "title": "Repetição controlada",
+        "description": "Chave, conteúdo, erros e janela de repetição fazem parte do protocolo.",
+        "reviewLessons": [
+          9,
+          20,
+          25,
+          27
+        ]
+      },
+      {
+        "id": "r4",
+        "title": "Consulta e desempenho",
+        "description": "Paginação, agregação e índices mantêm resultados corretos e medições contextualizadas.",
+        "reviewLessons": [
+          6,
+          13,
+          14,
+          15,
+          17,
+          19,
+          22,
+          24
+        ]
+      },
+      {
+        "id": "r5",
+        "title": "Acesso e diagnóstico",
+        "description": "Filtros e permissões limitam a operação e erros são observáveis sem credenciais nos logs.",
+        "reviewLessons": [
+          28,
+          29,
+          30,
+          32
+        ]
+      },
+      {
+        "id": "r6",
+        "title": "Evolução recuperável",
+        "description": "Versionamento, eventos e cópia restaurada possuem procedimentos e limites explícitos.",
+        "reviewLessons": [
+          21,
+          31,
+          33,
+          34,
+          35,
+          36
+        ]
+      }
+    ],
+    "acceptance": [
+      {
+        "title": "Duas tentativas para a última vaga",
+        "setup": "Crie oficina com uma vaga e duas identidades de operação diferentes; use o replica set local para o fluxo transacional.",
+        "input": "Dispare duas tentativas concorrentes de inscrição e consulte vagas e registros confirmados.",
+        "expected": "Somente uma inscrição é aceita; vagas não ficam negativas e o estado rejeitado não deixa metade da operação persistida.",
+        "reviewLessons": [
+          7,
+          20,
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "title": "Repetição e validação de entrada",
+        "setup": "Prepare uma operação confirmada e fixtures inválidas para tipos/campos e estrutura de filtro.",
+        "input": "Repita a mesma operação com mesmo conteúdo, depois com conteúdo diferente; tente documento inválido e operador não permitido.",
+        "expected": "Repetição idêntica não reserva outra vaga; conflito é distinguido; documento/filtro indevido é recusado com estado preservado.",
+        "reviewLessons": [
+          12,
+          20,
+          27,
+          28,
+          29
+        ]
+      },
+      {
+        "title": "Cópia, migração e eventos",
+        "setup": "Preserve documentos conhecidos, versão de schema, índices e token/estado de consumidor quando o ensaio usar change streams.",
+        "input": "Execute backup/restauração em base separada e confira o estado; aplique a migração prevista e ensaie retomada ou reconciliação.",
+        "expected": "Dados, tipos e invariantes esperados coincidem no destino; migração e retomada têm resultados e limites registrados, sem prometer histórico infinito.",
+        "reviewLessons": [
+          31,
+          33,
+          35,
+          36
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "options": [
+          "A propagação da sessão e os limites de transação/erro em todas as operações da unidade.",
+          "Somente a ordem das propriedades JSON no arquivo.",
+          "Adicionar um sort à consulta para que escritas sejam confirmadas juntas.",
+          "Assumir que qualquer conexão cria transação automática entre documentos."
+        ],
+        "answer": 0,
+        "prompt": "No projeto, duas coleções ficaram parcialmente atualizadas após erro. Ambas usaram a mesma conexão, mas não a mesma sessão transacional. O que revisar?",
+        "explanation": "A unidade transacional exige o contexto apropriado nas operações. Valide também pré-requisitos da topologia e o estado após a falha.",
+        "reviewLessons": [
+          7,
+          25,
+          26,
+          27
+        ]
+      },
+      {
+        "id": "q2",
+        "options": [
+          "Sim, devolver o mesmo ID resolve qualquer efeito duplicado.",
+          "Não; a decisão de repetição e o efeito precisam estar coordenados para não duplicar a reserva.",
+          "Sim, o índice único sempre desfaz atualizações anteriores externas à unidade.",
+          "Não, porque IDs não podem ser usados em protocolos."
+        ],
+        "answer": 1,
+        "prompt": "A repetição retorna o mesmo ID, mas o estoque foi reservado de novo antes de verificar a chave. O requisito de idempotência foi atendido?",
+        "explanation": "Identificar a resposta não basta quando um efeito já ocorreu outra vez. Organize a unidade de trabalho e o comportamento de conflito e reentrega.",
+        "reviewLessons": [
+          7,
+          20,
+          25,
+          27
+        ]
+      },
+      {
+        "id": "q3",
+        "options": [
+          "A cor do log de terminal.",
+          "Apenas o nome da cópia, sem abrir a base.",
+          "A configuração de validação e os testes positivos/negativos do estado restaurado.",
+          "Nenhuma, porque o processo ter retornado zero prova toda regra do produto."
+        ],
+        "answer": 2,
+        "prompt": "Os logs de restore registram sucesso, mas a inscrição com tipo inválido continua aceita no destino. Que evidência ainda precisa ser corrigida?",
+        "explanation": "A cópia utilizável precisa conservar os contratos exigidos. Verifique os validators, índices e invariantes, além do resultado do executável.",
+        "reviewLessons": [
+          12,
+          20,
+          31,
+          35,
+          36
+        ]
+      }
+    ]
+  }
+}

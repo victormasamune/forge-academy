@@ -1,0 +1,3537 @@
+{
+  "id": "mongodb",
+  "name": "MongoDB",
+  "title": "MongoDB Forge",
+  "updated": "2026-10-24",
+  "hours": 216,
+  "description": "Documentos BSON, consultas, modelagem, agregações, índices e operação de MongoDB 8.0, com laboratórios locais até transações, eventos e decisões de distribuição.",
+  "prerequisites": [
+    "Concluir Lógica de Programação ou dominar objetos, arrays e funções simples de JavaScript.",
+    "Fundamentos de bancos de dados ajudam a comparar integridade, índices e transações; SQL não é obrigatório para começar.",
+    "MongoDB Community Server 8.0, mongosh 2.x compatível e Database Tools compatível para o laboratório de backup. Não é necessário contratar nuvem."
+  ],
+  "outcome": "Construir a persistência de um catálogo e seus pedidos, com validação, consultas, índices medidos, migração versionada e ensaio de restauração.",
+  "extension": "js",
+  "codeLanguage": "javascript",
+  "setup": [
+    {
+      "title": "Servidor e shell",
+      "text": "Instale Community Server 8.0 e mongosh pelo procedimento oficial do seu sistema. Confira mongod --version e mongosh --version. Inicie mongod restrito a 127.0.0.1:27017 e consulte db.version() pelo shell. mongosh é cliente; ele não inicia nem substitui o servidor. A trilha fixa a série8.0 e não exige a versão mais recente."
+    },
+    {
+      "title": "Executar os exemplos",
+      "text": "Salve cada exemplo no arquivo indicado e rode mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aulaNN.js. Cada aula usa forge_lab e uma coleção aulaNN própria; deleteMany({}) limpa apenas a coleção do exercício. Nunca use dados de trabalho. A plataforma salva o rascunho e não executa mongosh."
+    },
+    {
+      "title": "Replica set para aulas 25, 26 e 33",
+      "text": "Siga o tutorial oficial deploy-replica-set-for-testing: crie três diretórios distintos e inicie três processos mongod com --replSet rs0, --bind_ip localhost e portas27017,27018,27019. No primeiro, execute uma vez rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"},{_id:1,host:\"localhost:27018\"},{_id:2,host:\"localhost:27019\"}]}). Aguarde um primary em rs.status(). Use a URI mongodb://localhost:27017,localhost:27018,localhost:27019/forge_lab?replicaSet=rs0. Pare antes o standalone de laboratório que ocupar essas portas. Três membros no mesmo computador permitem estudar o protocolo, mas não toleram perder o computador."
+    },
+    {
+      "title": "Ferramentas e autorização",
+      "text": "mongodump e mongorestore são executáveis separados usados no terminal do sistema. A aula31 usa Bash; no Windows pode ser executada em Bash/WSL com as ferramentas instaladas. A aula28 requer permissão de consultar roles. Para estudar auth, siga enable-authentication oficial e separe conta administrativa e conta da aplicação; peça senha no prompt e restrinja a rede."
+    }
+  ],
+  "references": [
+    {
+      "title": "Manual8.0",
+      "url": "https://www.mongodb.com/docs/v8.0/",
+      "description": "Comandos e contratos do servidor."
+    },
+    {
+      "title": "mongosh",
+      "url": "https://www.mongodb.com/docs/mongodb-shell/",
+      "description": "Cliente e execução de scripts."
+    },
+    {
+      "title": "Validação",
+      "url": "https://www.mongodb.com/docs/v8.0/core/schema-validation/",
+      "description": "Regras de tipos e integridade."
+    },
+    {
+      "title": "Agregação",
+      "url": "https://www.mongodb.com/docs/v8.0/core/aggregation-pipeline/",
+      "description": "Etapas e expressões."
+    },
+    {
+      "title": "Otimização",
+      "url": "https://www.mongodb.com/docs/v8.0/core/query-optimization/",
+      "description": "Índices e consultas cobertas."
+    },
+    {
+      "title": "Transações",
+      "url": "https://www.mongodb.com/docs/v8.0/core/transactions/",
+      "description": "Sessões e atomicidade."
+    },
+    {
+      "title": "Retryable writes",
+      "url": "https://www.mongodb.com/docs/v8.0/core/retryable-writes/",
+      "description": "Garantias das repetições."
+    },
+    {
+      "title": "Controle de acesso",
+      "url": "https://www.mongodb.com/docs/v8.0/tutorial/enable-authentication/",
+      "description": "Autenticação local e autorização."
+    },
+    {
+      "title": "mongodump",
+      "url": "https://www.mongodb.com/docs/database-tools/mongodump/",
+      "description": "Exportação BSON."
+    },
+    {
+      "title": "mongorestore",
+      "url": "https://www.mongodb.com/docs/database-tools/mongorestore/",
+      "description": "Restauração e namespaces."
+    },
+    {
+      "title": "Change streams",
+      "url": "https://www.mongodb.com/docs/v8.0/changestreams/",
+      "description": "Eventos e retomada."
+    },
+    {
+      "title": "Shard key",
+      "url": "https://www.mongodb.com/docs/v8.0/core/sharding-choose-a-shard-key/",
+      "description": "Distribuição e padrões de consulta."
+    },
+    {
+      "title": "Replica set de teste",
+      "url": "https://www.mongodb.com/docs/v8.0/tutorial/deploy-replica-set-for-testing/",
+      "description": "Procedimento para membros locais."
+    }
+  ],
+  "levels": [
+    {
+      "id": 1,
+      "title": "Ambiente e documentos",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Reconheça cliente, servidor e tipos BSON antes das primeiras operações.",
+      "skills": [
+        "mongosh",
+        "BSON",
+        "Objetos e arrays"
+      ],
+      "project": "Cadastro documental de produtos",
+      "deliverables": [
+        "Scripts de conexão e carga de10 produtos fictícios.",
+        "Tipos BSON e estrutura aninhada documentados.",
+        "README com versões e comandos de execução."
+      ],
+      "rubric": [
+        "IDs únicos e busca por identificador.",
+        "Datas como Date e política monetária explícita.",
+        "Reexecução limpa apenas coleções do laboratório."
+      ],
+      "challenge": [
+        {
+          "question": "O colega instalou somente mongosh e localhost27017 recusa conexão. O que verificar primeiro?",
+          "options": [
+            "Se o arquivo tem extensão.sql.",
+            "Se um processo mongod está iniciado e ouvindo no endereço indicado.",
+            "Se há uma coleção chamadalocalhost.",
+            "Se todos os documentos têm preço."
+          ],
+          "answer": 1,
+          "explanation": "O cliente não substitui um servidor disponível."
+        },
+        {
+          "question": "criadoEm foi gravado como texto com aparência ISO. A regra exige Date. Qual mudança é necessária?",
+          "options": [
+            "Renomear o campo apenas.",
+            "Criar índice text para converter tipos.",
+            "Validar e gravar Date explicitamente, migrando o legado quando necessário.",
+            "Adicionar.js ao valor."
+          ],
+          "answer": 2,
+          "explanation": "Formatação visual não altera o tipo BSON."
+        },
+        {
+          "question": "Um cadastro guarda endereco:{cidade:\"Natal\"}. Como alcançar o campo interno?",
+          "options": [
+            "{cidade:\"Natal\"}.",
+            "{endereco:[\"Natal\"]}.",
+            "{$cidade:\"Natal\"}.",
+            "{\"endereco.cidade\":\"Natal\"}."
+          ],
+          "answer": 3,
+          "explanation": "O ponto no caminho textual referencia o campo aninhado."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Consultas e contratos",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Traduza filtros, projeções e ordenação para resultados verificáveis.",
+      "skills": [
+        "Filtros",
+        "Projeções",
+        "Cursores"
+      ],
+      "project": "Busca paginada do catálogo",
+      "deliverables": [
+        "Cinco filtros com resultados previstos.",
+        "Projeções específicas por caso de uso.",
+        "Páginas com desempate definido."
+      ],
+      "rubric": [
+        "Casos de fronteira de preço e estado.",
+        "Testes separados de null e ausência.",
+        "Ordem estável entre preços iguais."
+      ],
+      "challenge": [
+        {
+          "question": "Uma API deve expor só nome e email mesmo quando surgem campos internos novos. Qual contrato ajuda?",
+          "options": [
+            "Retornar tudo e confiar no frontend.",
+            "Ordenar pelo campo interno.",
+            "Projeção inclusiva explícita dos campos permitidos.",
+            "Converter documento inteiro emstring."
+          ],
+          "answer": 2,
+          "explanation": "Enumerar os campos permitidos reduz exposição por evolução do modelo."
+        },
+        {
+          "question": "telefone:null encontrou cadastros sem telefone. Como selecionar apenas o tipo nulo?",
+          "options": [
+            "{telefone:\"null\"}.",
+            "{telefone:0}.",
+            "sort({telefone:1}).",
+            "{telefone:{$type:\"null\"}}."
+          ],
+          "answer": 3,
+          "explanation": "Igualdade a null também inclui ausência; tipo distingue."
+        },
+        {
+          "question": "A tela ordena por preço e dois produtos empatam. O que falta para páginas determinísticas na mesma base?",
+          "options": [
+            "Chave única adicional como _id para desempatar.",
+            "Nome de coleção maior.",
+            "Skip aleatório.",
+            "Retirar todos os limites."
+          ],
+          "answer": 0,
+          "explanation": "Ordenação não única não define posição entre empates."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Escritas atômicas",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Altere documentos e arrays com pré-condições e resultados interpretados.",
+      "skills": [
+        "$inc e $set",
+        "Arrays",
+        "Upsert"
+      ],
+      "project": "Controle de estoque",
+      "deliverables": [
+        "Retirada e reposição condicionais.",
+        "Itens alterados por arrayFilters.",
+        "Lote por chave única com relatório de falha parcial."
+      ],
+      "rubric": [
+        "Estoque não negativo nos testes.",
+        "Repetição de importação não duplicaSKU.",
+        "Estado final após erro do lote é demonstrado."
+      ],
+      "challenge": [
+        {
+          "question": "Duas retiradas concorrem sobre o mesmo produto. Onde avaliar estoque suficiente?",
+          "options": [
+            "Somente depois da escrita.",
+            "Apenas no formulário.",
+            "Numa leitura anterior sem coordenação.",
+            "No filtro da própria escrita que decrementa estoque."
+          ],
+          "answer": 3,
+          "explanation": "A condição precisa participar da escrita atômica."
+        },
+        {
+          "question": "O array contém A/qtd1 e B/qtd5. A busca exige A com qtd>=3 no mesmo item. Qual expressão é apropriada?",
+          "options": [
+            "$elemMatch reunindo sku e quantidade.",
+            "Dois caminhos independentes semelemMatch.",
+            "ÍndiceTTL.",
+            "Projeção só de_id."
+          ],
+          "answer": 0,
+          "explanation": "Predicados independentes podem usar elementos diferentes."
+        },
+        {
+          "question": "Um lote ordered aplicou a primeira inserção e falhou na segunda. Qual estado considerar?",
+          "options": [
+            "Tudo foi desfeito automaticamente.",
+            "A primeira pode estar persistida e as seguintes não foram necessariamente executadas.",
+            "Todas as seguintes foram aplicadas.",
+            "Todo o banco ficou vazio."
+          ],
+          "answer": 1,
+          "explanation": "Agrupamento de operações não é rollback geral."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Modelagem e integridade",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Escolha embedding ou referências e imponha contrato no servidor.",
+      "skills": [
+        "Padrões de acesso",
+        "Referências",
+        "Validação"
+      ],
+      "project": "Pedidos e clientes",
+      "deliverables": [
+        "Inventário de consultas e estrutura dos documentos.",
+        "Política de referências e dados históricos.",
+        "Validador com testes positivos e negativos."
+      ],
+      "rubric": [
+        "Arrays têm limites de domínio.",
+        "Órfãos são detectados e tratados.",
+        "Servidor rejeita documento inválido."
+      ],
+      "challenge": [
+        {
+          "question": "O catálogo muda o nome do produto e o pedido precisa preservar o contratado. O que faz sentido?",
+          "options": [
+            "Guardar uma fotografia nomeNaCompra no item.",
+            "Reescrever obrigatoriamente todos os pedidos antigos.",
+            "Copiar saldo atual sem fonte definida.",
+            "Excluir itens de pedidos antigos."
+          ],
+          "answer": 0,
+          "explanation": "Uma fotografia histórica tem semântica deliberada."
+        },
+        {
+          "question": "Entre checar pedidos e excluir cliente, uma compra nova aparece. Qual problema existe?",
+          "options": [
+            "Erro resolvido renomeandoclienteId.",
+            "Janela de concorrência que exige coordenação e política de exclusão.",
+            "Uma foreignkey automática com atraso.",
+            "Problema exclusivamente de projeção."
+          ],
+          "answer": 1,
+          "explanation": "Checar e agir separadamente não cria atomicidade do conjunto."
+        },
+        {
+          "question": "A nova regra exige estoque int>=0. O que esperar dos dados antigos sem migração?",
+          "options": [
+            "Todos viram inteiro0.",
+            "Todos são removidos.",
+            "Não são convertidos automaticamente pelo validador.",
+            "A coleção é renomeada."
+          ],
+          "answer": 2,
+          "explanation": "Alterar regra de escrita não transforma histórico por si só."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Agregação e relações",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Construa relatórios sem confundir a unidade de contagem.",
+      "skills": [
+        "$group",
+        "$unwind",
+        "$lookup"
+      ],
+      "project": "Relatório de vendas",
+      "deliverables": [
+        "Totais por estado e porSKU.",
+        "Associação com cliente ausente tratado.",
+        "Cardinalidade após cada etapa documentada."
+      ],
+      "rubric": [
+        "Totais conferem manualmente.",
+        "Pedido não é contado como item.",
+        "Órfãos não somem quando o requisito pede mostrá-los."
+      ],
+      "challenge": [
+        {
+          "question": "Após group, um campo original não aparece. Por quê?",
+          "options": [
+            "O servidor apagou o campo armazenado.",
+            "A forma de saída contém chave e acumuladores definidos, não todos os campos originais.",
+            "O shell perdeu a coleção.",
+            "Group exige replica set."
+          ],
+          "answer": 1,
+          "explanation": "A forma intermediária muda sem alterar os documentos de origem."
+        },
+        {
+          "question": "Um pedido com três itens gera três linhas após unwind. Como não chamá-las de três pedidos?",
+          "options": [
+            "Multiplicar sempre por três.",
+            "Remover arrays de todo domínio.",
+            "Definir a unidade e reagrupar por pedido quando necessário.",
+            "AplicarTTL ao resultado."
+          ],
+          "answer": 2,
+          "explanation": "Contagem de itens difere de contagem de pedidos."
+        },
+        {
+          "question": "Lookup retorna[] para cliente inexistente. Isso impede gravar novos órfãos?",
+          "options": [
+            "Sim, cria foreignkey.",
+            "Sim, restaura o cliente.",
+            "Sim, aborta escritas anteriores.",
+            "Não; a junção só relata correspondências da leitura."
+          ],
+          "answer": 3,
+          "explanation": "Integridade de escrita exige regras próprias."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Pipelines analíticos",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Produza visões múltiplas, acumulados e conversões diagnosticáveis.",
+      "skills": [
+        "$facet",
+        "Janelas",
+        "Datas"
+      ],
+      "project": "Painel analítico",
+      "deliverables": [
+        "Página e total com limites.",
+        "Acumulado por loja e fuso definido.",
+        "Relatório de valores legados inválidos."
+      ],
+      "rubric": [
+        "Entrada vazia tratada.",
+        "Acumulado reinicia por partição.",
+        "Inválido não vira zero silencioso."
+      ],
+      "challenge": [
+        {
+          "question": "Facet não recebe documentos e o ramo count é[]. Como apresentar total?",
+          "options": [
+            "Acessar contagem[0].total semteste.",
+            "Sempre reportar erro deauth.",
+            "Tratar a ausência do documento de contagem como0 explicitamente.",
+            "Inventar uma correspondência."
+          ],
+          "answer": 2,
+          "explanation": "Count de entrada vazia não produz um documento total0 sozinho."
+        },
+        {
+          "question": "O acumulado deve reiniciar a cada loja. O que delimita as sequências?",
+          "options": [
+            "Renomear total apenas.",
+            "Lookup em coleção vazia.",
+            "Remover sort e confiar na inserção.",
+            "partitionBy para loja, com ordem e janela adequadas."
+          ],
+          "answer": 3,
+          "explanation": "A partição define os documentos considerados por sequência."
+        },
+        {
+          "question": "Um valor legado inválido vira0 no relatório financeiro. Qual risco aparece?",
+          "options": [
+            "Confundir erro de dados com zero legítimo.",
+            "Zero cria uma nova réplica.",
+            "Índice_id deixa de existir.",
+            "TodoBSON futuro é inválido."
+          ],
+          "answer": 0,
+          "explanation": "Tratamento de erro precisa preservar significado."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Índices e retenção",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Desenhe acesso, unicidade e expiração com custos conhecidos.",
+      "skills": [
+        "Compostos",
+        "Parciais e únicos",
+        "TTL"
+      ],
+      "project": "Plano de índices e sessões",
+      "deliverables": [
+        "Mapa consulta→índice.",
+        "Conflito de unicidade demonstrado.",
+        "Sessões comTTL e validade na leitura."
+      ],
+      "rubric": [
+        "Índices nomeados e justificados.",
+        "Unicidade testada no subconjunto correto.",
+        "Expirado recusado antes da limpeza."
+      ],
+      "challenge": [
+        {
+          "question": "Qual evidência deve motivar um índice composto?",
+          "options": [
+            "Todo campo novo deve ganharíndice.",
+            "Nome grande da coleção.",
+            "O uso deJavaScript.",
+            "Consulta concreta com filtros,ordenação e medições."
+          ],
+          "answer": 3,
+          "explanation": "Índices atendem padrões e têm custo de manutenção."
+        },
+        {
+          "question": "Uma duplicata inativa está fora do índice parcial único ativo:true. Ao ativá-la, o que pode ocorrer?",
+          "options": [
+            "A atualização falha por chave duplicada no subconjunto ativo.",
+            "Ela ignora o índice para sempre.",
+            "Ela apaga a entidade ativa.",
+            "Ela muda de banco."
+          ],
+          "answer": 0,
+          "explanation": "Entrar no subconjunto exige obedecer à unicidade correspondente."
+        },
+        {
+          "question": "A autorização venceu às10h e TTL ainda não removeu o documento. O que vale às10h?",
+          "options": [
+            "Continua válida até limpeza.",
+            "A consulta deve recusar a autorização vencida.",
+            "Torna-se permanente.",
+            "Precisa parar o servidor."
+          ],
+          "answer": 1,
+          "explanation": "Limpeza eventual não define validade de uso."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Desempenho de consultas",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Meça esforço, cobertura e paginação antes de otimizar.",
+      "skills": [
+        "Explain",
+        "Cobertura",
+        "Paginação por chave"
+      ],
+      "project": "Investigação reproduzível",
+      "deliverables": [
+        "Base fictícia e consultas limitadas.",
+        "Planos e contadores antes/depois.",
+        "Cursor validado e busca textual experimental."
+      ],
+      "rubric": [
+        "Retorno e esforço registrados separadamente.",
+        "Cobertura com resultado não vazio.",
+        "Continuação respeita ordem completa."
+      ],
+      "challenge": [
+        {
+          "question": "nReturned10 e totalDocsExamined100000 sugerem o quê?",
+          "options": [
+            "Muito trabalho em relação ao retorno, a investigar.",
+            "Cobertura comprovada.",
+            "Existem só10documentos.",
+            "Rede certamente perfeita."
+          ],
+          "answer": 0,
+          "explanation": "Contadores diferenciam resultado e esforço."
+        },
+        {
+          "question": "Uma projeção acrescenta campo fora do índice. Qual efeito pode ocorrer?",
+          "options": [
+            "O campo entra sozinho no índice.",
+            "A consulta precisa buscar documentos e perde a cobertura daquele índice.",
+            "O retorno é sempre nulo.",
+            "Todos os índices são apagados."
+          ],
+          "answer": 1,
+          "explanation": "Cobertura depende dos campos exigidos na resposta."
+        },
+        {
+          "question": "Cursor guarda só preço e a ordenação é preço+ID. O que falta?",
+          "options": [
+            "Menos autenticação.",
+            "A coleção inteira dentro do cursor.",
+            "Valor do desempate para continuar entre preços iguais.",
+            "Eliminar projeção sempre."
+          ],
+          "answer": 2,
+          "explanation": "Continuação precisa representar a ordem completa."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Consistência e concorrência",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Use transações e trate confirmação incerta e repetição.",
+      "skills": [
+        "Sessões",
+        "Read/write concern",
+        "Idempotência"
+      ],
+      "project": "Transferência e recebimento idempotente",
+      "deliverables": [
+        "Replica set de teste identificado.",
+        "Testes decommit eabort da transferência.",
+        "Reuso divergente de chave rejeitado."
+      ],
+      "rubric": [
+        "Operações transacionais na mesma sessão.",
+        "Falha não gera crédito sem débito.",
+        "Timeout não significa ausência de escrita."
+      ],
+      "challenge": [
+        {
+          "question": "Uma escrita da transferência usa coleção fora da sessão. Qual risco existe?",
+          "options": [
+            "Entra por estar no mesmo arquivo.",
+            "Ela pode ficar fora da transação iniciada.",
+            "Servidor une tudo por nome.",
+            "Saldo vira string."
+          ],
+          "answer": 1,
+          "explanation": "Participação transacional depende do contexto da chamada."
+        },
+        {
+          "question": "A confirmação majority expirou e não se sabe se o pedido existe. Qual ação preserva o contrato?",
+          "options": [
+            "Criar nova compra com chave diferente.",
+            "Assumir rollback garantido.",
+            "Consultar ou repetir com a mesma chave de idempotência e tratar resultado incerto.",
+            "Apagar índice único."
+          ],
+          "answer": 2,
+          "explanation": "Timeout de confirmação não prova ausência da escrita."
+        },
+        {
+          "question": "A mesma chave idempotente chega com outroSKU. Qual resposta é adequada?",
+          "options": [
+            "Alterar silenciosamente o pedido antigo.",
+            "Aceitar ambos como mesma compra sem aviso.",
+            "Criar duplicata com a mesma chave única.",
+            "Detectar divergência e recusar reuso incompatível."
+          ],
+          "answer": 3,
+          "explanation": "A chave identifica um conteúdo de operação definido."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Segurança e limites",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Aplique menor privilégio e construa consultas a partir de entradas validadas.",
+      "skills": [
+        "Roles",
+        "Injeção NoSQL",
+        "Timeouts"
+      ],
+      "project": "Consulta segura por tenant",
+      "deliverables": [
+        "Contas separadas de aplicação e administração.",
+        "Entrada tipada e tenant confiável.",
+        "Limites de página/tempo e política de logs."
+      ],
+      "rubric": [
+        "Acesso proibido testado com identidade real.",
+        "Objeto operador rejeitado no campo string.",
+        "Falha não vira lista vazia silenciosa."
+      ],
+      "challenge": [
+        {
+          "question": "A aplicação apenas consulta catálogo. Qual identidade é um ponto de partida adequado?",
+          "options": [
+            "Root compartilhado.",
+            "UserAdminAnyDatabase.",
+            "Conta com leitura no banco necessário e separada da administração.",
+            "Sem política fora dolocalhost."
+          ],
+          "answer": 2,
+          "explanation": "Menor privilégio restringe o alcance da aplicação."
+        },
+        {
+          "question": "O cliente manda nome:{$ne:null} onde só string é permitida. Qual passo vem antes de find?",
+          "options": [
+            "Passar o objeto direto ao login.",
+            "Executareval para verificar conteúdo.",
+            "Remover filtrotenant.",
+            "Rejeitar objeto e construir filtro com string validada."
+          ],
+          "answer": 3,
+          "explanation": "Controlar tipo e estrutura impede introdução de operadores como valor."
+        },
+        {
+          "question": "Uma consulta falha por prazo e a API responde[]. Qual problema é criado?",
+          "options": [
+            "Falha de execução oculta como ausência de dados.",
+            "Mais consistência garantida.",
+            "Backup automático.",
+            "Menos necessidade de autorização."
+          ],
+          "answer": 0,
+          "explanation": "Consumidor deve distinguir vazio válido de execução interrompida."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Recuperação e eventos",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Restaure dados, investigue sinais e processe eventos retomáveis.",
+      "skills": [
+        "Database Tools",
+        "Observabilidade",
+        "Change streams"
+      ],
+      "project": "Plano operacional",
+      "deliverables": [
+        "Dump real e restore separado.",
+        "Relatório de métricas e roteiro de incidente.",
+        "Consumidor comcheckpoint e deduplicação desenhados."
+      ],
+      "rubric": [
+        "Restore validado por dados e índices.",
+        "Métricas variáveis não são inventadas.",
+        "Falha entre efeito echeckpoint prevista."
+      ],
+      "challenge": [
+        {
+          "question": "Dump terminou. O que falta antes de declarar recuperação testada?",
+          "options": [
+            "Consultar só a origem.",
+            "EsperarTTL.",
+            "Duplicar o nome do arquivo noREADME.",
+            "Restore separado e verificação de dados,índices e funcionamento."
+          ],
+          "answer": 3,
+          "explanation": "Arquivo existente não prova aplicação recuperável."
+        },
+        {
+          "question": "A contagem é estável e o disco cresce. O que investigar?",
+          "options": [
+            "Tamanho dos documentos,índices,logs e outros consumidores.",
+            "A contagem é necessariamente falsa.",
+            "Apagar arquivos internos manualmente.",
+            "Desabilitar validação sempre."
+          ],
+          "answer": 0,
+          "explanation": "Quantidade de documentos e bytes são medidas diferentes."
+        },
+        {
+          "question": "Consumidor aplica efeito e cai antes do checkpoint. Qual proteção reduz duplicação?",
+          "options": [
+            "Assumir exactlyonce externo universal.",
+            "Efeito idempotente ou deduplicação por chave de evento.",
+            "Ignorar tokens para sempre.",
+            "Remover filtros do stream."
+          ],
+          "answer": 1,
+          "explanation": "Falha entre efeito e progresso pode repetir evento."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Evolução e projeto final",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Justifique distribuição, migre contratos e reúna evidências.",
+      "skills": [
+        "Shard key",
+        "Migração",
+        "Projeto integrado"
+      ],
+      "project": "Persistência completa do catálogo",
+      "deliverables": [
+        "Scripts de criação,carga,consultas e testes.",
+        "Migração repetível e plano de reversão.",
+        "Relatório de modelo,índices,acesso e recuperação."
+      ],
+      "rubric": [
+        "Sharding justificado por carga e consultas.",
+        "Validador aplicado e testado.",
+        "Ensaios executados separados de hipóteses."
+      ],
+      "challenge": [
+        {
+          "question": "A chave tem muitos valores mas os novos crescem e concentram inserts numa faixa. O que avaliar?",
+          "options": [
+            "Monotonicidade e carga, além de cardinalidade.",
+            "Só número de campos.",
+            "Extensão do arquivo.",
+            "Título da aula."
+          ],
+          "answer": 0,
+          "explanation": "Muitos valores não resolvem todo padrão de distribuição."
+        },
+        {
+          "question": "Migração marca versão2 sem criar campo novo obrigatório. Qual verificação revela isso?",
+          "options": [
+            "Só contar documentos totais.",
+            "Consultar conteúdo e invariantes da versão2 além da contagem por versão.",
+            "Ler o nome da função.",
+            "Checar apenas índice_id."
+          ],
+          "answer": 1,
+          "explanation": "O número da versão declara um contrato que os dados devem cumprir."
+        },
+        {
+          "question": "O relatório diz que validação está ativa porque const regra existe. O que falta provar?",
+          "options": [
+            "Que a variável se chama regra.",
+            "Arquivo com100linhas.",
+            "Aplicação por createCollection/collMod e rejeição de uma escrita inválida.",
+            "Banco na nuvem."
+          ],
+          "answer": 2,
+          "explanation": "Objeto local não configura servidor sem comando e teste."
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": 1,
+      "level": 1,
+      "title": "Conectar e persistir o primeiro documento",
+      "goal": "Distinguir cliente, servidor e banco e verificar uma escrita.",
+      "theory": [
+        {
+          "title": "Cliente e servidor",
+          "text": "mongod guarda os dados; mongosh envia comandos. Selecionar forge_lab não importa um arquivo nem prova que existe conteúdo. Verifique primeiro se há servidor no endereço da conexão."
+        },
+        {
+          "title": "Documentos",
+          "text": "Uma coleção reúne documentos BSON com _id único dentro dela. Usaremos IDs numéricos pequenos para obter saídas previsíveis. ObjectId é comum em aplicações, mas não é obrigatório."
+        },
+        {
+          "title": "Reprodução",
+          "text": "A limpeza fica limitada à coleção aula01. A resposta de insertOne contém metadados; consultar depois verifica o estado persistido. Preveja a saída antes de executar."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula01\");\nc.deleteMany({});\nc.insertOne({_id:1,nome:\"Catálogo Forge\"});\nprint(c.findOne({_id:1}).nome);\n",
+      "filename": "aula01.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula01.js",
+      "expected": "Catálogo Forge",
+      "quiz": {
+        "question": "Qual programa envia o arquivo JavaScript ao servidor?",
+        "options": [
+          "mongodump.",
+          "mongosh.",
+          "O editor da plataforma sozinho.",
+          "Um arquivo BSON."
+        ],
+        "answer": 1,
+        "explanation": "mongosh é cliente; mongod é servidor."
+      },
+      "exercises": [
+        {
+          "title": "Outro cadastro",
+          "prompt": "Insira ID2 com nome Pedidos e consulte seu nome.",
+          "hint": "Mude o filtro de findOne.",
+          "solution": "c.insertOne({_id:2,nome:\"Pedidos\"}); print(c.findOne({_id:2}).nome) imprime Pedidos.",
+          "criteria": [
+            "Existem dois IDs diferentes.",
+            "A consulta imprime Pedidos."
+          ],
+          "id": 1
+        },
+        {
+          "title": "ID duplicado",
+          "prompt": "Tente inserir ID1 novamente e explique o erro.",
+          "hint": "Observe o índice _id_.",
+          "solution": "A segunda inserção produz chave duplicada, normalmente código11000. Outro cadastro precisa de outro ID; para alterar o existente use uma atualização.",
+          "criteria": [
+            "Registra chave duplicada.",
+            "ID1 continua único."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Identifique a conexão",
+          "prompt": "Imprima banco e versão do servidor e compare com a versão do shell.",
+          "hint": "Use lab.getName() e db.version().",
+          "solution": "lab.getName() é forge_lab; db.version() consulta o servidor, enquanto mongosh --version identifica o cliente. As versões podem ser diferentes.",
+          "criteria": [
+            "Registra as duas versões.",
+            "Distingue cliente e servidor."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/method/db.getSiblingDB/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 2,
+      "level": 1,
+      "title": "Objetos, arrays e caminhos",
+      "goal": "Representar endereço e interesses com estrutura aninhada.",
+      "theory": [
+        {
+          "title": "Embedding inicial",
+          "text": "Objetos e arrays podem viver dentro de um documento. Um endereço pequeno lido junto de um cadastro pode ser embutido. A escolha deve refletir consultas e mudanças, não só a aparência do JSON."
+        },
+        {
+          "title": "Caminhos",
+          "text": "\"endereco.cidade\" alcança um campo aninhado. As aspas fazem o ponto pertencer à chave do filtro. Comparar o objeto inteiro tem semântica diferente e pode depender da estrutura e ordem de seus campos."
+        },
+        {
+          "title": "Elementos",
+          "text": "Igualdade simples por tags:\"dados\" encontra esse valor num array. Isso difere de exigir um array completo com exatamente os mesmos elementos na mesma ordem."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula02\");\nc.deleteMany({});\nc.insertOne({_id:1,nome:\"Lia\",endereco:{cidade:\"Recife\",uf:\"PE\"},tags:[\"go\",\"dados\"]});\nconst p=c.findOne({\"endereco.cidade\":\"Recife\",tags:\"dados\"});\nprint(p.nome+\":\"+p.tags.length);\n",
+      "filename": "aula02.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula02.js",
+      "expected": "Lia:2",
+      "quiz": {
+        "question": "Como filtrar a cidade aninhada?",
+        "options": [
+          "{cidade:\"Recife\"}.",
+          "{\"endereco.cidade\":{$size:6}}.",
+          "{\"endereco.cidade\":\"Recife\"}.",
+          "{endereco:[\"Recife\"]}."
+        ],
+        "answer": 2,
+        "explanation": "O caminho textual aponta para o campo interno."
+      },
+      "exercises": [
+        {
+          "title": "Segunda cidade",
+          "prompt": "Inclua Rui de Olinda e liste somente nomes de Recife.",
+          "hint": "Use outro ID.",
+          "solution": "Insira {_id:2,nome:\"Rui\",endereco:{cidade:\"Olinda\"},tags:[]}; find({\"endereco.cidade\":\"Recife\"},{_id:0,nome:1}) retorna somente Lia.",
+          "criteria": [
+            "Rui não aparece.",
+            "Os dois cadastros permanecem."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Uma tag",
+          "prompt": "Encontre o cadastro que contém a tag go.",
+          "hint": "Igualdade ao elemento.",
+          "solution": "find({tags:\"go\"},{_id:0,nome:1}) encontra Lia; tags:[\"go\"] exigiria igualdade ao array completo e não encontra o array de duas tags.",
+          "criteria": [
+            "Usa igualdade ao elemento.",
+            "Explica a diferença para o array completo."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Projeção interna",
+          "prompt": "Retorne nome e cidade, sem _id ou tags.",
+          "hint": "Use projeção inclusiva.",
+          "solution": "findOne({_id:1},{_id:0,nome:1,\"endereco.cidade\":1}) mantém a cidade dentro do objeto endereco.",
+          "criteria": [
+            "tags não aparece.",
+            "Preserva endereco.cidade."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/document/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 3,
+      "level": 1,
+      "title": "Tipos BSON, datas e decimais",
+      "goal": "Escolher representações e distinguir valor de formatação.",
+      "theory": [
+        {
+          "title": "Além de JSON",
+          "text": "BSON inclui Date, ObjectId, Decimal128 e inteiros de tamanhos diferentes. A aparência no shell não determina o tipo armazenado. Use testes de tipo para auditar um contrato."
+        },
+        {
+          "title": "Precisão",
+          "text": "Números JavaScript comuns usam ponto flutuante binário. Decimal128 representa decimais dentro de seus limites; é uma escolha possível quando o domínio exige essa representação. Não misture string, double e decimal sem política."
+        },
+        {
+          "title": "Instantes",
+          "text": "ISODate produz um Date no shell. Armazene instantes com fuso definido e formate na apresentação. Uma string com aparência de data não se converte automaticamente em Date ao ser filtrada."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula03\");\nc.deleteMany({});\nc.insertOne({_id:1,preco:NumberDecimal(\"19.90\"),criadoEm:ISODate(\"2026-01-01T12:00:00Z\")});\nconst p=c.findOne({_id:1});\nprint(p.preco.toString());\nprint(p.criadoEm.toISOString());\n",
+      "filename": "aula03.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula03.js",
+      "expected": "19.90\n2026-01-01T12:00:00.000Z",
+      "quiz": {
+        "question": "O que ISODate produz para gravação?",
+        "options": [
+          "Uma string obrigatoriamente.",
+          "Uma coleção de datas.",
+          "Um fuso separado em outro campo.",
+          "Um valor BSON Date."
+        ],
+        "answer": 3,
+        "explanation": "O valor é Date; sua exibição não muda o tipo."
+      },
+      "exercises": [
+        {
+          "title": "Intervalo temporal",
+          "prompt": "Busque janeiro2026 usando início inclusivo e fim exclusivo.",
+          "hint": "Use $gte e $lt.",
+          "solution": "{criadoEm:{$gte:ISODate(\"2026-01-01T00:00:00Z\"),$lt:ISODate(\"2026-02-01T00:00:00Z\")}} evita inventar o último milissegundo do mês.",
+          "criteria": [
+            "Encontra ID1.",
+            "O fim é exclusivo."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Audite tipos",
+          "prompt": "Conte preco decimal e preco string.",
+          "hint": "Use $type.",
+          "solution": "countDocuments({preco:{$type:\"decimal\"}}) retorna1; com $type:\"string\" retorna0.",
+          "criteria": [
+            "Registra1 e0.",
+            "Distingue tipo e apresentação."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Comparação monetária",
+          "prompt": "Inclua preço20.00 e filtre preços menores que20.00.",
+          "hint": "Compare Decimal128 com Decimal128.",
+          "solution": "Insira {_id:2,preco:NumberDecimal(\"20.00\")}; find({preco:{$lt:NumberDecimal(\"20.00\")}}) encontra apenas ID1.",
+          "criteria": [
+            "O limite não entra.",
+            "Não compara strings monetárias."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/bson-types/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 4,
+      "level": 2,
+      "title": "Filtros e lógica",
+      "goal": "Traduzir regras de seleção com operadores explícitos.",
+      "theory": [
+        {
+          "title": "Comparações",
+          "text": "$gte e $lt expressam fronteiras; campos diferentes no mesmo filtro normalmente formam uma conjunção. Teste valores nos limites antes de generalizar a consulta."
+        },
+        {
+          "title": "Alternativas",
+          "text": "$or aceita ramos alternativos; $in compara um campo com um conjunto. Repetir a mesma chave num objeto JavaScript perde o valor anterior, não cria duas condições."
+        },
+        {
+          "title": "Entrada",
+          "text": "A aplicação deve construir o filtro com campos e tipos permitidos. Não aceite objetos arbitrários do cliente em autenticação ou autorização só porque são JSON válido."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula04\");\nc.deleteMany({});\nc.insertMany([{_id:1,nome:\"A\",preco:10,ativo:true},{_id:2,nome:\"B\",preco:20,ativo:false},{_id:3,nome:\"C\",preco:30,ativo:true}]);\nprint(c.find({ativo:true,preco:{$gte:10,$lt:30}}).sort({_id:1}).toArray().map(x=>x.nome).join(\",\"));\n",
+      "filename": "aula04.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula04.js",
+      "expected": "A",
+      "quiz": {
+        "question": "Como representar10<=preco<30?",
+        "options": [
+          "{preco:{$gte:10,$lt:30}}.",
+          "{preco:10,preco:30}.",
+          "{preco:{$gt:10,$lte:30}}.",
+          "{preco:\"10..30\"}."
+        ],
+        "answer": 0,
+        "explanation": "Os operadores expressam as fronteiras pedidas."
+      },
+      "exercises": [
+        {
+          "title": "Fronteiras",
+          "prompt": "Adicione ativos de preços9e30 e preveja o filtro original.",
+          "hint": "10 entra;30 não.",
+          "solution": "Os novos itens ficam fora:9 está abaixo do mínimo e30 é limite exclusivo. B também fica fora por ativo:false.",
+          "criteria": [
+            "Testa ambos os limites.",
+            "Separa preço e estado."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Alternativa",
+          "prompt": "Liste ativos ou preço20.",
+          "hint": "Use $or.",
+          "solution": "find({$or:[{ativo:true},{preco:20}]}).sort({_id:1}) retorna os três itens iniciais.",
+          "criteria": [
+            "Retorna1,2,3.",
+            "Explica alternativa versus conjunção."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Lista de nomes",
+          "prompt": "Busque A e C com $in.",
+          "hint": "O valor é um array.",
+          "solution": "find({nome:{$in:[\"A\",\"C\"]}}).sort({_id:1}) retorna1e3. Valide que as entradas são strings.",
+          "criteria": [
+            "Exclui B.",
+            "Usa um predicado nome."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/tutorial/query-documents/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 5,
+      "level": 2,
+      "title": "Projeção, null e ausência",
+      "goal": "Definir o retorno e distinguir falta de campo de valor nulo.",
+      "theory": [
+        {
+          "title": "Contrato",
+          "text": "Projeções inclusivas enumeram campos; _id vem por padrão e pode ser excluído. Em geral não misture inclusões e exclusões de outros campos. Isso controla retorno, não garante cobertura de índice."
+        },
+        {
+          "title": "Null",
+          "text": "{email:null} encontra email nulo e campo ausente. $exists verifica presença; $type:\"null\" seleciona o tipo nulo propriamente dito. Escolha conforme o requisito."
+        },
+        {
+          "title": "Exposição",
+          "text": "Retornar tudo pode expor campos novos do modelo sem revisão da API. Defina campos opcionais, nulos e obrigatórios e projete apenas os permitidos em cada operação."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula05\");\nc.deleteMany({});\nc.insertMany([{_id:1,nome:\"Lia\",email:null},{_id:2,nome:\"Rui\"},{_id:3,nome:\"Bia\",email:\"bia@example.test\"}]);\nprint(c.countDocuments({email:null}));\nprint(c.countDocuments({email:{$type:\"null\"}}));\nprint(JSON.stringify(c.findOne({_id:3},{_id:0,nome:1})));\n",
+      "filename": "aula05.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula05.js",
+      "expected": "2\n1\n{\"nome\":\"Bia\"}",
+      "quiz": {
+        "question": "{email:null} seleciona quais casos?",
+        "options": [
+          "Somente tipo null.",
+          "Nulo e campo ausente.",
+          "Somente string vazia.",
+          "Nenhum documento."
+        ],
+        "answer": 1,
+        "explanation": "Igualdade a null também inclui ausência."
+      },
+      "exercises": [
+        {
+          "title": "Ausente",
+          "prompt": "Encontre somente documentos sem email.",
+          "hint": "Use $exists:false.",
+          "solution": "find({email:{$exists:false}},{_id:1}) retorna somente ID2. email:null é um campo presente.",
+          "criteria": [
+            "Retorna ID2.",
+            "Explica presença versus valor."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Retorno permitido",
+          "prompt": "Retorne nome e email de Bia sem _id.",
+          "hint": "Projeção inclusiva.",
+          "solution": "findOne({_id:3},{_id:0,nome:1,email:1}) retorna somente esses campos.",
+          "criteria": [
+            "Não retorna _id.",
+            "Não depende de filtrar no frontend."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Regra da aplicação",
+          "prompt": "Defina email opcional que precisa ser string quando presente.",
+          "hint": "Teste presença antes do tipo.",
+          "solution": "Se \"email\" in entrada, exija typeof entrada.email===\"string\" e valide o formato escolhido; ausência é aceita e null é rejeitado nesse contrato.",
+          "criteria": [
+            "Trata ausência separadamente.",
+            "Rejeita objeto e null."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/tutorial/query-for-null-fields/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 6,
+      "level": 2,
+      "title": "Cursores e páginas ordenadas",
+      "goal": "Consumir resultados e reconhecer limites da paginação por deslocamento.",
+      "theory": [
+        {
+          "title": "Cursor",
+          "text": "find retorna um cursor. toArray facilita bases pequenas, mas acumula os resultados na memória do cliente. Em resultados maiores, use iteração e limites coerentes com a operação."
+        },
+        {
+          "title": "Desempate",
+          "text": "Não existe ordem de negócio implícita. sort deve ter desempate único para páginas estáveis no mesmo estado da base. Preço sozinho deixa itens iguais sem ordem definida."
+        },
+        {
+          "title": "Deslocamento",
+          "text": "skip e limit permitem páginas numeradas, mas grandes deslocamentos custam trabalho. Inserções e exclusões entre páginas podem mover posições; sort não cria um snapshot entre requisições."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula06\");\nc.deleteMany({});\nc.insertMany([{_id:1,preco:10},{_id:2,preco:10},{_id:3,preco:20}]);\nprint(c.find({}).sort({preco:1,_id:1}).skip(1).limit(2).toArray().map(x=>x._id).join(\",\"));\n",
+      "filename": "aula06.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula06.js",
+      "expected": "2,3",
+      "quiz": {
+        "question": "Por que adicionar _id ao sort por preco?",
+        "options": [
+          "Converter preços em string.",
+          "Impedir qualquer índice.",
+          "Desempatar preços iguais com uma chave única.",
+          "Garantir um snapshot entre requisições."
+        ],
+        "answer": 2,
+        "explanation": "Um desempate define a ordem dos itens iguais."
+      },
+      "exercises": [
+        {
+          "title": "Duas páginas",
+          "prompt": "Mostre páginas de dois itens com skip0e2.",
+          "hint": "Mantenha o mesmo sort.",
+          "solution": "A primeira tem IDs1,2; a segunda3. Use sort({preco:1,_id:1}) e limit(2) nas duas.",
+          "criteria": [
+            "Não repete na base imutável.",
+            "Mantém o mesmo desempate."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Itere",
+          "prompt": "Imprima IDs sem toArray.",
+          "hint": "O cursor oferece forEach.",
+          "solution": "c.find({}).sort({_id:1}).limit(3).forEach(d=>print(d._id)) imprime1,2,3 em linhas separadas.",
+          "criteria": [
+            "Ordem explícita.",
+            "Limite explícito."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Base alterada",
+          "prompt": "Explique o efeito de inserir um item de preço5 entre páginas por skip.",
+          "hint": "Os itens mudam de posição.",
+          "solution": "A inserção desloca os itens vistos; a segunda página pode repetir um item. Paginação por chave reduz esse problema, mas também precisa de contrato para mudanças concorrentes.",
+          "criteria": [
+            "Apresenta uma repetição possível.",
+            "Não promete snapshot com sort."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/method/cursor.sort/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 7,
+      "level": 3,
+      "title": "Atualizações e atomicidade",
+      "goal": "Usar $set e $inc com pré-condição e interpretar contadores.",
+      "theory": [
+        {
+          "title": "Operadores",
+          "text": "$set atribui campos sem substituir tudo; $inc calcula no servidor. Ler saldo e depois gravar um resultado do cliente pode perder atualizações concorrentes."
+        },
+        {
+          "title": "Pré-condição",
+          "text": "A escrita num documento é atômica. Inclua estoque suficiente no filtro e decremente na mesma operação. matchedCount0 informa que a regra não encontrou entidade naquele instante."
+        },
+        {
+          "title": "Contadores",
+          "text": "matchedCount e modifiedCount respondem perguntas diferentes. Um documento encontrado pode já ter o valor de $set e não precisar mudar; zero modificações não prova ausência."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula07\");\nc.deleteMany({});\nc.insertOne({_id:1,estoque:5});\nconst r=c.updateOne({_id:1,estoque:{$gte:3}},{$inc:{estoque:-3}});\nprint(r.matchedCount+\":\"+c.findOne({_id:1}).estoque);\n",
+      "filename": "aula07.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula07.js",
+      "expected": "1:2",
+      "quiz": {
+        "question": "Qual desenho evita estoque negativo na retirada de um documento?",
+        "options": [
+          "Ler e depois gravar sem pré-condição.",
+          "Apenas projeção.",
+          "Converter estoque para texto.",
+          "Filtro estoque suficiente e $inc negativo na mesma escrita."
+        ],
+        "answer": 3,
+        "explanation": "O predicado participa da operação atômica."
+      },
+      "exercises": [
+        {
+          "title": "Nova retirada",
+          "prompt": "Retire mais3 e confira o estado.",
+          "hint": "Mantenha a pré-condição.",
+          "solution": "A nova escrita tem matchedCount0 e o estoque permanece2. A aplicação deve informar que a retirada não foi aceita.",
+          "criteria": [
+            "Não modifica estoque.",
+            "Não declara sucesso."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Mesmo valor",
+          "prompt": "Atribua nomeA duas vezes e compare os contadores.",
+          "hint": "Use $set.",
+          "solution": "Na segunda atribuição matchedCount é1 e modifiedCount0: o documento existe, mas já tem o valor.",
+          "criteria": [
+            "Registra os dois contadores.",
+            "Explica o zero sem ausência."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Dois clientes",
+          "prompt": "Planeje um teste com duas retiradas de4 sobre estoque5.",
+          "hint": "Use dois clientes com a mesma condição.",
+          "solution": "Só uma retirada pode corresponder a estoque>=4; o final deve ser1. Um teste sequencial verifica a regra, mas não mede concorrência real.",
+          "criteria": [
+            "Define o resultado final.",
+            "Distingue teste sequencial e concorrente."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/write-operations-atomicity/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 8,
+      "level": 3,
+      "title": "Arrays e atualização posicional",
+      "goal": "Reunir condições no mesmo elemento e alterar itens filtrados.",
+      "theory": [
+        {
+          "title": "Mesmo elemento",
+          "text": "Dois filtros por caminhos de array podem ser satisfeitos por itens diferentes. $elemMatch exige que as condições valham no mesmo item. Use dados que diferenciem os dois significados."
+        },
+        {
+          "title": "Posicional filtrado",
+          "text": "$[item] referencia elementos que atendem a arrayFilters. Uma escrita pode modificar vários elementos e permanece atômica para o documento. Confira todos os itens após a alteração."
+        },
+        {
+          "title": "Crescimento",
+          "text": "Arrays embutidos devem ter limite de domínio. Históricos ilimitados aumentam tamanho e custo e podem exigir coleção de eventos ou segmentação por período."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula08\");\nc.deleteMany({});\nc.insertOne({_id:1,itens:[{sku:\"A\",qtd:1},{sku:\"B\",qtd:3}]});\nprint(c.countDocuments({itens:{$elemMatch:{sku:\"A\",qtd:{$gte:2}}}}));\nc.updateOne({_id:1},{$inc:{\"itens.$[item].qtd\":2}},{arrayFilters:[{\"item.sku\":\"A\"}]});\nprint(c.findOne({_id:1}).itens[0].qtd);\n",
+      "filename": "aula08.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula08.js",
+      "expected": "0\n3",
+      "quiz": {
+        "question": "Quando usar $elemMatch?",
+        "options": [
+          "Quando condições devem valer no mesmo elemento.",
+          "Para ordenar toda coleção.",
+          "Para substituir autenticação.",
+          "Para converter arrays em outras coleções."
+        ],
+        "answer": 0,
+        "explanation": "Ele agrupa os predicados do elemento."
+      },
+      "exercises": [
+        {
+          "title": "Falso positivo",
+          "prompt": "Antes do incremento, compare condições independentes e $elemMatch.",
+          "hint": "A tem1;B tem3.",
+          "solution": "{\"itens.sku\":\"A\",\"itens.qtd\":{$gte:2}} encontra1 documento; com $elemMatch encontra0. Cada condição independente pode vir de outro elemento.",
+          "criteria": [
+            "Reproduz1e0.",
+            "Identifica os elementos diferentes."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Sem duplicar",
+          "prompt": "Inclua tag dados duas vezes sem duplicar.",
+          "hint": "Use $addToSet.",
+          "solution": "Execute {$addToSet:{tags:\"dados\"}} duas vezes. O novo array tem uma ocorrência; isso não limpa duplicatas antigas existentes.",
+          "criteria": [
+            "Uma nova ocorrência.",
+            "Reconhece o limite das duplicatas antigas."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Remova zero",
+          "prompt": "Inclua itemC/qtd0 e remova itens com zero.",
+          "hint": "Use $pull.",
+          "solution": "Use $push para incluir o item e {$pull:{itens:{qtd:0}}} para removê-lo. A e B permanecem.",
+          "criteria": [
+            "Zero não permanece.",
+            "Preserva os demais itens."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/operator/query/elemMatch/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 9,
+      "level": 3,
+      "title": "Upsert, exclusão e lotes",
+      "goal": "Decidir criar ou alterar e reconhecer resultados parciais.",
+      "theory": [
+        {
+          "title": "Upsert",
+          "text": "upsert insere se não há correspondência. $setOnInsert vale só na criação. Para unicidade sob concorrência, o filtro precisa de um índice único adequado à chave de negócio."
+        },
+        {
+          "title": "Exclusão",
+          "text": "deleteOne e deleteMany têm escopos diferentes. Prefira filtros explícitos e verifique deletedCount. Limpeza total só é usada aqui em coleções identificadas de laboratório."
+        },
+        {
+          "title": "Lote",
+          "text": "bulkWrite reduz viagens de rede, mas não cria automaticamente transação. Com ordered:true, uma falha interrompe operações seguintes; anteriores podem estar aplicadas."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula09\");\nc.deleteMany({});\nc.createIndex({sku:1},{unique:true});\nfor(let i=0;i<2;i++)c.updateOne({sku:\"A\"},{$set:{ativo:true},$setOnInsert:{criadoEm:ISODate(\"2026-01-01T00:00:00Z\")}},{upsert:true});\nprint(c.countDocuments({sku:\"A\"}));\nprint(c.deleteOne({sku:\"inexistente\"}).deletedCount);\n",
+      "filename": "aula09.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula09.js",
+      "expected": "1\n0",
+      "quiz": {
+        "question": "bulkWrite é sempre atômico entre documentos?",
+        "options": [
+          "Sim, por padrão.",
+          "Não; agrupamento não substitui transação.",
+          "Sim, com ordered:false.",
+          "Sim, até dez operações."
+        ],
+        "answer": 1,
+        "explanation": "As escritas podem ter resultados parciais."
+      },
+      "exercises": [
+        {
+          "title": "Só na criação",
+          "prompt": "Atualize ativo e confira criadoEm.",
+          "hint": "$setOnInsert não roda na correspondência.",
+          "solution": "Uma nova atualização com $set:{ativo:false} muda ativo e mantém a data original.",
+          "criteria": [
+            "ativo fica false.",
+            "A data não muda."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Exclusão delimitada",
+          "prompt": "Insira B e exclua só B.",
+          "hint": "Use deleteOne com sku.",
+          "solution": "Insira {sku:\"B\"}; deleteOne({sku:\"B\"}) retorna deletedCount1 e A continua existindo.",
+          "criteria": [
+            "Remove somente B.",
+            "Registra o contador."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Falha no lote",
+          "prompt": "Preveja insertC, insertA duplicado, insertD com ordered:true.",
+          "hint": "O índice sku é único.",
+          "solution": "C pode ser aplicado; A falha e D não é executado. Consulte todos depois de capturar11000 para provar o estado parcial.",
+          "criteria": [
+            "C existe e D não.",
+            "Não descreve rollback geral."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/method/db.collection.bulkWrite/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 10,
+      "level": 4,
+      "title": "Modelagem por padrões de acesso",
+      "goal": "Desenhar documentos a partir das leituras, mudanças e limites.",
+      "theory": [
+        {
+          "title": "Operações primeiro",
+          "text": "Liste filtros, retornos, frequência e tamanho das consultas importantes. Um modelo ótimo para detalhar pedido pode ser inadequado para atualizar um cliente global. Registre o que precisa ser consistente."
+        },
+        {
+          "title": "Embedding",
+          "text": "Dados pequenos que pertencem à mesma entidade e são lidos juntos podem ser embutidos. A atomicidade do documento ajuda quando a regra cabe nele; limite arrays e tamanho no domínio."
+        },
+        {
+          "title": "Histórico",
+          "text": "Copiar preço para um pedido preserva o valor contratado. Copiar saldo atual para muitos lugares exige sincronização. Defina se cada cópia é fotografia histórica ou estado atual."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula10\");\nc.deleteMany({});\nc.insertOne({_id:1,clienteId:7,clienteNomeNaCompra:\"Lia\",itens:[{sku:\"A\",nomeNaCompra:\"Caderno\",precoCentavos:1500,qtd:2}]});\nconst p=c.findOne({_id:1});\nprint(p.itens.reduce((s,i)=>s+i.precoCentavos*i.qtd,0));\n",
+      "filename": "aula10.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula10.js",
+      "expected": "3000",
+      "quiz": {
+        "question": "Por que guardar precoNaCompra no pedido?",
+        "options": [
+          "Porque MongoDB proíbe coleção de produtos.",
+          "Porque qualquer duplicação elimina inconsistência.",
+          "Para preservar o preço contratado naquele momento.",
+          "Porque o catálogo nunca muda."
+        ],
+        "answer": 2,
+        "explanation": "Fotografia histórica tem contrato diferente de estado atual."
+      },
+      "exercises": [
+        {
+          "title": "Consultas do domínio",
+          "prompt": "Liste três consultas com filtros e campos necessários.",
+          "hint": "Inclua detalhe, histórico e relatório.",
+          "solution": "Exemplo: _id para detalhe; clienteId+criadoEm para histórico; status+criadoEm para totais. Acrescente ordenação e limites, orientando modelo e índices.",
+          "criteria": [
+            "Três filtros definidos.",
+            "Pelo menos uma ordenação explícita."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Limite do array",
+          "prompt": "Defina máximo de itens por pedido e teste um acima.",
+          "hint": "O limite é regra de produto.",
+          "solution": "Adote, por exemplo,100itens e valide comprimento<=100; teste100e101. Se o domínio exige mais, redesenhe processamento em vez de esconder o limite.",
+          "criteria": [
+            "Registra o limite.",
+            "Testa ambos os lados."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Fonte de verdade",
+          "prompt": "Explique por que não copiar saldo atual para todos os pedidos.",
+          "hint": "Quem atualizaria cada cópia?",
+          "solution": "As cópias mutáveis podem divergir; mantenha saldo na entidade própria e guarde no pedido apenas valores históricos necessários.",
+          "criteria": [
+            "Distingue atual e histórico.",
+            "Define uma fonte para saldo."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/data-modeling/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 11,
+      "level": 4,
+      "title": "Referências e integridade",
+      "goal": "Detectar referências sem destino e definir exclusão coordenada.",
+      "theory": [
+        {
+          "title": "Referência manual",
+          "text": "clienteId pode apontar para outra coleção, mas não cria foreign key automaticamente. A aplicação define criação, alteração e exclusão das entidades e o significado de uma referência ausente."
+        },
+        {
+          "title": "Tradeoff",
+          "text": "Referências permitem centralizar estado mutável, mas podem exigir outra consulta ou $lookup. Para uma fotografia histórica pequena, uma leitura extra pode não fazer sentido."
+        },
+        {
+          "title": "Concorrência",
+          "text": "Auditar órfãos detecta problemas depois, não impede que aconteçam. Se a regra proíbe órfãos em qualquer instante, coordene escritas e exclusões; avalie transação para múltiplos documentos."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula11\");\nc.deleteMany({});\nconst clientes=lab.getCollection(\"aula11_clientes\");clientes.deleteMany({});\nclientes.insertOne({_id:7,nome:\"Lia\"});\nc.insertMany([{_id:1,clienteId:7},{_id:2,clienteId:99}]);\nconst ids=clientes.find({},{_id:1}).toArray().map(x=>x._id);\nprint(c.find({clienteId:{$nin:ids}}).toArray().map(x=>x._id).join(\",\"));\n",
+      "filename": "aula11.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula11.js",
+      "expected": "2",
+      "quiz": {
+        "question": "clienteId cria foreign key automaticamente?",
+        "options": [
+          "Sim, se termina com Id.",
+          "Sim, se for ObjectId.",
+          "Sim, por existir índice _id.",
+          "Não; a integridade precisa ser projetada."
+        ],
+        "answer": 3,
+        "explanation": "Nome e tipo não criam restrição relacional."
+      },
+      "exercises": [
+        {
+          "title": "Corrija o órfão",
+          "prompt": "Mude clienteId do pedido2 para7 e repita a auditoria.",
+          "hint": "Use $set.",
+          "solution": "updateOne({_id:2},{$set:{clienteId:7}}) elimina o órfão. O array de todos os IDs serve só ao laboratório pequeno; em escala use agregação ou lotes.",
+          "criteria": [
+            "Zero órfãos.",
+            "Reconhece o limite em memória."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Política de exclusão",
+          "prompt": "Escolha uma regra de exclusão de cliente com pedidos.",
+          "hint": "Considere desativação.",
+          "solution": "Uma opção é bloquear exclusão física com pedidos e permitir desativar. A checagem seguida de exclusão separada tem janela de concorrência e precisa de coordenação.",
+          "criteria": [
+            "Regra explícita.",
+            "Identifica a janela."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Leitura defensiva",
+          "prompt": "Busque cliente do pedido1 e trate destino ausente.",
+          "hint": "findOne pode retornar null.",
+          "solution": "const p=c.findOne({_id:1});const cli=clientes.findOne({_id:p.clienteId});print(cli?cli.nome:\"cliente ausente\"); evita acessar nome de null.",
+          "criteria": [
+            "Imprime Lia.",
+            "Trata referência sem destino."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/data-modeling/concepts/embedding-vs-references/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 12,
+      "level": 4,
+      "title": "Schema validation",
+      "goal": "Reforçar tipos e campos obrigatórios no servidor.",
+      "theory": [
+        {
+          "title": "Contrato",
+          "text": "Esquema flexível não elimina regras. $jsonSchema declara campos obrigatórios, tipos BSON e limites. A validação no servidor complementa mensagens da aplicação e autorização, sem substituí-las."
+        },
+        {
+          "title": "Evolução",
+          "text": "Alterar o validador não migra documentos existentes. validationLevel e validationAction controlam operações seguintes. Audite dados antigos antes de tornar o contrato mais restritivo."
+        },
+        {
+          "title": "Falha esperada",
+          "text": "Teste documento válido e inválido. Capture somente o erro previsto; engolir qualquer exceção pode mascarar indisponibilidade ou falta de permissão como se o teste tivesse passado."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst regra={$jsonSchema:{bsonType:\"object\",required:[\"nome\",\"estoque\"],properties:{nome:{bsonType:\"string\"},estoque:{bsonType:\"int\",minimum:0}}}};\nif(!lab.getCollectionNames().includes(\"aula12\"))lab.createCollection(\"aula12\",{validator:regra});\nelse lab.runCommand({collMod:\"aula12\",validator:regra,validationLevel:\"strict\",validationAction:\"error\"});\nconst c=lab.getCollection(\"aula12\");c.deleteMany({});\nc.insertOne({_id:1,nome:\"A\",estoque:NumberInt(2)});\ntry{c.insertOne({_id:2,nome:\"B\",estoque:NumberInt(-1)});}catch(e){if(e.code!==121)throw e;print(\"estoque negativo rejeitado\");}\nprint(c.countDocuments({}));\n",
+      "filename": "aula12.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula12.js",
+      "expected": "estoque negativo rejeitado\n1",
+      "quiz": {
+        "question": "Novo validador transforma dados antigos?",
+        "options": [
+          "Não; migração é uma etapa distinta.",
+          "Sim, converte todos os tipos.",
+          "Sim, apaga inválidos automaticamente.",
+          "Sim, renomeia os campos."
+        ],
+        "answer": 0,
+        "explanation": "O contrato controla operações, não reescreve a base por si só."
+      },
+      "exercises": [
+        {
+          "title": "Obrigatório",
+          "prompt": "Insira estoque válido sem nome.",
+          "hint": "required contém nome.",
+          "solution": "insertOne({_id:3,estoque:NumberInt(2)}) recebe erro121; confirme que ID3 não existe. Outros códigos devem ser propagados.",
+          "criteria": [
+            "Escrita rejeitada.",
+            "Não oculta outro erro."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Tipo",
+          "prompt": "Teste estoque string \"2\".",
+          "hint": "A regra exige int.",
+          "solution": "A string é rejeitada apesar da aparência numérica. Use conversão explícita validada antes da escrita e NumberInt no exemplo.",
+          "criteria": [
+            "Não grava string.",
+            "Distingue tipo e valor."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Campo opcional",
+          "prompt": "Aceite precoCentavos int>=0 sem torná-lo obrigatório.",
+          "hint": "Inclua apenas em properties.",
+          "solution": "Adicione precoCentavos:{bsonType:\"int\",minimum:0} em properties e aplique collMod. Teste ausência aceita e valor negativo rejeitado.",
+          "criteria": [
+            "Ausência aceita.",
+            "Negativo rejeitado."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/schema-validation/",
+      "caution": "Criar ou alterar validadores exige permissões apropriadas. Use somente a coleção de laboratório.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 13,
+      "level": 5,
+      "title": "Agregação por etapas",
+      "goal": "Calcular grupos e acompanhar o formato intermediário.",
+      "theory": [
+        {
+          "title": "Pipeline",
+          "text": "Cada etapa recebe a saída da anterior. $match filtra, $group reúne chaves e $sort ordena. Desenhe os documentos intermediários antes de compor um relatório maior."
+        },
+        {
+          "title": "Acumuladores",
+          "text": "$sum de um campo acumula seus valores; $sum:1 conta documentos. _id no resultado do grupo é a chave de agrupamento, não obrigatoriamente um ID original."
+        },
+        {
+          "title": "Leitura e escrita",
+          "text": "Uma agregação comum apenas consulta. $merge e $out são etapas de escrita e mudam esse contrato; leia o pipeline inteiro antes de executar conteúdo fornecido por terceiros."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula13\");\nc.deleteMany({});\nc.insertMany([{_id:1,status:\"pago\",total:20},{_id:2,status:\"pago\",total:30},{_id:3,status:\"aberto\",total:9}]);\nconst r=c.aggregate([{$match:{status:\"pago\"}},{$group:{_id:\"$status\",total:{$sum:\"$total\"},pedidos:{$sum:1}}}]).toArray()[0];\nprint(r._id+\":\"+r.total+\":\"+r.pedidos);\n",
+      "filename": "aula13.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula13.js",
+      "expected": "pago:50:2",
+      "quiz": {
+        "question": "O que $sum:1 calcula no grupo?",
+        "options": [
+          "Um campo chamado1.",
+          "Quantidade de documentos que chegaram ao grupo.",
+          "Uma porcentagem automática.",
+          "Tamanho físico do banco."
+        ],
+        "answer": 1,
+        "explanation": "O literal1 é somado para cada documento."
+      },
+      "exercises": [
+        {
+          "title": "Todos os estados",
+          "prompt": "Some totais por estado sem filtrar pagos.",
+          "hint": "Agrupe e ordene por _id.",
+          "solution": "Use $group:{_id:\"$status\",total:{$sum:\"$total\"}} e $sort:{_id:1}; aberto soma9 e pago50.",
+          "criteria": [
+            "Ambos aparecem.",
+            "Ordem explícita."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Ticket médio",
+          "prompt": "Calcule média de total dos pagos.",
+          "hint": "Use $avg após o filtro.",
+          "solution": "{$match:{status:\"pago\"}},{$group:{_id:null,media:{$avg:\"$total\"}}} resulta25. Não inclua abertos no denominador.",
+          "criteria": [
+            "Média25.",
+            "Filtro correto."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Formato intermediário",
+          "prompt": "Execute só $match e depois acrescente $group.",
+          "hint": "Observe quais campos permanecem.",
+          "solution": "Antes do grupo há dois pedidos; depois há um documento agregado. Campos não definidos como chave ou acumulador não ficam automaticamente disponíveis.",
+          "criteria": [
+            "Descreve os dois formatos.",
+            "Explica perda do campo na forma intermediária."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/aggregation-pipeline/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 14,
+      "level": 5,
+      "title": "$unwind e subtotais",
+      "goal": "Desdobrar itens sem confundir quantidade de linhas com pedidos.",
+      "theory": [
+        {
+          "title": "Cardinalidade",
+          "text": "$unwind gera documento por elemento. Um pedido com dois itens vira duas linhas intermediárias. Contar linhas depois da expansão não equivale a contar pedidos distintos."
+        },
+        {
+          "title": "Expressões",
+          "text": "Caminhos com $ obtêm valores em expressões. $multiply calcula preço vezes quantidade e $sum acumula subtotais. Defina a unidade monetária do relatório."
+        },
+        {
+          "title": "Vazios",
+          "text": "preserveNullAndEmptyArrays escolhe manter documentos com campo ausente, nulo ou array vazio. Sem isso, eles podem desaparecer do relatório. Teste os casos do domínio."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula14\");\nc.deleteMany({});\nc.insertOne({_id:1,itens:[{sku:\"A\",preco:10,qtd:2},{sku:\"B\",preco:5,qtd:3}]});\nconst r=c.aggregate([{$unwind:\"$itens\"},{$group:{_id:\"$_id\",total:{$sum:{$multiply:[\"$itens.preco\",\"$itens.qtd\"]}}}}]).toArray();\nprint(r[0].total);\n",
+      "filename": "aula14.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula14.js",
+      "expected": "35",
+      "quiz": {
+        "question": "Depois de expandir dois itens, $sum:1 conta o quê?",
+        "options": [
+          "Um pedido necessariamente.",
+          "O campo quantidade automaticamente.",
+          "Duas linhas de itens.",
+          "Número de coleções."
+        ],
+        "answer": 2,
+        "explanation": "A unidade da linha mudou com a expansão."
+      },
+      "exercises": [
+        {
+          "title": "Por SKU",
+          "prompt": "Inclua outro pedido com A/qtd1 e some quantidade por SKU.",
+          "hint": "Agrupe após unwind.",
+          "solution": "Com $group:{_id:\"$itens.sku\",qtd:{$sum:\"$itens.qtd\"}}, A soma3 e B3. Conte quantidade, não apenas ocorrências.",
+          "criteria": [
+            "A3 e B3.",
+            "Usa campo qtd."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Vazio",
+          "prompt": "Inclua pedido com itens:[] e compare preserveNullAndEmptyArrays.",
+          "hint": "Use a forma objeto.",
+          "solution": "{$unwind:{path:\"$itens\",preserveNullAndEmptyArrays:true}} mantém o pedido vazio; a forma curta elimina. Defina como subtotal ausente é tratado.",
+          "criteria": [
+            "Registra cardinalidade.",
+            "Define regra do vazio."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Total salvo",
+          "prompt": "Defina um teste se total também é gravado no pedido.",
+          "hint": "Item e total podem divergir.",
+          "solution": "Compare total salvo com reduce dos itens após cada alteração. Atualize ambos na mesma escrita ou calcule na leitura conforme custo e requisito.",
+          "criteria": [
+            "Identifica dado derivado.",
+            "Verificação concreta."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/operator/aggregation/unwind/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 15,
+      "level": 5,
+      "title": "$lookup e relações",
+      "goal": "Associar documentos e tratar ausência de correspondência.",
+      "theory": [
+        {
+          "title": "Resultado",
+          "text": "$lookup devolve um array no campo as. Array vazio significa nenhuma correspondência, não erro automático de integridade. Uma relação múltipla pode ampliar muito o retorno."
+        },
+        {
+          "title": "Tipos",
+          "text": "localField e foreignField precisam conter valores comparáveis. Uma string que parece ObjectId não é um ObjectId BSON. Padronize as referências na gravação."
+        },
+        {
+          "title": "Custo",
+          "text": "O índice no lado consultado pode ajudar, mas a consulta completa deve ser medida. Reavalie embedding quando uma pequena informação sempre é lida junto e raramente muda."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula15\");\nc.deleteMany({});\nconst clientes=lab.getCollection(\"aula15_clientes\");clientes.deleteMany({});\nclientes.insertOne({_id:7,nome:\"Lia\"});\nc.insertMany([{_id:1,clienteId:7},{_id:2,clienteId:99}]);\nconst r=c.aggregate([{$lookup:{from:\"aula15_clientes\",localField:\"clienteId\",foreignField:\"_id\",as:\"cliente\"}},{$sort:{_id:1}}]).toArray();\nprint(r.map(x=>x._id+\":\"+x.cliente.length).join(\",\"));\n",
+      "filename": "aula15.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula15.js",
+      "expected": "1:1,2:0",
+      "quiz": {
+        "question": "O campo as recebe o quê?",
+        "options": [
+          "Uma foreign key obrigatória.",
+          "Somente booleano.",
+          "Uma transação aberta.",
+          "Um array de correspondências."
+        ],
+        "answer": 3,
+        "explanation": "A junção produz resultado sem impor integridade da escrita."
+      },
+      "exercises": [
+        {
+          "title": "Nome",
+          "prompt": "Retorne pedido e nome mantendo pedido sem cliente.",
+          "hint": "Unwind com preservação.",
+          "solution": "Após lookup, use {$unwind:{path:\"$cliente\",preserveNullAndEmptyArrays:true}} e {$project:{_id:1,nome:\"$cliente.nome\"}}. Pedido1 tem Lia;2 fica sem nome.",
+          "criteria": [
+            "Mantém ambos.",
+            "Não inventa cliente99."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Tipo divergente",
+          "prompt": "Troque clienteId7 por string \"7\" e refaça lookup.",
+          "hint": "Igualdade distingue tipo.",
+          "solution": "O array fica vazio: \"7\" difere do número7. Corrija o contrato e migre legados de forma validada.",
+          "criteria": [
+            "Reproduz vazio.",
+            "Não usa coerção invisível."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Índice",
+          "prompt": "Identifique o índice que atende o lado clientes.",
+          "hint": "foreignField é _id.",
+          "solution": "O índice _id_ apoia a igualdade. Se fosse codigo, avalie índice apropriado nesse campo e meça a consulta.",
+          "criteria": [
+            "Identifica o lado consultado.",
+            "Distingue _id e outra chave."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/operator/aggregation/lookup/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 16,
+      "level": 6,
+      "title": "$facet e múltiplas visões",
+      "goal": "Retornar página e metadados com limites definidos.",
+      "theory": [
+        {
+          "title": "Ramos",
+          "text": "$facet executa subpipelines sobre a entrada recebida e reúne arrays. É útil para página e total, mas o documento final também precisa respeitar os limites do servidor."
+        },
+        {
+          "title": "Entrada seletiva",
+          "text": "$match antes de facet pode reduzir a entrada e aproveitar índice. Usar facet como primeira etapa não é otimização universal; observe o trabalho realizado."
+        },
+        {
+          "title": "Limites",
+          "text": "Não devolva toda a coleção em um array de facet. Limite a página e defina o custo do total exato. O limite de um ramo não corta automaticamente o trabalho do outro."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula16\");\nc.deleteMany({});\nc.insertMany([{_id:1,ativo:true},{_id:2,ativo:true},{_id:3,ativo:false}]);\nconst r=c.aggregate([{$match:{ativo:true}},{$facet:{contagem:[{$count:\"total\"}],pagina:[{$sort:{_id:1}},{$limit:1},{$project:{_id:1}}]}}]).toArray()[0];\nprint(r.contagem[0].total+\":\"+r.pagina[0]._id);\n",
+      "filename": "aula16.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula16.js",
+      "expected": "2:1",
+      "quiz": {
+        "question": "Qual cuidado é necessário com facet?",
+        "options": [
+          "Limitar arrays e respeitar limites de memória e documento.",
+          "Retornar toda a base em cada ramo sempre.",
+          "Remover filtros para garantir índice.",
+          "Presumir escrita automática."
+        ],
+        "answer": 0,
+        "explanation": "Os arrays ainda consomem recursos."
+      },
+      "exercises": [
+        {
+          "title": "Entrada vazia",
+          "prompt": "Faça um filtro sem resultado e trate contagem[].",
+          "hint": "$count não produz total0 em entrada vazia.",
+          "solution": "const total=r.contagem.length?r.contagem[0].total:0; a página é[]. Evite acessar total de undefined.",
+          "criteria": [
+            "Contrato retorna0.",
+            "Trata array vazio."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Último item",
+          "prompt": "Adicione ramo com maior _id ativo.",
+          "hint": "Sort decrescente e limit1.",
+          "solution": "ultimo:[{$sort:{_id:-1}},{$limit:1},{$project:{_id:1}}] retorna[{_id:2}].",
+          "criteria": [
+            "Retorna2.",
+            "Não altera os demais ramos."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Custo da contagem",
+          "prompt": "Explique por que limit1 na página não limita a contagem a1.",
+          "hint": "São subpipelines distintos.",
+          "solution": "O total exato processa todos os documentos que passaram no match. Meça se a tela precisa dele em toda navegação.",
+          "criteria": [
+            "Distingue os ramos.",
+            "Relaciona custo e requisito."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/operator/aggregation/facet/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 17,
+      "level": 6,
+      "title": "Funções de janela",
+      "goal": "Calcular acumulados mantendo as linhas originais.",
+      "theory": [
+        {
+          "title": "Janela e grupo",
+          "text": "$group reduz linhas por chave; $setWindowFields acrescenta agregados aos documentos da partição. Declare a ordem e a janela de cálculo."
+        },
+        {
+          "title": "Acumulado",
+          "text": "documents:[\"unbounded\",\"current\"] inclui do início à linha atual. Em janelas por posição, empates de ordenação precisam de uma política de desempate coerente."
+        },
+        {
+          "title": "Apresentação",
+          "text": "A ordem de cálculo não substitui um sort final quando a apresentação exige uma sequência. Confira acumulados manualmente numa base pequena antes de ampliar o relatório."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula17\");\nc.deleteMany({});\nc.insertMany([{_id:1,dia:1,total:10},{_id:2,dia:2,total:20},{_id:3,dia:3,total:5}]);\nconst r=c.aggregate([{$setWindowFields:{sortBy:{dia:1},output:{acumulado:{$sum:\"$total\",window:{documents:[\"unbounded\",\"current\"]}}}}},{$sort:{dia:1}}]).toArray();\nprint(r.map(x=>x.acumulado).join(\",\"));\n",
+      "filename": "aula17.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula17.js",
+      "expected": "10,30,35",
+      "quiz": {
+        "question": "Qual diferença em relação a group?",
+        "options": [
+          "Group nunca soma.",
+          "A janela mantém documentos e acrescenta valores.",
+          "A janela sempre grava a coleção.",
+          "A janela exige sharding."
+        ],
+        "answer": 1,
+        "explanation": "É uma operação de enriquecimento das linhas."
+      },
+      "exercises": [
+        {
+          "title": "Por loja",
+          "prompt": "Calcule acumulados separados por loja.",
+          "hint": "partitionBy:\"$loja\".",
+          "solution": "Com A10,A20,B5, partitionBy mantém acumulados A10,A30,B5. Ordene saída por loja e dia.",
+          "criteria": [
+            "Não atravessa lojas.",
+            "Ordem final definida."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Janela móvel",
+          "prompt": "Preveja documents:[-1,0].",
+          "hint": "Linha anterior e atual.",
+          "solution": "Os resultados iniciais são10,30,25; o último inclui20+5 e não o primeiro valor.",
+          "criteria": [
+            "Previsão correta.",
+            "Explica fronteira inicial."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Empates",
+          "prompt": "Defina uma sequência para eventos do mesmo dia.",
+          "hint": "Dia sozinho não define posições.",
+          "solution": "Use sequência única no sortBy, ou combinação permitida pela janela e operação escolhidas. Defina o contrato antes de calcular.",
+          "criteria": [
+            "Identifica o empate.",
+            "Declara desempate adequado."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/operator/aggregation/setWindowFields/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 18,
+      "level": 6,
+      "title": "Conversões e períodos",
+      "goal": "Diagnosticar valores legados e definir o fuso do relatório.",
+      "theory": [
+        {
+          "title": "Período",
+          "text": "Um instante UTC pode pertencer a dias locais diferentes. $dateTrunc permite período e timezone; o fuso precisa vir do requisito do relatório, não da máquina que abre a página."
+        },
+        {
+          "title": "Conversão",
+          "text": "$convert oferece onError e onNull. Evite trocar inválidos por zero silenciosamente quando zero é um valor legítimo. Preserve o valor original para diagnóstico e correção."
+        },
+        {
+          "title": "Migração",
+          "text": "Converter toda a base em cada consulta pode esconder heterogeneidade e aumentar custo. Use conversão para auditar e migrar e imponha o contrato escolhido nas próximas escritas."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula18\");\nc.deleteMany({});\nc.insertMany([{_id:1,valor:\"12\"},{_id:2,valor:\"erro\"},{_id:3,valor:null}]);\nconst r=c.aggregate([{$project:{_id:1,n:{$convert:{input:\"$valor\",to:\"int\",onError:null,onNull:null}}}},{$sort:{_id:1}}]).toArray();\nprint(r.map(x=>x.n===null?\"inválido\":x.n).join(\",\"));\n",
+      "filename": "aula18.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula18.js",
+      "expected": "12,inválido,inválido",
+      "quiz": {
+        "question": "Qual risco de converter erros para0?",
+        "options": [
+          "Zero é proibido no BSON.",
+          "Remove índice _id.",
+          "Confundir inválido com zero legítimo.",
+          "Converte tudo em ObjectId."
+        ],
+        "answer": 2,
+        "explanation": "O tratamento deve preservar o significado do domínio."
+      },
+      "exercises": [
+        {
+          "title": "Rejeições",
+          "prompt": "Retenha o original e separe valores não convertidos.",
+          "hint": "Projete valor e n.",
+          "solution": "IDs2e3 precisam revisão: texto inválido e nulo. Preserve as razões em vez de reduzir ambos a zero.",
+          "criteria": [
+            "Identifica2e3.",
+            "Guarda o valor original."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Dia local",
+          "prompt": "Agrupe01:00Z e04:00Z de02jan2026 por dia em São Paulo.",
+          "hint": "Use $dateTrunc e America/Sao_Paulo.",
+          "solution": "Com unit:\"day\" e timezone:\"America/Sao_Paulo\", os instantes pertencem a01e02de janeiro. UTC os colocaria no mesmo dia.",
+          "criteria": [
+            "Fuso explícito.",
+            "Compara local e UTC."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Novo contrato",
+          "prompt": "Defina campo valorInt após a migração.",
+          "hint": "Tipo único e validação.",
+          "solution": "Grave int validado e imponha bsonType:\"int\"; NumberInt(12) passa e \"12\" falha. Preserve o legado até verificar conversão e reversão.",
+          "criteria": [
+            "Testa os dois tipos.",
+            "Define retirada do legado."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/operator/aggregation/convert/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 19,
+      "level": 7,
+      "title": "Índices simples e compostos",
+      "goal": "Criar estruturas de acesso a partir das consultas importantes.",
+      "theory": [
+        {
+          "title": "Custo",
+          "text": "Índices guardam estruturas auxiliares e acompanham escritas. Indexar cada campo sem avaliar as consultas aumenta espaço e manutenção sem garantir benefício."
+        },
+        {
+          "title": "Ordem",
+          "text": "A ordem do índice composto define prefixos e apoio a filtros e ordenação. Igualdade, sort e intervalo orientam a escolha, mas distribuição e seletividade precisam ser medidas."
+        },
+        {
+          "title": "Hipótese",
+          "text": "Registre a consulta que motiva cada índice e a redução de trabalho esperada. createIndex com sucesso não prova que ele será usado em toda consulta."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula19\");\nc.deleteMany({});\nc.insertMany([{_id:1,loja:\"A\",dia:1},{_id:2,loja:\"A\",dia:2},{_id:3,loja:\"B\",dia:1}]);\nc.createIndex({loja:1,dia:-1},{name:\"loja_dia\"});\nprint(c.getIndexes().find(i=>i.name===\"loja_dia\").name);\nprint(c.find({loja:\"A\"}).sort({dia:-1}).toArray().map(x=>x._id).join(\",\"));\n",
+      "filename": "aula19.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula19.js",
+      "expected": "loja_dia\n2,1",
+      "quiz": {
+        "question": "Por que a ordem dos campos no índice importa?",
+        "options": [
+          "Muda nomes dos campos.",
+          "Torna toda consulta coberta.",
+          "Elimina custo das escritas.",
+          "Define prefixos e apoio a filtros e ordenação."
+        ],
+        "answer": 3,
+        "explanation": "A estrutura deve corresponder ao acesso."
+      },
+      "exercises": [
+        {
+          "title": "Inventário",
+          "prompt": "Liste nome e chave de cada índice.",
+          "hint": "getIndexes.",
+          "solution": "getIndexes().map(i=>({nome:i.name,chave:i.key})) mostra _id_ e loja_dia. O primeiro é implícito.",
+          "criteria": [
+            "Registra os dois.",
+            "Mostra a ordem das chaves."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Prefixo",
+          "prompt": "Compare filtro lojaA com somente dia1.",
+          "hint": "O campo inicial é loja.",
+          "solution": "lojaA usa o prefixo; dia1 isolado não tem o mesmo prefixo de igualdade. Examine planos antes de concluir desempenho.",
+          "criteria": [
+            "Identifica o prefixo.",
+            "Não promete custo igual."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Antes de criar",
+          "prompt": "Defina medição antes de cinco índices novos.",
+          "hint": "Inclua leitura, escrita e espaço.",
+          "solution": "Compare latência, throughput de updates/inserts, tamanho dos índices e esforço das consultas. Mantenha o que atende requisitos e compensa o custo.",
+          "criteria": [
+            "Inclui escrita.",
+            "Inclui espaço."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/data-modeling/schema-design-process/create-indexes/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 20,
+      "level": 7,
+      "title": "Unicidade, índices parciais e multikey",
+      "goal": "Aplicar regras de negócio a subconjuntos e conhecer índices sobre arrays.",
+      "theory": [
+        {
+          "title": "Único",
+          "text": "unique recusa chaves duplicadas. Uma checagem anterior não substitui a restrição sob concorrência. Audite e resolva conflitos antigos antes de criar a regra."
+        },
+        {
+          "title": "Parcial",
+          "text": "partialFilterExpression inclui só parte dos documentos. Unicidade parcial vale nesse subconjunto. Uma consulta precisa preservar resultados completos ao usar o índice; não force um parcial que omita respostas válidas."
+        },
+        {
+          "title": "Multikey",
+          "text": "Índice sobre array guarda entradas relacionadas aos elementos. Há restrições em índices compostos e cobertura; não planeje combinar livremente vários campos de arrays do mesmo documento."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula20\");\nc.deleteMany({});\nc.createIndex({email:1},{name:\"email_ativo\",unique:true,partialFilterExpression:{ativo:true}});\nc.insertMany([{_id:1,email:\"lia@example.test\",ativo:true},{_id:2,email:\"lia@example.test\",ativo:false}]);\ntry{c.insertOne({_id:3,email:\"lia@example.test\",ativo:true});}catch(e){if(e.code!==11000)throw e;print(\"duplicata ativa rejeitada\");}\nprint(c.countDocuments({}));\n",
+      "filename": "aula20.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula20.js",
+      "expected": "duplicata ativa rejeitada\n2",
+      "quiz": {
+        "question": "Qual regra o índice do exemplo impõe?",
+        "options": [
+          "Email único entre documentos ativo:true.",
+          "Email único inclusive entre todos os inativos.",
+          "Todo campo é obrigatório.",
+          "Arrays são proibidos no banco."
+        ],
+        "answer": 0,
+        "explanation": "A restrição segue o subconjunto indexado."
+      },
+      "exercises": [
+        {
+          "title": "Ativação",
+          "prompt": "Tente ativar ID2 e confira seu estado.",
+          "hint": "Entrará no índice parcial.",
+          "solution": "updateOne({_id:2},{$set:{ativo:true}}) falha com11000; ID2 permanece inativo.",
+          "criteria": [
+            "Rejeita a mudança.",
+            "Preserva estado anterior."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Auditoria",
+          "prompt": "Localize emails ativos duplicados antes do índice.",
+          "hint": "Match, group, match.",
+          "solution": "Use $match ativo:true, $group por email com n:{$sum:1}, e $match n:{$gt:1}. Resolva cada conflito antes da restrição.",
+          "criteria": [
+            "Filtra ativos.",
+            "Retorna só n>1."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Tags",
+          "prompt": "Crie aula20_tags com array e índice tags:1.",
+          "hint": "A consulta é pelo elemento.",
+          "solution": "Insira {_id:1,tags:[\"go\",\"dados\"]}; crie o índice e find({tags:\"dados\"}). Examine isMultiKey no explain sem confundir elementos indexados com documentos separados.",
+          "criteria": [
+            "Encontra ID1.",
+            "Distingue elemento e documento."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/index-partial/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 21,
+      "level": 7,
+      "title": "TTL e retenção",
+      "goal": "Configurar expiração sem confundi-la com autorização imediata.",
+      "theory": [
+        {
+          "title": "Expiração",
+          "text": "TTL sobre campo Date remove documentos após o prazo. expireAfterSeconds0 permite guardar o instante de expiração. O monitor é assíncrono; remoção não é garantida no milissegundo esperado."
+        },
+        {
+          "title": "Validade",
+          "text": "Sessão vencida deve ser recusada mesmo que o documento ainda exista. Filtre expiraEm na consulta de uso. Retenção física e validade de acesso são contratos diferentes."
+        },
+        {
+          "title": "Teste",
+          "text": "Evite teste dependente do instante exato do monitor. Verifique definição do índice e regra de leitura; observe a limpeza separadamente numa janela documentada."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula21\");\nc.deleteMany({});\nc.createIndex({expiraEm:1},{name:\"expiracao\",expireAfterSeconds:0});\nc.insertOne({_id:1,expiraEm:ISODate(\"2099-01-01T00:00:00Z\")});\nprint(c.getIndexes().find(i=>i.name===\"expiracao\").expireAfterSeconds);\nprint(c.countDocuments({expiraEm:{$gt:ISODate(\"2026-01-01T00:00:00Z\")}}));\n",
+      "filename": "aula21.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula21.js",
+      "expected": "0\n1",
+      "quiz": {
+        "question": "Sessão vencida ainda existe. Qual regra vale?",
+        "options": [
+          "Aceitar até TTL apagar.",
+          "Recusar pelo filtro de validade.",
+          "Tornar válida permanentemente.",
+          "Parar o servidor."
+        ],
+        "answer": 1,
+        "explanation": "TTL não substitui autorização."
+      },
+      "exercises": [
+        {
+          "title": "Uso válido",
+          "prompt": "Busque sessãoID1 somente se ainda válida.",
+          "hint": "Compare com new Date().",
+          "solution": "findOne({_id:1,expiraEm:{$gt:new Date()}}) aplica validade na leitura. Verifique também usuário e contexto da sessão.",
+          "criteria": [
+            "Inclui expiração.",
+            "Não usa só existência."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Tipo errado",
+          "prompt": "Explique por que uma string expiraEm é inadequada.",
+          "hint": "TTL depende de Date.",
+          "solution": "\"2099-01-01\" não é BSON Date. Valide o tipo no banco e converta entrada de modo explícito.",
+          "criteria": [
+            "Identifica o tipo.",
+            "Propõe validação."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Retenção",
+          "prompt": "Escolha políticas para sessão e pedido comercial.",
+          "hint": "Nem todo dado antigo pode expirar.",
+          "solution": "Sessões descartáveis podem usar TTL; pedidos precisam política de negócio e arquivamento auditável. Defina finalidade e prazo antes de automatizar exclusão.",
+          "criteria": [
+            "Distingue entidades.",
+            "Justifica os prazos."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/index-ttl/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 22,
+      "level": 8,
+      "title": "Explain e trabalho de consulta",
+      "goal": "Ler contadores e comparar índices em uma experiência controlada.",
+      "theory": [
+        {
+          "title": "Execução",
+          "text": "queryPlanner mostra planejamento; executionStats executa a consulta para obter estatísticas. Isso consome recursos. Use com cuidado em consultas pesadas e controle o cenário do laboratório."
+        },
+        {
+          "title": "Contadores",
+          "text": "nReturned mede retorno; totalDocsExamined e totalKeysExamined ajudam a medir esforço. Latência também depende de cache, concorrência, rede e volume; uma execução curta não prova um ganho universal."
+        },
+        {
+          "title": "Versões",
+          "text": "MongoDB8.0 pode exibir formas de plano distintas de versões antigas. Leia métricas e contratos em vez de exigir sempre o mesmo nó num mesmo caminho JSON. hint é útil em uma experiência explícita, não como reflexo automático."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula22\");\nc.deleteMany({});\nc.insertMany(Array.from({length:100},(_,i)=>({_id:i,grupo:i%10})));\nc.createIndex({grupo:1},{name:\"grupo\"});\nconst e=c.find({grupo:3}).hint(\"grupo\").explain(\"executionStats\");\nprint(\"retornados=\"+e.executionStats.nReturned);\nprint(\"documentos=\"+e.executionStats.totalDocsExamined);\n",
+      "filename": "aula22.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula22.js",
+      "expected": "retornados=10\ndocumentos=10",
+      "quiz": {
+        "question": "executionStats executa a consulta?",
+        "options": [
+          "Não, só lê sintaxe.",
+          "Não, se houver índice.",
+          "Sim, para coletar estatísticas.",
+          "Apaga o cache de todos os usuários."
+        ],
+        "answer": 2,
+        "explanation": "Esse nível de explain realiza trabalho de execução."
+      },
+      "exercises": [
+        {
+          "title": "Varredura",
+          "prompt": "Compare hint(\"grupo\") com hint({$natural:1}).",
+          "hint": "O segundo força varredura natural.",
+          "solution": "O retorno continua10, mas a varredura examina100 documentos na base criada. Registre chaves e documentos, não apenas um tempo.",
+          "criteria": [
+            "Mesmo retorno.",
+            "Registra esforço nos dois."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Retorno e esforço",
+          "prompt": "Explique por que10 respostas não provam eficiência.",
+          "hint": "Pode ler100000 para devolver10.",
+          "solution": "nReturned mede quantidade entregue. Compare documentos/chaves examinados e teste carga representativa antes de concluir.",
+          "criteria": [
+            "Distingue as medidas.",
+            "Inclui duas métricas de esforço."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Sem hint",
+          "prompt": "Observe o plano escolhido pelo otimizador.",
+          "hint": "Remova só hint.",
+          "solution": "Registre winningPlan e estatísticas. A escolha num conjunto pequeno não é garantia para todo volume e distribuição.",
+          "criteria": [
+            "Registra o observado.",
+            "Mantém o resultado funcional."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/explain-results/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 23,
+      "level": 8,
+      "title": "Consultas cobertas",
+      "goal": "Alinhar retorno e índice e verificar ausência de fetch.",
+      "theory": [
+        {
+          "title": "Cobertura",
+          "text": "Uma consulta pode ser respondida pelas entradas do índice se ele contém o necessário para filtrar e retornar, respeitadas restrições do índice e da consulta. Usar índice no filtro não basta."
+        },
+        {
+          "title": "ID implícito",
+          "text": "_id vem por padrão. Se não está no índice usado e a resposta o exige, pode ser necessário buscar o documento. Exclua somente quando o contrato permitir."
+        },
+        {
+          "title": "Evidência",
+          "text": "totalDocsExamined0 precisa ser lido junto de nReturned. Consulta vazia não demonstra cobertura útil de documentos correspondentes; teste uma chave existente."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula23\");\nc.deleteMany({});\nc.insertMany([{_id:1,sku:\"A\",nome:\"Caderno\"},{_id:2,sku:\"B\",nome:\"Caneta\"}]);\nc.createIndex({sku:1,nome:1},{name:\"sku_nome\"});\nconst e=c.find({sku:\"A\"},{_id:0,sku:1,nome:1}).hint(\"sku_nome\").explain(\"executionStats\");\nprint(e.executionStats.nReturned+\":\"+e.executionStats.totalDocsExamined);\n",
+      "filename": "aula23.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula23.js",
+      "expected": "1:0",
+      "quiz": {
+        "question": "Por que excluir _id neste caso?",
+        "options": [
+          "Porque _id não pode ser retornado.",
+          "Para apagá-lo do banco.",
+          "Para remover o índice _id_.",
+          "O índice usado não o contém e a resposta não precisa dele."
+        ],
+        "answer": 3,
+        "explanation": "A projeção limita o retorno sem alterar dados."
+      },
+      "exercises": [
+        {
+          "title": "Campo fora",
+          "prompt": "Adicione descricao não indexada à projeção e meça.",
+          "hint": "Grave o campo primeiro.",
+          "solution": "Atualize A com descricao:\"Papel\" e projete descricao:1. Com hint sku_nome, a consulta precisa ler o documento e totalDocsExamined deixa de ser0.",
+          "criteria": [
+            "Retorna descrição.",
+            "Compara antes/depois."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Vazio",
+          "prompt": "Busque Z e explique por que0:0 não prova a mesma cobertura.",
+          "hint": "Não houve resultado.",
+          "solution": "Nenhum documento correspondeu; repita a análise com A ou B e os campos realmente usados pela aplicação.",
+          "criteria": [
+            "Reconhece caso vazio.",
+            "Usa chave existente no teste."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Compensação",
+          "prompt": "Justifique não incluir todos os campos num índice gigante.",
+          "hint": "Há custo de escrita e memória.",
+          "solution": "Índices grandes ocupam espaço e encarecem manutenção. Meça frequência e benefício de consultas cobertas antes de aumentar a estrutura.",
+          "criteria": [
+            "Inclui escrita.",
+            "Relaciona custo e frequência."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/query-optimization/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 24,
+      "level": 8,
+      "title": "Paginação por chave e busca text",
+      "goal": "Continuar páginas pela última chave e conhecer a busca textual básica.",
+      "theory": [
+        {
+          "title": "Continuação",
+          "text": "Com sort _id ascendente, o filtro _id maior que último evita descartar grandes deslocamentos. Não cria snapshot entre requisições e precisa de contrato para documentos alterados."
+        },
+        {
+          "title": "Cursor composto",
+          "text": "Se o sort usa preço e ID, o cursor precisa dos dois e o predicado deve respeitar a ordem lexicográfica. Valide seus campos como qualquer entrada recebida."
+        },
+        {
+          "title": "Texto",
+          "text": "Índices text e $text oferecem busca textual do servidor. Isso é diferente de Atlas Search. Defina idioma, ranking esperado e limitações em vez de trocar toda busca por regex sem limites."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula24\");\nc.deleteMany({});\nc.insertMany([{_id:1,nome:\"A\"},{_id:2,nome:\"B\"},{_id:3,nome:\"C\"},{_id:4,nome:\"D\"}]);\nconst p=c.find({}).sort({_id:1}).limit(2).toArray();\nconst ultimo=p[p.length-1]._id;\nprint(c.find({_id:{$gt:ultimo}}).sort({_id:1}).limit(2).toArray().map(x=>x._id).join(\",\"));\n",
+      "filename": "aula24.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula24.js",
+      "expected": "3,4",
+      "quiz": {
+        "question": "Por que _id>último é coerente aqui?",
+        "options": [
+          "A ordem é crescente por _id único.",
+          "Toda coleção tem ordem física fixa.",
+          "Não existe índice algum.",
+          "skip é obrigatório em toda página."
+        ],
+        "answer": 0,
+        "explanation": "O filtro de continuação corresponde à ordem."
+      },
+      "exercises": [
+        {
+          "title": "Fim",
+          "prompt": "Continue depois de4 e trate vazio.",
+          "hint": "Confira comprimento antes do último elemento.",
+          "solution": "find({_id:{$gt:4}}) retorna[]. Encerre navegação ou omita próximo cursor, sem ler _id de undefined.",
+          "criteria": [
+            "Trata vazio.",
+            "Não fabrica próximo cursor."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Composto",
+          "prompt": "Continue preço ascendente e ID ascendente após preço10,ID2.",
+          "hint": "Preço maior ou empate com ID maior.",
+          "solution": "Use {$or:[{preco:{$gt:10}},{preco:10,_id:{$gt:2}}]} e sort({preco:1,_id:1}) com índice compatível.",
+          "criteria": [
+            "Tem dois ramos.",
+            "Leva os dois valores no cursor."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Text",
+          "prompt": "Em aula24_text, crie busca pela palavra mongodb em titulo.",
+          "hint": "Crie índice text.",
+          "solution": "Insira títulos simples; createIndex({titulo:\"text\"},{default_language:\"none\"}); find({$text:{$search:\"mongodb\"}}) busca o termo. Documente se o produto precisa de tolerância a erro ou ranking além disso.",
+          "criteria": [
+            "Cria o índice certo.",
+            "Diferencia de Atlas Search."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/method/cursor.skip/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 25,
+      "level": 9,
+      "title": "Transações entre documentos",
+      "goal": "Transferir valores com commit e abort na mesma sessão.",
+      "theory": [
+        {
+          "title": "Topologia",
+          "text": "Transações de múltiplos documentos exigem replica set ou sharded cluster. Confirme o rs0 do setup; standalone não oferece este laboratório. Três processos locais não dão resiliência à perda da máquina."
+        },
+        {
+          "title": "Sessão",
+          "text": "Todas as operações da regra devem usar coleções obtidas da mesma sessão. Uma escrita fora dela não entra na transação por estar perto no arquivo. Mantenha o trabalho curto."
+        },
+        {
+          "title": "Falhas",
+          "text": "O exemplo faz commit e abort explícitos; aplicações precisam tratar rótulos e commit incerto com as APIs do driver. Não execute efeitos externos irreversíveis no corpo que pode ser repetido."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula25\");c.deleteMany({});\nc.insertMany([{_id:\"A\",saldo:100},{_id:\"B\",saldo:20}]);\nconst s=db.getMongo().startSession();\nconst contas=s.getDatabase(\"forge_lab\").getCollection(\"aula25\");\ntry{\n s.startTransaction({readConcern:{level:\"snapshot\"},writeConcern:{w:\"majority\"}});\n if(contas.updateOne({_id:\"A\",saldo:{$gte:30}},{$inc:{saldo:-30}}).matchedCount!==1)throw new Error(\"saldo insuficiente\");\n if(contas.updateOne({_id:\"B\"},{$inc:{saldo:30}}).matchedCount!==1)throw new Error(\"destino ausente\");\n s.commitTransaction();\n}catch(e){s.abortTransaction();throw e;}finally{s.endSession();}\nprint(c.find({}).sort({_id:1}).toArray().map(x=>x._id+\":\"+x.saldo).join(\",\"));\n",
+      "filename": "aula25.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://localhost:27017,localhost:27018,localhost:27019/forge_lab?replicaSet=rs0\" --quiet --file aula25.js",
+      "expected": "A:70,B:50",
+      "quiz": {
+        "question": "Como incluir uma escrita na transação iniciada?",
+        "options": [
+          "Qualquer db no arquivo serve.",
+          "Usar a coleção da mesma sessão.",
+          "Um comentário transaction basta.",
+          "Usar somente updateMany."
+        ],
+        "answer": 1,
+        "explanation": "O contexto de sessão vincula as operações."
+      },
+      "exercises": [
+        {
+          "title": "Destino ausente",
+          "prompt": "Remova B antes da transferência e verifique A após abort.",
+          "hint": "A segunda pré-condição falha.",
+          "solution": "Capture o erro esperado no teste e consulte A: permanece100. Não transforme a falha em sucesso; apenas permita verificar o estado depois do abort.",
+          "criteria": [
+            "A permanece100.",
+            "A falha é reportada."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Sem saldo",
+          "prompt": "Tente transferir130 e registre ambos os saldos.",
+          "hint": "Primeiro filtro exige saldo suficiente.",
+          "solution": "matchedCount0 aborta antes do crédito; na base reiniciada ficam100e20.",
+          "criteria": [
+            "Não credita B.",
+            "Preserva os saldos."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Efeito externo",
+          "prompt": "Explique por que email dentro de um corpo repetível é arriscado.",
+          "hint": "Email não sofre rollback.",
+          "solution": "Grave intenção de envio na transação e processe após commit com chave única de evento. O consumidor deve deduplicar possíveis repetições.",
+          "criteria": [
+            "Identifica efeito externo.",
+            "Propõe chave de deduplicação."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/transactions/",
+      "caution": "Exige replica set rs0 com primary disponível. O exemplo não implementa toda política de retry de um driver e não é um serviço financeiro pronto.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 26,
+      "level": 9,
+      "title": "Read e write concern",
+      "goal": "Explicitar confirmação e visibilidade e separar replicação de backup.",
+      "theory": [
+        {
+          "title": "Confirmação",
+          "text": "write concern define confirmações pedidas. w:\"majority\" e prazo de espera expressam uma escolha distinta de resposta de um nó. Timeout de confirmação não prova ausência da escrita."
+        },
+        {
+          "title": "Leitura",
+          "text": "read concern controla aspectos de visibilidade; read preference escolhe onde ler. Ler secondary pode exigir lidar com defasagem. Essas dimensões precisam refletir as garantias do fluxo."
+        },
+        {
+          "title": "Recuperação",
+          "text": "Réplicas mantêm cópias e podem ajudar disponibilidade. Uma exclusão acidental também é replicada. Backups e testes de restore continuam necessários para pontos históricos e erros humanos."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula26\");\nc.deleteMany({});\nc.insertOne({_id:1,status:\"confirmado\"},{writeConcern:{w:\"majority\",wtimeout:5000}});\nconst r=lab.runCommand({find:\"aula26\",filter:{_id:1},readConcern:{level:\"majority\"}});\nif(r.ok!==1)throw new Error(\"leitura falhou\");\nprint(r.cursor.firstBatch[0].status);\n",
+      "filename": "aula26.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://localhost:27017,localhost:27018,localhost:27019/forge_lab?replicaSet=rs0\" --quiet --file aula26.js",
+      "expected": "confirmado",
+      "quiz": {
+        "question": "Write concern timeout garante rollback?",
+        "options": [
+          "Sim, sempre.",
+          "Sim, nenhuma réplica recebeu.",
+          "Não; o resultado da confirmação pode ser incerto.",
+          "É apenas erro de sintaxe."
+        ],
+        "answer": 2,
+        "explanation": "O prazo pode expirar após a escrita ser aplicada."
+      },
+      "exercises": [
+        {
+          "title": "Duas dimensões",
+          "prompt": "Explique secondary versus majority.",
+          "hint": "Nó e visibilidade são diferentes.",
+          "solution": "secondary seleciona uma réplica elegível; majority pede dados com garantia de confirmação correspondente. A combinação não promete última escrita imediata em qualquer secondary.",
+          "criteria": [
+            "Distingue nó e garantia.",
+            "Reconhece defasagem."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Resultado incerto",
+          "prompt": "Projete API para criação cujo prazo de confirmação expirou.",
+          "hint": "Precisa identificar a mesma operação.",
+          "solution": "Use chave de idempotência e permita consultar estado por ela. Repetição não cria nova compra apenas porque a primeira resposta se perdeu.",
+          "criteria": [
+            "Chave estável.",
+            "Não afirma ausência de escrita."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Exclusão replicada",
+          "prompt": "Como recuperar uma exclusão propagada a todos?",
+          "hint": "Réplica atual não é histórico.",
+          "solution": "Use backup e estratégia de ponto de recuperação com RPO/RTO e restore ensaiado. Failover não desfaz exclusões já replicadas.",
+          "criteria": [
+            "Distingue disponibilidade e recuperação.",
+            "Inclui teste de restore."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/write-concern/",
+      "caution": "Exige replica set rs0. O exemplo confirma e lê uma escrita; não mede failover nem prova recuperação de desastre.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 27,
+      "level": 9,
+      "title": "Retries e idempotência",
+      "goal": "Impedir duplicação por repetição de requisição de negócio.",
+      "theory": [
+        {
+          "title": "Driver",
+          "text": "Retryable writes cobrem operações e topologias específicas. O protocolo não torna novas requisições HTTP ou qualquer lote arbitrário idempotentes automaticamente."
+        },
+        {
+          "title": "Chave",
+          "text": "Defina identificador estável de operação e unicidade no banco. $setOnInsert pode criar resultado inicial sem refazê-lo. Uma mesma chave com outro corpo deve ser detectada."
+        },
+        {
+          "title": "Escopo",
+          "text": "O exemplo grava um pedido em um documento. Se também altera estoque em outro, é preciso coordenação adicional. Não confunda registro idempotente com compra distribuída completa."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula27\");\nc.deleteMany({});\nc.createIndex({chave:1},{name:\"idempotencia\",unique:true});\nconst criar=()=>c.updateOne({chave:\"req-001\"},{$setOnInsert:{sku:\"A\",qtd:2,status:\"recebido\"}},{upsert:true});\ncriar();criar();\nprint(c.countDocuments({chave:\"req-001\"}));\nprint(c.findOne({chave:\"req-001\"}).qtd);\n",
+      "filename": "aula27.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula27.js",
+      "expected": "1\n2",
+      "quiz": {
+        "question": "Retries do driver tornam duas compras com IDs diferentes a mesma compra?",
+        "options": [
+          "Sim, se o texto for parecido.",
+          "Sim, em localhost.",
+          "MongoDB compara todos os documentos automaticamente.",
+          "Não; o domínio precisa de uma chave e contrato próprios."
+        ],
+        "answer": 3,
+        "explanation": "Repetição de protocolo e de negócio são distintas."
+      },
+      "exercises": [
+        {
+          "title": "Corpo divergente",
+          "prompt": "Defina resposta para req001 com qtd3 após aceitar qtd2.",
+          "hint": "Compare o conteúdo validado.",
+          "solution": "Recuse conflito de conteúdo e preserve pedido original. Compare sku e qtd ou hash canônico do contrato validado.",
+          "criteria": [
+            "Detecta diferença.",
+            "Não altera compra original."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Outra chave",
+          "prompt": "Crie req002 e confira quantidade.",
+          "hint": "Chave diferente é nova operação.",
+          "solution": "O total fica2, um por chave. Se o negócio considera duplicado, exige outra regra além da chave de transporte.",
+          "criteria": [
+            "Total2.",
+            "Explica o significado da chave."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Concorrência",
+          "prompt": "Planeje dois clientes criando a mesma chave simultaneamente.",
+          "hint": "O índice único é decisivo.",
+          "solution": "Teste as duas requisições e trate eventual11000 consultando a entidade existente; confirme uma entidade final e rejeite conteúdos divergentes.",
+          "criteria": [
+            "Verifica unicidade final.",
+            "Testa divergência de conteúdo."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/retryable-writes/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 28,
+      "level": 10,
+      "title": "Autenticação e roles",
+      "goal": "Inspecionar privilégios e separar aplicação e administração.",
+      "theory": [
+        {
+          "title": "Identidade",
+          "text": "Autenticação identifica; autorização decide ações e recursos. Uma senha não define sozinha acesso adequado. A conta da aplicação deve ter somente permissões necessárias no banco correspondente."
+        },
+        {
+          "title": "Acúmulo",
+          "text": "Roles concedem privilégios cumulativos. Dar read a quem possui readWrite não retira escrita. Revise acesso efetivo e teste operações com a identidade real da aplicação."
+        },
+        {
+          "title": "Segredos",
+          "text": "Peça senha no prompt ou use mecanismo de segredos do ambiente. Não grave credenciais em código, URI compartilhada ou logs. Rede restrita e TLS dependem do ambiente e devem ser configurados adequadamente."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst r=lab.getRole(\"read\",{showPrivileges:true});\nif(!r)throw new Error(\"role ausente\");\nprint(r.role+\":\"+r.db);\nprint(r.privileges.some(p=>p.actions.includes(\"find\")));\n",
+      "filename": "aula28.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula28.js",
+      "expected": "read:forge_lab\ntrue",
+      "quiz": {
+        "question": "Adicionar read a readWrite retira a escrita?",
+        "options": [
+          "Não; concessões se acumulam.",
+          "Sim, a última sempre substitui.",
+          "Sim, se vazio.",
+          "Read tem prioridade negativa."
+        ],
+        "answer": 0,
+        "explanation": "Revogue as fontes de escrita para removê-la."
+      },
+      "exercises": [
+        {
+          "title": "Conta de leitura",
+          "prompt": "Com auth habilitada, teste leitura e inserção com uma conta read.",
+          "hint": "Criação exige administrador; teste exige a nova conta.",
+          "solution": "Crie com pwd:passwordPrompt() e roles:[{role:\"read\",db:\"forge_lab\"}]. Reconecte com --username leitor --authenticationDatabase forge_lab --password. find funciona; insert recebe Unauthorized.",
+          "criteria": [
+            "Testa com conta nova.",
+            "Senha fora do arquivo."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Permissão necessária",
+          "prompt": "Escolha privilégios para catálogo somente de consulta.",
+          "hint": "Não precisa de root.",
+          "solution": "read em forge_lab é o ponto de partida. Separe migração e administração; avalie role customizada quando precisar restringir coleções.",
+          "criteria": [
+            "Menor privilégio.",
+            "Contas separadas."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Herança",
+          "prompt": "Retire escrita concedida diretamente e por role herdada.",
+          "hint": "Há várias fontes possíveis.",
+          "solution": "Inspecione concessões e herança, revogue todas as fontes necessárias e teste insert como Unauthorized com a identidade final.",
+          "criteria": [
+            "Considera herança.",
+            "Teste efetivo."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/built-in-roles/",
+      "caution": "Exige privilégio para consultar roles. A consulta não habilita auth; configure o laboratório pelo procedimento oficial.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 29,
+      "level": 10,
+      "title": "Validação de entrada e injeção NoSQL",
+      "goal": "Construir filtros com valores permitidos e identidade confiável.",
+      "theory": [
+        {
+          "title": "Estrutura hostil",
+          "text": "Um campo esperado como string pode chegar como {$ne:null}. Aceitar esse objeto diretamente permite controlar operadores. Valide tipo e domínio antes de construir a consulta."
+        },
+        {
+          "title": "Sem eval",
+          "text": "Não use eval ou $where com entrada concatenada. Objetos de consulta dos drivers aceitam valores com segurança quando a aplicação controla sua estrutura; JSON válido não equivale a entrada autorizada."
+        },
+        {
+          "title": "Acesso",
+          "text": "Um filtro seguro ainda pode vazar outro usuário se faltar dono ou tenant. Obtenha tenant da identidade autenticada e inclua na consulta, sem aceitar troca livre por parâmetro."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula29\");\nc.deleteMany({});\nc.insertOne({_id:1,tenantId:\"t1\",nome:\"Lia\"});\nfunction buscar(entrada,tenant){\n if(typeof entrada!==\"string\"||entrada.length>80)throw new Error(\"nome inválido\");\n return c.find({tenantId:tenant,nome:entrada},{_id:0,nome:1}).toArray();\n}\nprint(buscar(\"Lia\",\"t1\").length);\ntry{buscar({$ne:null},\"t1\");}catch(e){if(e.message!==\"nome inválido\")throw e;print(e.message);}\n",
+      "filename": "aula29.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula29.js",
+      "expected": "1\nnome inválido",
+      "quiz": {
+        "question": "Como bloquear objeto operador onde se espera nome?",
+        "options": [
+          "Concatenar em eval.",
+          "Exigir string válida e construir o filtro na aplicação.",
+          "Usar root.",
+          "Remover projeção."
+        ],
+        "answer": 1,
+        "explanation": "Tipo e estrutura precisam ser controlados."
+      },
+      "exercises": [
+        {
+          "title": "Tamanho",
+          "prompt": "Teste string vazia e81caracteres e defina regra da vazia.",
+          "hint": "O exemplo só limita máximo.",
+          "solution": "Se vazio é inválido, exija trim().length>0; teste vazio e81 rejeitados. Não use String(objeto) para converter uma entrada hostil.",
+          "criteria": [
+            "Testa fronteira81.",
+            "Decide vazio explicitamente."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Tenant",
+          "prompt": "Inclua outra Lia em t2 e prove isolamento de t1.",
+          "hint": "Tenant vem do contexto autenticado.",
+          "solution": "Insira {_id:2,tenantId:\"t2\",nome:\"Lia\"}; buscar(\"Lia\",\"t1\") devolve um documento.",
+          "criteria": [
+            "Exclui t2.",
+            "Explica a origem confiável do tenant."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Sort permitido",
+          "prompt": "Aceite ordenação nome ou criadoEm com mapa fechado.",
+          "hint": "Não aceite objeto arbitrário.",
+          "solution": "Mapeie nomeAsc para {nome:1,_id:1} e dataDesc para {criadoEm:-1,_id:-1}; rejeite outras opções.",
+          "criteria": [
+            "Lista fechada.",
+            "Desempate único."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/faq/fundamentals/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 30,
+      "level": 10,
+      "title": "Limites, timeouts e logs",
+      "goal": "Limitar trabalho e distinguir falhas de ausência de resultados.",
+      "theory": [
+        {
+          "title": "Orçamento",
+          "text": "Limite quantidade e tamanho de retorno além do tempo. maxTimeMS limita processamento no servidor em operações compatíveis; não substitui todos os prazos de rede, pool e requisição."
+        },
+        {
+          "title": "Erro",
+          "text": "Consulta que excede prazo não equivale a resultado vazio. Retornar[] em qualquer exceção pode esconder indisponibilidade e levar o usuário a decidir com informação falsa."
+        },
+        {
+          "title": "Diagnóstico",
+          "text": "Registre requestId, operação, duração e classe de erro. Evite senha, URI com segredo e documentos pessoais. Um identificador de consulta permite correlacionar sinais sem expor todo o conteúdo."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula30\");\nc.deleteMany({});\nc.insertMany([{_id:1,status:\"aberto\"},{_id:2,status:\"pago\"}]);\nconst ids=c.find({status:\"aberto\"},{_id:1}).sort({_id:1}).limit(10).maxTimeMS(1000).toArray().map(x=>x._id);\nprint(JSON.stringify({operacao:\"listar-abertos\",quantidade:ids.length}));\n",
+      "filename": "aula30.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula30.js",
+      "expected": "{\"operacao\":\"listar-abertos\",\"quantidade\":1}",
+      "quiz": {
+        "question": "Prazo excedido deve virar lista vazia normal?",
+        "options": [
+          "Sim, qualquer erro significa zero.",
+          "Sim, se poucos índices.",
+          "Não; é falha de execução distinta de ausência.",
+          "Remova auth e repita sempre."
+        ],
+        "answer": 2,
+        "explanation": "O contrato precisa sinalizar a falha."
+      },
+      "exercises": [
+        {
+          "title": "Página",
+          "prompt": "Valide tamanho inteiro entre1e100.",
+          "hint": "Number.isInteger e limites.",
+          "solution": "Teste1e100 aceitos;0,101e\"10\" rejeitados. limit0 não representa a página vazia pretendida pelo contrato.",
+          "criteria": [
+            "Testa extremos.",
+            "Rejeita0e101."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Log",
+          "prompt": "Desenhe registro de falha sem URI nem corpo do pedido.",
+          "hint": "ID, operação e classe de erro.",
+          "solution": "{requestId:\"r42\",operacao:\"listar-abertos\",erro:\"MaxTimeMSExpired\",duracaoMs:valorMedido}. Não confunda orçamento configurado com duração observada.",
+          "criteria": [
+            "Não expõe segredo.",
+            "Distingue medida e orçamento."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Camadas",
+          "prompt": "Compare prazo HTTP, seleção de servidor e maxTimeMS.",
+          "hint": "As camadas são diferentes.",
+          "solution": "HTTP cobre o fluxo inteiro; server selection espera nó elegível; maxTimeMS limita processamento do servidor. Teste falha de nó e consulta lenta separadamente.",
+          "criteria": [
+            "Três camadas.",
+            "Não promete cobrir rede com maxTimeMS."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/method/cursor.maxTimeMS/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 31,
+      "level": 11,
+      "title": "Backup BSON e restauração",
+      "goal": "Criar backup real e restaurar num namespace separado.",
+      "theory": [
+        {
+          "title": "Ferramentas",
+          "text": "mongodump e mongorestore são executáveis de terminal. Um find ou JSON exibido não equivale a backup verificado. Registre versões, opções e requisitos de restauração."
+        },
+        {
+          "title": "Consistência",
+          "text": "O exemplo exporta uma coleção sem escritores concorrentes. Bases ativas exigem estratégia de consistência adequada à topologia; dumps parciais podem não representar um ponto coerente entre entidades."
+        },
+        {
+          "title": "Prova",
+          "text": "Restaure separado e confira dados e índices sem sobrescrever a origem. Use major/FCV compatível e revise falhas dos logs. Criar um arquivo não prova recuperar a aplicação."
+        }
+      ],
+      "code": "set -eu\nmongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --eval 'const lab=db.getSiblingDB(\"forge_lab\");const c=lab.getCollection(\"aula31\");c.deleteMany({});c.insertMany([{_id:1,nome:\"A\"},{_id:2,nome:\"B\"}]);'\nmongodump --uri=\"mongodb://127.0.0.1:27017\" --db=forge_lab --collection=aula31 --archive=forge-aula31.archive\n# Limpa somente o destino do ensaio, nunca a origem.\nmongosh \"mongodb://127.0.0.1:27017/forge_restore\" --quiet --eval 'db.getSiblingDB(\"forge_restore\").getCollection(\"aula31\").drop();'\nmongorestore --uri=\"mongodb://127.0.0.1:27017\" --archive=forge-aula31.archive --nsInclude=\"forge_lab.aula31\" --nsFrom=\"forge_lab.*\" --nsTo=\"forge_restore.*\"\nmongosh \"mongodb://127.0.0.1:27017/forge_restore\" --quiet --eval 'print(db.getSiblingDB(\"forge_restore\").getCollection(\"aula31\").find({}).sort({_id:1}).toArray().map(x=>x.nome).join(\",\"));'\n",
+      "filename": "aula31.sh",
+      "language": "bash",
+      "run": "bash aula31.sh",
+      "expected": "Depois dos logs variáveis, a verificação final imprime A,B. O dump exporta2 documentos; o restore deve registrar2 documentos e0 falhas.",
+      "quiz": {
+        "question": "Qual evidência demonstra recuperação no laboratório?",
+        "options": [
+          "Somente o nome do arquivo.",
+          "Find na origem.",
+          "Secondary disponível.",
+          "Restore separado com validação funcional e estrutural."
+        ],
+        "answer": 3,
+        "explanation": "Recuperação precisa ser exercitada."
+      },
+      "exercises": [
+        {
+          "title": "Índice",
+          "prompt": "Crie índice nome:1 antes do dump e confira no destino.",
+          "hint": "Metadata inclui índices.",
+          "solution": "Crie name:\"nome\", repita o ensaio e consulte getIndexes() no destino; confira _id_ e nome com a chave correta.",
+          "criteria": [
+            "Verifica chave no destino.",
+            "Não usa só lista de arquivos."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Ponto exportado",
+          "prompt": "Mude A paraA2 na origem após o dump e restaure de novo.",
+          "hint": "O arquivo representa o estado anterior.",
+          "solution": "Origem mostra A2,B; destino limpo restaurado mostra A,B. Isso não substitui um ensaio de consistência com carga concorrente.",
+          "criteria": [
+            "Compara estados.",
+            "Não sobrescreve a origem."
+          ],
+          "id": 2
+        },
+        {
+          "title": "RPO e RTO",
+          "prompt": "Defina objetivos e meça um ensaio de recuperação.",
+          "hint": "Inclua validação, não só cópia.",
+          "solution": "Exemplo de objetivo: até24h de perda e30min de recuperação, a validar. Registre backup, localização, versões, restore, contagem, índices, leitura funcional e tempo observado.",
+          "criteria": [
+            "Distingue objetivo e medida.",
+            "Inclui teste funcional."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/database-tools/mongorestore/",
+      "caution": "Exige Bash e Database Tools compatível. Apaga apenas forge_restore.aula31 para repetir o ensaio. Pressupõe ausência de escritores na origem; não é um plano de produção.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 32,
+      "level": 11,
+      "title": "Observabilidade e incidentes",
+      "goal": "Relacionar sinais e testar hipóteses sem inventar medições.",
+      "theory": [
+        {
+          "title": "Conjunto",
+          "text": "Latência, erros, throughput, cache, disco e conexões devem ser correlacionados. Um tempo isolado de laboratório não identifica a causa nem prevê comportamento sob carga."
+        },
+        {
+          "title": "Estatísticas",
+          "text": "Comandos de coleção informam contagem, armazenamento e índices. Os valores dependem do servidor. Não dê administração à conta da aplicação só para preencher um painel."
+        },
+        {
+          "title": "Hipótese",
+          "text": "Comece por sintoma e hipótese testável: índice ausente, retorno ilimitado ou disco pressionado. Mude uma variável e compare evidências, preservando caminho para reverter sem benefício."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula32\");\nc.deleteMany({});\nc.insertMany([{_id:1,grupo:\"A\"},{_id:2,grupo:\"B\"}]);\nc.createIndex({grupo:1},{name:\"grupo\"});\nconst s=lab.runCommand({collStats:\"aula32\",scale:1});\nif(s.ok!==1)throw new Error(\"collStats falhou\");\nprint(\"documentos=\"+s.count);\nprint(\"índices=\"+s.nindexes);\n",
+      "filename": "aula32.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula32.js",
+      "expected": "documentos=2\níndices=2",
+      "quiz": {
+        "question": "Como investigar um pico de latência?",
+        "options": [
+          "Correlacionar sinais e testar hipóteses com carga representativa.",
+          "Indexar tudo imediatamente.",
+          "Apagar logs sem investigar.",
+          "Concluir falta de RAM só por um tempo."
+        ],
+        "answer": 0,
+        "explanation": "Métricas relacionadas permitem diferenciar causas."
+      },
+      "exercises": [
+        {
+          "title": "Inventário",
+          "prompt": "Compare nindexes com getIndexes().length.",
+          "hint": "Duas observações da coleção.",
+          "solution": "Ambos são2 na base inicial. Se houver mudança concorrente de índices, repita em cenário controlado antes de afirmar inconsistência.",
+          "criteria": [
+            "Mostra os dois.",
+            "Considera concorrência."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Relatório",
+          "prompt": "Documente uma consulta lenta sem dados pessoais.",
+          "hint": "Forma, volume e contadores.",
+          "solution": "Registre operação, filtro fictício, índices, nReturned, docs/keys examinados, várias latências, concorrência e versão.",
+          "criteria": [
+            "Permite reprodução.",
+            "Sem segredos."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Espaço",
+          "prompt": "Investigue disco crescente com contagem estável.",
+          "hint": "Bytes e documentos são diferentes.",
+          "solution": "Compare tamanho médio dos documentos, índices, logs e outras bases. Não apague arquivos internos do mecanismo manualmente.",
+          "criteria": [
+            "Três causas distintas.",
+            "Procedimento suportado."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/reference/command/collStats/",
+      "caution": "collStats exige privilégio correspondente com auth. Tamanho e tempo variam; não há números fixos prometidos para essas métricas.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 33,
+      "level": 11,
+      "title": "Change streams e retomada",
+      "goal": "Observar evento e planejar checkpoint e deduplicação.",
+      "theory": [
+        {
+          "title": "Eventos",
+          "text": "Change streams estão disponíveis em replica sets e clusters sharded. O exemplo observa inserção criada depois de abrir o stream numa coleção comum; não funciona no standalone."
+        },
+        {
+          "title": "Token",
+          "text": "O evento possui token de retomada. Persista progresso conforme contrato do consumidor. Falha após efeito e antes do checkpoint pode fazer o mesmo evento ser processado novamente."
+        },
+        {
+          "title": "Histórico",
+          "text": "Efeitos precisam ser idempotentes ou deduplicados. Tokens dependem do histórico disponível: retenção insuficiente exige ressincronização planejada, não replay infinito."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula33\");c.deleteMany({});\nc.updateOne({_id:\"preparo\"},{$set:{tipo:\"preparo\"}},{upsert:true});\nconst stream=c.watch([{$match:{operationType:\"insert\"}}],{maxAwaitTimeMS:1000});\ntry{\n stream.tryNext(); // Inicializa o cursor antes da escrita que será observada.\n c.insertOne({_id:\"evento\",valor:7});\n let ev=null;const limite=Date.now()+10000;\n while(!ev&&Date.now()<limite)ev=stream.tryNext();\n if(!ev)throw new Error(\"evento não observado no prazo do laboratório\");\n print(ev.operationType+\":\"+ev.fullDocument.valor);\n print(ev._id!==undefined?\"token recebido\":\"sem token\");\n}finally{stream.close();}\n",
+      "filename": "aula33.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://localhost:27017,localhost:27018,localhost:27019/forge_lab?replicaSet=rs0\" --quiet --file aula33.js",
+      "expected": "insert:7\ntoken recebido",
+      "quiz": {
+        "question": "Token dispensa idempotência externa?",
+        "options": [
+          "Sim, garante email exatamente uma vez.",
+          "Não; falhas entre efeito e checkpoint podem levar a reprocessamento.",
+          "Sim, se vazio.",
+          "Ele apaga duplicatas externas."
+        ],
+        "answer": 1,
+        "explanation": "O consumidor coordena seus próprios efeitos."
+      },
+      "exercises": [
+        {
+          "title": "Update",
+          "prompt": "Observe evento update ao mudar valor para8 com stream aberto.",
+          "hint": "Filtre operationType update.",
+          "solution": "Atualize {_id:\"evento\"} com $set:{valor:8}. Examine updateDescription; fullDocument:\"updateLookup\" pode buscar o documento atual e não é necessariamente imagem exata no instante do evento.",
+          "criteria": [
+            "Observa update.",
+            "Distingue delta e lookup."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Checkpoint",
+          "prompt": "Defina ordem entre efeito e token.",
+          "hint": "Considere a queda entre etapas.",
+          "solution": "Aplique efeito com chave única de evento e salve token após confirmação. Ao repetir, a chave evita duplicação. Quando possível, coordene projeção e checkpoint numa transação do destino.",
+          "criteria": [
+            "Prevê queda.",
+            "Deduplicação verificável."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Histórico perdido",
+          "prompt": "Defina ação se token é antigo demais.",
+          "hint": "Oplog não retém tudo para sempre.",
+          "solution": "Interrompa com alerta e recomponha a projeção por procedimento de snapshot e novo ponto de stream adequado ao desenho. Não ignore o erro e finja continuidade.",
+          "criteria": [
+            "Sinaliza descontinuidade.",
+            "Propõe ressincronização."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/changestreams/",
+      "caution": "Exige replica set rs0 e permissão de changeStream/find. O prazo10s é do ensaio, não SLA. Não usar em coleção time series.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 34,
+      "level": 12,
+      "title": "Sharding e escolha de chave",
+      "goal": "Avaliar concentração e consultas antes de fragmentar dados.",
+      "theory": [
+        {
+          "title": "Objetivos",
+          "text": "Sharding divide dados; replica set mantém cópias. Fragmentar acrescenta roteamento, balanceamento e operação. Uma base pequena não deve ser distribuída apenas por moda."
+        },
+        {
+          "title": "Critérios",
+          "text": "Cardinalidade, frequência e monotonicidade influenciam a distribuição. Consultas com a chave podem ser direcionadas. Muitos valores distintos não impedem um tenant ou uma faixa de concentrar escritas."
+        },
+        {
+          "title": "Evidência local",
+          "text": "A agregação mede concentração numa coleção pequena; não cria shards nem mede balanceamento. Um cluster de laboratório separado é necessário para experimentar roteamento e migrações reais."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula34\");\nc.deleteMany({});\nc.insertMany([{_id:1,tenant:\"A\"},{_id:2,tenant:\"A\"},{_id:3,tenant:\"A\"},{_id:4,tenant:\"B\"}]);\nconst r=c.aggregate([{$group:{_id:\"$tenant\",n:{$sum:1}}},{$sort:{n:-1,_id:1}}]).toArray();\nprint(r.map(x=>x._id+\":\"+x.n).join(\",\"));\n",
+      "filename": "aula34.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula34.js",
+      "expected": "A:3,B:1",
+      "quiz": {
+        "question": "Alta cardinalidade garante uniformidade?",
+        "options": [
+          "Sim, sempre.",
+          "Sim, mesmo99% num valor.",
+          "Não; frequência, monotonicidade e consultas também importam.",
+          "Dispensa índices nos shards."
+        ],
+        "answer": 2,
+        "explanation": "Uma dimensão não resolve todas as concentrações."
+      },
+      "exercises": [
+        {
+          "title": "Dominante",
+          "prompt": "Explique risco de tenant como única chave se A é90% da carga.",
+          "hint": "Número de tenants não mede frequência.",
+          "solution": "A pode concentrar tráfego numa faixa. Avalie chave composta e granularidade com dados/carga representativos; adicionar shards não resolve automaticamente.",
+          "criteria": [
+            "Identifica concentração.",
+            "Não promete solução sem medir."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Roteamento",
+          "prompt": "Compare tenant+sku e relatório global.",
+          "hint": "Uma consulta tem chave;outra não.",
+          "solution": "Busca por tenant+sku pode favorecer roteamento direcionado; relatório sem tenant pode atingir vários shards. Considere frequência e custo.",
+          "criteria": [
+            "Duas consultas.",
+            "Relaciona chave e roteamento."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Replicar ou dividir",
+          "prompt": "Compare perda de servidor e falta de capacidade de volume.",
+          "hint": "Disponibilidade e divisão são diferentes.",
+          "solution": "Replica set é base para eleição/disponibilidade; sharding divide dados quando justificado. Podem coexistir e nenhum dispensa backup.",
+          "criteria": [
+            "Distingue objetivos.",
+            "Reconhece coexistência."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/core/sharding-choose-a-shard-key/",
+      "caution": "Análise local de distribuição: não executa sh.shardCollection nem simula cluster sharded.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 35,
+      "level": 12,
+      "title": "Migração versionada",
+      "goal": "Converter documentos em etapas repetíveis e compatíveis.",
+      "theory": [
+        {
+          "title": "Versão",
+          "text": "schemaVersion declara formato e precisa corresponder ao conteúdo. Leitores e escritores devem suportar a coexistência de versões durante a transição."
+        },
+        {
+          "title": "Etapas",
+          "text": "Expanda contrato, converta em lotes, verifique e retire legado depois. Filtrar versão1 e mudar para2 na mesma escrita permite repetir sem reprocessar o documento já migrado."
+        },
+        {
+          "title": "Reversão",
+          "text": "Valide contagens e invariantes. Transformação que perde dados não tem rollback mágico: preserve o necessário ou mantenha backup adequado. Teste interrupção e retomada."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula35\");\nc.deleteMany({});\nc.insertMany([{_id:1,schemaVersion:1,nomeCompleto:\"Lia Silva\"},{_id:2,schemaVersion:1,nomeCompleto:\"Rui Lima\"}]);\nfunction migrar(){return c.updateMany({schemaVersion:1},[{$set:{nomeExibicao:\"$nomeCompleto\",schemaVersion:2}}]);}\nprint(migrar().modifiedCount);\nprint(migrar().modifiedCount);\nprint(c.countDocuments({schemaVersion:2,nomeExibicao:{$type:\"string\"}}));\n",
+      "filename": "aula35.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula35.js",
+      "expected": "2\n0\n2",
+      "quiz": {
+        "question": "O que evita reprocessar já convertidos?",
+        "options": [
+          "Somente nome migrar.",
+          "UpdateMany garante rollback global.",
+          "Usar localhost.",
+          "Filtro versão1 e alteração para2 na mesma escrita do documento."
+        ],
+        "answer": 3,
+        "explanation": "Convertidos deixam de corresponder ao filtro."
+      },
+      "exercises": [
+        {
+          "title": "Leitor",
+          "prompt": "Implemente apresentação que aceite versões1e2.",
+          "hint": "Escolha campo por versão.",
+          "solution": "Para2 leia nomeExibicao;para1 nomeCompleto;versão desconhecida gera erro ou diagnóstico definido. Teste os três casos.",
+          "criteria": [
+            "Lê as duas.",
+            "Trata desconhecida."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Verificação",
+          "prompt": "Detecte versão1 restante e versão2 sem string nova.",
+          "hint": "Verifique conteúdo além do número.",
+          "solution": "Conte versão1 e encontre versão2 com nomeExibicao não string, por $not:$type ou agregação equivalente. Só retire legado após critérios e escritores compatíveis.",
+          "criteria": [
+            "Detecta antigos.",
+            "Valida conteúdo novo."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Lotes",
+          "prompt": "Planeje lote de100 e retomada.",
+          "hint": "Mantenha filtro versão1.",
+          "solution": "Busque IDs antigos limitados e atualize só eles ainda em1. Ao reiniciar, procure novamente antigos; um checkpoint de posição isolado pode pular documentos escritos depois.",
+          "criteria": [
+            "Lote limitado.",
+            "Não ignora restos antigos."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/data-modeling/design-patterns/data-versioning/schema-versioning/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 36,
+      "level": 12,
+      "title": "Projeto integrado e evidências",
+      "goal": "Reunir modelo, consultas, invariantes e operação para revisão.",
+      "theory": [
+        {
+          "title": "Integração",
+          "text": "Cada recurso precisa resolver requisito. Escolha entre documento único e coordenação de múltiplos documentos; não coloque toda tecnologia em cada entidade apenas para cumprir uma lista."
+        },
+        {
+          "title": "Invariantes",
+          "text": "Teste SKU único, estoque não negativo, total correto, tenant isolado e migração completa. Cenários inválidos e falhas esperadas também fazem parte da entrega."
+        },
+        {
+          "title": "Revisão",
+          "text": "Forneça scripts, dados fictícios e restore com versões e pré-requisitos. Distinga código revisado, laboratório executado e garantias que exigem outro ambiente ou carga maior."
+        }
+      ],
+      "code": "const lab=db.getSiblingDB(\"forge_lab\");\nconst c=lab.getCollection(\"aula36\");\nc.deleteMany({});\nconst regra={$jsonSchema:{bsonType:\"object\",required:[\"sku\",\"estoque\"],properties:{sku:{bsonType:\"string\"},estoque:{bsonType:\"int\",minimum:0}}}};\nc.createIndex({sku:1},{name:\"sku_unico\",unique:true});\nc.insertMany([{_id:1,sku:\"A\",estoque:NumberInt(5)},{_id:2,sku:\"B\",estoque:NumberInt(0)}]);\nconst erros=c.countDocuments({estoque:{$lt:0}});\nconst duplicados=c.aggregate([{$group:{_id:\"$sku\",n:{$sum:1}}},{$match:{n:{$gt:1}}}]).toArray().length;\nprint(JSON.stringify({estoquesInvalidos:erros,skusDuplicados:duplicados}));\n// Declarar a variável regra não habilita o validator.\nprint(regra.$jsonSchema.required.join(\",\"));\n",
+      "filename": "aula36.js",
+      "language": "javascript",
+      "run": "mongosh \"mongodb://127.0.0.1:27017/forge_lab\" --quiet --file aula36.js",
+      "expected": "{\"estoquesInvalidos\":0,\"skusDuplicados\":0}\nsku,estoque",
+      "quiz": {
+        "question": "Declarar const regra com $jsonSchema ativa validação?",
+        "options": [
+          "Não; aplique em createCollection ou collMod.",
+          "Sim, pelo nome.",
+          "Sim, pela extensão.js.",
+          "Sim, depois de find."
+        ],
+        "answer": 0,
+        "explanation": "Objeto local não configura servidor sozinho."
+      },
+      "exercises": [
+        {
+          "title": "Ative",
+          "prompt": "Aplique regra e prove estoque negativo rejeitado.",
+          "hint": "Use collMod e teste escrita.",
+          "solution": "lab.runCommand({collMod:\"aula36\",validator:regra,validationLevel:\"strict\",validationAction:\"error\"}); insira C com NumberInt(-1) e confirme121; estoque1 válido deve passar.",
+          "criteria": [
+            "Servidor rejeita inválido.",
+            "Válido funciona."
+          ],
+          "id": 1
+        },
+        {
+          "title": "Cinco verificações",
+          "prompt": "Crie cinco testes executáveis do catálogo.",
+          "hint": "Dados,acesso,migração,recuperação.",
+          "solution": "SKU duplicado rejeitado;retirada sem negativo;tenant isolado;zero antigos após migração;restore separado funcional. Registre comandos e resultados.",
+          "criteria": [
+            "Cinco evidências.",
+            "Inclui falha e recuperação."
+          ],
+          "id": 2
+        },
+        {
+          "title": "Defesa",
+          "prompt": "Justifique embedding, dois índices e usar ou não transação/sharding.",
+          "hint": "Vincule a requisitos e medições.",
+          "solution": "Explique dados lidos juntos, limites dos arrays, consultas dos índices, métricas e invariantes entre documentos. Se replica set atende, registre por que adiar sharding e qual sinal muda essa decisão.",
+          "criteria": [
+            "Cada recurso tem motivo.",
+            "Distingue medida e hipótese."
+          ],
+          "id": 3
+        }
+      ],
+      "source": "https://www.mongodb.com/docs/v8.0/data-modeling/",
+      "caution": "A amostra verifica dados fictícios e demonstra que declarar objeto não ativa validação. O projeto exige aplicar regras e executar mais testes; não é certificação de produção.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    }
+  ]
+}

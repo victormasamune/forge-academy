@@ -1,0 +1,3517 @@
+{
+  "id": "sqlite",
+  "name": "SQLite",
+  "title": "SQLite Forge",
+  "updated": "2026-10-24",
+  "hours": 144,
+  "description": "SQLite do arquivo local à aplicação robusta: tipos, integridade, SQL, JSON, FTS5, índices, transações, WAL, integração Python, migrações e recuperação testada.",
+  "prerequisites": [
+    "Conhecimentos da trilha de Bancos de Dados e SQL ou SQL básico equivalente.",
+    "SQLite 3.37 ou superior com patch de manutenção adequado; prefira um build estável recente. JSON e FTS5 devem ser detectados conforme a aula 3.",
+    "Python 3.12 ou superior com módulo sqlite3 para os seis laboratórios de integração; editor e terminal. A CLI sqlite3 é opcional para executar os exemplos SQL."
+  ],
+  "outcome": "Construir uma camada de persistência local com constraints, consultas eficientes, concorrência observada, migrações versionadas e backup aberto e validado independentemente.",
+  "extension": "sql",
+  "codeLanguage": "sql",
+  "setup": [
+    {
+      "title": "Biblioteca e cliente",
+      "text": "SQLite roda dentro do processo que usa a biblioteca. A ferramenta sqlite3 do terminal é um cliente e pode usar versão diferente da biblioteca embutida no Python. No terminal execute python -c \"import sqlite3; print(sqlite3.sqlite_version)\". Se tiver a CLI, execute sqlite3 --version também. STRICT exige 3.37+; JSON1 e FTS5 precisam ser detectados, não presumidos."
+    },
+    {
+      "title": "Executar SQL do curso",
+      "text": "Cada aula SQL é autocontida e deve usar um banco novo: na CLI entre com sqlite3 :memory: e use .read aula.sql após salvar o arquivo. .read é metacomando do cliente, não faz parte do código SQL. Uma alternativa em Python é abrir sqlite3.connect(\":memory:\", isolation_level=None) e executar cada instrução pelo cursor para inspecionar os resultados; executescript não imprime resultados de SELECT. Não reutilize o banco de uma aula em outra sem limpeza planejada."
+    },
+    {
+      "title": "Executar Python do curso",
+      "text": "Nas seis aulas com código Python, salve o arquivo com o nome indicado na aula, aula.py ou main.py, e use o comando correspondente. Os exemplos usam somente a biblioteca padrão e diretórios temporários quando precisam de arquivos. Aulas de controle SQL explícito usam isolation_level=None; a aula de binding também mostra o contexto transacional do driver. Conexões são fechadas explicitamente: o context manager de conexão não substitui close()."
+    },
+    {
+      "title": "Arquivo e recursos",
+      "text": "Para projetos persistentes use caminho absoluto conhecido, permissões de arquivo adequadas e backups independentes. A plataforma salva rascunhos; não abre seu arquivo nem executa SQLite. JSON1 era opcional em builds antigos e vem habilitado por padrão a partir de 3.38; FTS5 pode variar conforme a compilação. A aula 3 falha com diagnóstico claro se o build não atende, sem instalar extensões automaticamente."
+    }
+  ],
+  "references": [
+    {
+      "title": "Documentação SQLite",
+      "description": "Sintaxe, arquitetura e APIs oficiais.",
+      "url": "https://www.sqlite.org/docs.html"
+    },
+    {
+      "title": "Tipos e afinidade",
+      "description": "Classes de armazenamento e conversões.",
+      "url": "https://www.sqlite.org/datatype3.html"
+    },
+    {
+      "title": "Tabelas STRICT",
+      "description": "Tipos permitidos e conversão sem perda desde 3.37.",
+      "url": "https://www.sqlite.org/stricttables.html"
+    },
+    {
+      "title": "Foreign keys",
+      "description": "Ativação por conexão e validação de referências.",
+      "url": "https://www.sqlite.org/foreignkeys.html"
+    },
+    {
+      "title": "WAL",
+      "description": "Leitores, escritor, checkpoint e arquivos auxiliares.",
+      "url": "https://www.sqlite.org/wal.html"
+    },
+    {
+      "title": "JSON1",
+      "description": "Funções JSON textuais e seus contratos.",
+      "url": "https://www.sqlite.org/json1.html"
+    },
+    {
+      "title": "FTS5",
+      "description": "Índice virtual e linguagem MATCH.",
+      "url": "https://www.sqlite.org/fts5.html"
+    },
+    {
+      "title": "Online backup",
+      "description": "Cópia consistente com API de backup.",
+      "url": "https://www.sqlite.org/backup.html"
+    },
+    {
+      "title": "sqlite3 do Python",
+      "description": "Binding, conexões, transações e backup.",
+      "url": "https://docs.python.org/3/library/sqlite3.html"
+    }
+  ],
+  "levels": [
+    {
+      "id": 1,
+      "title": "SQLite embutido e ambiente",
+      "tag": "Fundamentos",
+      "hours": 12,
+      "summary": "Entenda a biblioteca, o arquivo e os recursos realmente disponíveis.",
+      "skills": [
+        "Biblioteca e arquivo",
+        "Afinidade",
+        "Detecção de recursos"
+      ],
+      "project": "Ficha técnica do laboratório",
+      "deliverables": [
+        "Arquivo de banco novo e diretório identificados.",
+        "Versão e suporte a JSON/FTS5 registrados.",
+        "Experimento com classes de armazenamento e afinidade."
+      ],
+      "rubric": [
+        "Distingue biblioteca de cliente CLI.",
+        "Não assume versão do SQLite pela versão de Python.",
+        "Explica onde os dados existem e quem pode abrir o arquivo."
+      ],
+      "challenge": [
+        {
+          "question": "Um app abriu :memory:, fechou a conexão e abriu outra. Onde estão os dados anteriores?",
+          "options": [
+            "Em um servidor remoto criado automaticamente.",
+            "Em toda conexão futura com esse nome.",
+            "Não são preservados como um arquivo persistente nessa nova conexão.",
+            "No cache de qualquer navegador."
+          ],
+          "answer": 2,
+          "explanation": "O banco em memória dessa conexão tem ciclo de vida próprio."
+        },
+        {
+          "question": "Uma coluna INTEGER não STRICT recebeu texto não numérico. O que não se deve presumir?",
+          "options": [
+            "Que SELECT pode ler a coluna.",
+            "Que uma tabela possui linhas.",
+            "Que TEXT pode armazenar texto.",
+            "Que a declaração de afinidade garante rigidez de tipo para todo valor."
+          ],
+          "answer": 3,
+          "explanation": "Afinidade e tipo rígido são contratos diferentes."
+        },
+        {
+          "question": "A versão é recente, mas CREATE VIRTUAL TABLE ... USING fts5 falha por módulo ausente. O que fazer?",
+          "options": [
+            "Verificar as capacidades do build e usar uma distribuição compatível.",
+            "Ignorar a falha e declarar busca funcional.",
+            "Assumir que toda versão inclui qualquer extensão.",
+            "Trocar o nome da tabela para fts5."
+          ],
+          "answer": 0,
+          "explanation": "Recursos disponíveis dependem também da compilação."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Identidade e integridade",
+      "tag": "Fundamentos",
+      "hours": 12,
+      "summary": "Modele regras com INTEGER PRIMARY KEY, STRICT e foreign keys verificadas.",
+      "skills": [
+        "rowid",
+        "STRICT",
+        "Foreign keys"
+      ],
+      "project": "Catálogo e categorias com regras",
+      "deliverables": [
+        "DDL STRICT com preço em centavos.",
+        "Chaves e referências com comportamento de exclusão definido.",
+        "Casos válidos, nulos, duplicados e órfãos testados."
+      ],
+      "rubric": [
+        "Compreende a relação INTEGER PRIMARY KEY e rowid.",
+        "Ativa foreign_keys em cada conexão antes da transação.",
+        "Testes negativos realmente falham no banco."
+      ],
+      "challenge": [
+        {
+          "question": "O domínio exige ID sequencial sem jamais reutilizar nenhum número. INTEGER PRIMARY KEY sozinho prova isso?",
+          "options": [
+            "Sim, todo ID é uma sequência sem lacunas.",
+            "Não; defina o contrato e estude geração/reutilização e AUTOINCREMENT com seus custos.",
+            "Sim, rowid é sempre um UUID.",
+            "Não, porque chaves inteiras são inválidas."
+          ],
+          "answer": 1,
+          "explanation": "Identidade e sequência sem reutilização não são a mesma garantia."
+        },
+        {
+          "question": "STRICT converte a string 5 para INTEGER sem perda. Isso viola necessariamente seu contrato?",
+          "options": [
+            "Sim, STRICT rejeita qualquer texto numérico.",
+            "Sim, toda linha vira BLOB.",
+            "Não; conversões sem perda fazem parte do comportamento documentado.",
+            "Não, porque STRICT desliga constraints."
+          ],
+          "answer": 2,
+          "explanation": "Rigidez não significa proibir toda coerção válida."
+        },
+        {
+          "question": "Uma segunda conexão não verifica FKs. A primeira já havia ativado foreign_keys. Qual ajuste falta?",
+          "options": [
+            "Criar mais índices no navegador.",
+            "Adicionar ORDER BY em INSERT.",
+            "Reiniciar o tema visual.",
+            "Ativar e conferir a configuração também na nova conexão."
+          ],
+          "answer": 3,
+          "explanation": "A configuração é por conexão."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Escritas e representação",
+      "tag": "Fundamentos",
+      "hours": 12,
+      "summary": "Use DML, UPSERT e contratos claros para dinheiro e tempo.",
+      "skills": [
+        "RETURNING",
+        "ON CONFLICT",
+        "Centavos e datas"
+      ],
+      "project": "Controle local de estoque",
+      "deliverables": [
+        "Reserva com condição de saldo e RETURNING.",
+        "UPSERT com chave de negócio única.",
+        "Convenção de tempo UTC e dinheiro documentada."
+      ],
+      "rubric": [
+        "Não usa REPLACE como sinônimo de UPDATE.",
+        "Saldo nunca se torna negativo.",
+        "Evita somas monetárias em ponto flutuante sem contrato."
+      ],
+      "challenge": [
+        {
+          "question": "UPDATE ... WHERE qtd>=3 RETURNING não devolveu linha. Qual decisão da aplicação é necessária?",
+          "options": [
+            "Tratar ausência ou condição não atendida antes de anunciar sucesso.",
+            "Inventar um saldo.",
+            "Assumir que três unidades foram baixadas.",
+            "Executar COMMIT como prova do efeito."
+          ],
+          "answer": 0,
+          "explanation": "O resultado da escrita condicionada precisa ser verificado."
+        },
+        {
+          "question": "REPLACE apagou e reinseriu uma linha com efeitos em FKs/triggers. Como evitar tratá-lo como UPDATE comum?",
+          "options": [
+            "Afirmar equivalência em todos os motores.",
+            "Escolher UPSERT ou UPDATE conforme a intenção e testar seus efeitos.",
+            "Desligar todas as FKs para sempre.",
+            "Usar SELECT no lugar de qualquer escrita."
+          ],
+          "answer": 1,
+          "explanation": "As operações possuem semânticas distintas."
+        },
+        {
+          "question": "A coluna guarda 1000 para significar dez reais. Que documentação é essencial?",
+          "options": [
+            "Só a cor do campo.",
+            "Só a extensão do arquivo.",
+            "Unidade monetária, escala e regra de cálculo/arredondamento.",
+            "A senha do administrador no README."
+          ],
+          "answer": 2,
+          "explanation": "Representação numérica precisa de significado de domínio."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "SQL relacional e composição",
+      "tag": "Intermediário",
+      "hours": 12,
+      "summary": "Construa relatórios sem perder pais ou multiplicar totais.",
+      "skills": [
+        "JOIN",
+        "EXISTS",
+        "CTE"
+      ],
+      "project": "Relatórios de pedidos",
+      "deliverables": [
+        "Consulta incluindo clientes sem compra.",
+        "Consulta de existência sem duplicação.",
+        "CTEs com granularidade e ordenação explícitas."
+      ],
+      "rubric": [
+        "Conta a chave do filho no LEFT JOIN.",
+        "Trata NULL sem comparar com =NULL.",
+        "Totais conferem com cálculo manual."
+      ],
+      "challenge": [
+        {
+          "question": "Um pai sem filho precisa aparecer com contagem zero. Qual combinação ajuda?",
+          "options": [
+            "INNER JOIN e COUNT(*) sempre.",
+            "Somente CROSS JOIN.",
+            "DELETE dos pais sem filhos.",
+            "LEFT JOIN e COUNT da chave não nula do filho."
+          ],
+          "answer": 3,
+          "explanation": "Contar a parte direita distingue ausência de relação."
+        },
+        {
+          "question": "NOT IN deixou de retornar itens por haver NULL na subconsulta. Qual reescrita exprime ausência por relação?",
+          "options": [
+            "NOT EXISTS com correlação adequada.",
+            "ORDER BY sem filtro.",
+            "COUNT(*) sem correlação.",
+            "Trocar NULL pela string NULL sem regra."
+          ],
+          "answer": 0,
+          "explanation": "O teste de existência evita essa armadilha de lógica de NULL."
+        },
+        {
+          "question": "Uma CTE foi executada e o SELECT seguinte não a encontra. Por quê?",
+          "options": [
+            "Toda CTE exige reiniciar SQLite.",
+            "Seu escopo acabou com a instrução que a declarou.",
+            "WITH só funciona em MySQL.",
+            "CTE criou um banco remoto inacessível."
+          ],
+          "answer": 1,
+          "explanation": "A CTE não é automaticamente uma tabela persistente."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Análise, JSON e busca",
+      "tag": "Intermediário",
+      "hours": 12,
+      "summary": "Explore recursos analíticos e extensões detectadas em seu build.",
+      "skills": [
+        "Janelas",
+        "JSON1",
+        "FTS5"
+      ],
+      "project": "Catálogo com busca e indicadores",
+      "deliverables": [
+        "Acumulado com frame explícito.",
+        "Atributos JSON validados e consultados.",
+        "Busca FTS5 com casos de termos e frases."
+      ],
+      "rubric": [
+        "Não assume extensão disponível sem testar.",
+        "Distingue SQL NULL, JSON null e chave ausente.",
+        "Não concatena linguagem MATCH sem controlar a consulta."
+      ],
+      "challenge": [
+        {
+          "question": "Um acumulado com empates mudou ao alterar o frame. O que especificar?",
+          "options": [
+            "Só o nome do arquivo.",
+            "Uma nova senha.",
+            "Ordem, desempate e frame correspondentes à medida.",
+            "A remoção de qualquer ORDER BY."
+          ],
+          "answer": 2,
+          "explanation": "A janela precisa ter semântica explícita."
+        },
+        {
+          "question": "JSON null e caminho ausente retornam SQL NULL na extração. Como diferenciá-los quando necessário?",
+          "options": [
+            "Assumir que nunca há ausência.",
+            "Tratar todo NULL como zero sem regra.",
+            "Usar GET do Redis na mesma conexão SQLite.",
+            "Consultar também o tipo/presença pelo contrato das funções JSON."
+          ],
+          "answer": 3,
+          "explanation": "A extração de valor pode perder a distinção desejada."
+        },
+        {
+          "question": "Busca FTS aceita operadores próprios. Ela deve ser tratada como uma simples substring literal?",
+          "options": [
+            "Não; defina como interpretar ou escapar a linguagem MATCH para o produto.",
+            "Sim, MATCH sempre é LIKE.",
+            "Sim, índices removem qualquer sintaxe.",
+            "Não, porque FTS5 não pesquisa texto."
+          ],
+          "answer": 0,
+          "explanation": "A linguagem de consulta faz parte da interface."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Views, triggers e hierarquias",
+      "tag": "Intermediário",
+      "hours": 12,
+      "summary": "Encapsule consultas e regras observáveis sem esconder efeitos.",
+      "skills": [
+        "Views",
+        "Triggers",
+        "Recursão"
+      ],
+      "project": "Auditoria e árvore de categorias",
+      "deliverables": [
+        "View de totais com contrato de colunas.",
+        "Trigger de auditoria com testes de rollback.",
+        "Consulta hierárquica com profundidade e prevenção de ciclos."
+      ],
+      "rubric": [
+        "Não presume view atualizável automaticamente.",
+        "Usa trigger por linha com OLD e NEW apropriados.",
+        "Recursão tem término e ordenação definidos."
+      ],
+      "challenge": [
+        {
+          "question": "Uma view consulta duas tabelas. Isso cria automaticamente uma cópia materializada e atualizada?",
+          "options": [
+            "Sim, toda view tem backup próprio.",
+            "Não; uma view comum define uma consulta.",
+            "Sim, cria outro servidor.",
+            "Não, porque view só contém comentários."
+          ],
+          "answer": 1,
+          "explanation": "Contrato de leitura não implica materialização."
+        },
+        {
+          "question": "O UPDATE foi desfeito por ROLLBACK. A auditoria inserida pelo trigger na mesma transação fica necessariamente confirmada?",
+          "options": [
+            "Sim, todo trigger tem commit independente.",
+            "Sim, triggers não participam de transações.",
+            "Não; também pertence à transação desfeita.",
+            "Somente se a tabela for temporária."
+          ],
+          "answer": 2,
+          "explanation": "Auditoria transacional tem o mesmo limite de confirmação."
+        },
+        {
+          "question": "Uma CTE recursiva visita um grafo com ciclos. Que proteção precisa ser projetada?",
+          "options": [
+            "Um nome de variável maior.",
+            "Uma senha no SQL.",
+            "Assumir que todo grafo é uma árvore.",
+            "Critério de término e tratamento de nós/caminhos já visitados conforme o problema."
+          ],
+          "answer": 3,
+          "explanation": "Recursão precisa tratar a estrutura real dos dados."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Índices por padrão de acesso",
+      "tag": "Avançado",
+      "hours": 12,
+      "summary": "Escolha índices compostos, parciais e de expressão com exemplos verificáveis.",
+      "skills": [
+        "B-tree",
+        "Índice parcial",
+        "Expressões"
+      ],
+      "project": "Estudo de índices do catálogo",
+      "deliverables": [
+        "Três consultas-alvo e seus índices candidatos.",
+        "Carga com seletividade e desempates.",
+        "Comparação de resultado antes/depois e custo de escrita descrito."
+      ],
+      "rubric": [
+        "Ordem do índice corresponde ao filtro e ordenação.",
+        "Predicado parcial corresponde à consulta.",
+        "Não transforma funções não determinísticas em índices."
+      ],
+      "challenge": [
+        {
+          "question": "Um índice composto começa por cliente_id. Consulta só por estado tem garantia de uso eficiente idêntico?",
+          "options": [
+            "Não; a ordem e a distribuição precisam ser avaliadas no plano.",
+            "Sim, posição das colunas nunca importa.",
+            "Sim, qualquer índice atende tudo.",
+            "Não, porque índice só permite uma coluna."
+          ],
+          "answer": 0,
+          "explanation": "O desenho acompanha o padrão de acesso."
+        },
+        {
+          "question": "Um índice parcial cobre ativo=1. O que avaliar numa consulta por todos os estados?",
+          "options": [
+            "Que toda linha está no índice.",
+            "Se o predicado permite usar esse índice e se ele corresponde ao conjunto consultado.",
+            "Que o índice parcial inclui apenas inativos.",
+            "Que ele substitui a tabela inteira sempre."
+          ],
+          "answer": 1,
+          "explanation": "O predicado define quais linhas compõem a estrutura."
+        },
+        {
+          "question": "Índice de expressão foi criado sobre lower(nome). Que detalhe da consulta importa?",
+          "options": [
+            "O tema do editor.",
+            "O número do capítulo.",
+            "A correspondência da expressão e suas regras de comparação.",
+            "A extensão da fonte."
+          ],
+          "answer": 2,
+          "explanation": "O otimizador precisa reconhecer a expressão indexada."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Planos e transações",
+      "tag": "Avançado",
+      "hours": 12,
+      "summary": "Leia estratégias de acesso e defina unidades atômicas com savepoints.",
+      "skills": [
+        "EXPLAIN QUERY PLAN",
+        "BEGIN",
+        "SAVEPOINT"
+      ],
+      "project": "Importação atômica de pedidos",
+      "deliverables": [
+        "Planos coletados sem depender de formato estável.",
+        "Transação que confirma ou desfaz a importação.",
+        "Caso opcional recuperado com savepoint."
+      ],
+      "rubric": [
+        "Distingue SCAN de SEARCH observado.",
+        "Não considera executescript uma transação automática universal.",
+        "Fecha transações e cursores em todo caminho de erro."
+      ],
+      "challenge": [
+        {
+          "question": "O texto de EQP mudou após atualização. O aplicativo deve depender desse formato como API estável?",
+          "options": [
+            "Sim, cada caractere é contrato permanente.",
+            "Sim, plano é resultado de negócio.",
+            "Não, porque não pode haver planos.",
+            "Não; use-o para diagnóstico e compare estratégia com cuidado."
+          ],
+          "answer": 3,
+          "explanation": "A apresentação de diagnóstico pode variar."
+        },
+        {
+          "question": "Uma transação realizou chamada HTTP antes de ROLLBACK. O rollback desfaz o efeito remoto automaticamente?",
+          "options": [
+            "Não; efeitos externos exigem coordenação própria.",
+            "Sim, qualquer BEGIN coordena a internet.",
+            "Sim, SQLite cancela o servidor remoto.",
+            "Somente se usar INTEGER PRIMARY KEY."
+          ],
+          "answer": 0,
+          "explanation": "A garantia do banco não inclui todo sistema externo."
+        },
+        {
+          "question": "Uma etapa interna recebeu RELEASE e depois a transação externa recebeu ROLLBACK. Qual estado prevalece?",
+          "options": [
+            "A etapa interna permanece confirmada para sempre.",
+            "As alterações daquela etapa também são desfeitas.",
+            "Todos os arquivos são apagados.",
+            "A tabela é renomeada automaticamente."
+          ],
+          "answer": 1,
+          "explanation": "RELEASE interno não cria um commit externo independente."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Concorrência e WAL",
+      "tag": "Avançado",
+      "hours": 12,
+      "summary": "Observe dois escritores, snapshots WAL e configuração por conexão.",
+      "skills": [
+        "SQLITE_BUSY",
+        "WAL",
+        "PRAGMA"
+      ],
+      "project": "Ensaio de concorrência com duas conexões",
+      "deliverables": [
+        "Script com dois escritores e busy controlado.",
+        "Script com leitor WAL e commit concorrente.",
+        "Configurações e limites de durabilidade registrados."
+      ],
+      "rubric": [
+        "Reconhece um escritor por vez por banco.",
+        "Mantém transações curtas e retry limitado.",
+        "Não usa WAL como promessa de múltiplos escritores simultâneos."
+      ],
+      "challenge": [
+        {
+          "question": "Um erro de permissão foi capturado como se fosse BUSY. Qual correção evita falso diagnóstico?",
+          "options": [
+            "Repetir infinitamente qualquer exceção.",
+            "Aumentar o número de colunas.",
+            "Examinar o código do erro e propagar causas diferentes.",
+            "Apagar o arquivo antes de qualquer escrita."
+          ],
+          "answer": 2,
+          "explanation": "Tratamento específico preserva a causa real da falha."
+        },
+        {
+          "question": "Ativar WAL cria tolerância à perda do computador que guarda o arquivo?",
+          "options": [
+            "Sim, WAL implica três réplicas.",
+            "Sim, cada conexão é um backup.",
+            "Não, porque WAL impede leitura.",
+            "Não; o modo de journal não cria por si só uma cópia em outro computador."
+          ],
+          "answer": 3,
+          "explanation": "Persistência local e disponibilidade de infraestrutura são dimensões distintas."
+        },
+        {
+          "question": "Um checkpoint terminou. Isso prova que há uma cópia independente para recuperar exclusão acidental?",
+          "options": [
+            "Não; ele atualiza os arquivos da própria base.",
+            "Sim, cria um snapshot remoto.",
+            "Sim, duplica toda retenção.",
+            "Não, porque checkpoint nunca escreve."
+          ],
+          "answer": 0,
+          "explanation": "Uma operação de manutenção local não substitui cópia recuperável."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Integração e migrações",
+      "tag": "Especialista",
+      "hours": 12,
+      "summary": "Vincule valores em Python e evolua schemas versionados.",
+      "skills": [
+        "Parâmetros",
+        "user_version",
+        "Reconstrução de tabela"
+      ],
+      "project": "Camada de persistência versionada",
+      "deliverables": [
+        "Consulta parametrizada com apóstrofo e tentativa de injeção.",
+        "Migração transacional com user_version.",
+        "Reconstrução de tabela com contagens e constraints validadas."
+      ],
+      "rubric": [
+        "Valores não são concatenados ao SQL.",
+        "Versão só avança quando a migração confirma.",
+        "Dados e dependências sobrevivem à evolução testada."
+      ],
+      "challenge": [
+        {
+          "question": "Uma consulta usa binding, mas deixa conexão aberta em erro. Qual problema ainda resta?",
+          "options": [
+            "Binding remove qualquer necessidade de fechar.",
+            "Gestão de recursos e possível transação/lock pendente.",
+            "A senha vira pública automaticamente.",
+            "O banco deixa de usar SQL."
+          ],
+          "answer": 1,
+          "explanation": "Segurança da consulta e ciclo de vida da conexão são responsabilidades diferentes."
+        },
+        {
+          "question": "Dois processos aplicam a mesma migração simultaneamente. user_version sozinho coordena os dois?",
+          "options": [
+            "Sim, o número cria uma fila global.",
+            "Sim, qualquer PRAGMA bloqueia eternamente.",
+            "Não; é necessário serializar e verificar a migração dentro do protocolo definido.",
+            "Não, porque user_version só aceita texto."
+          ],
+          "answer": 2,
+          "explanation": "Metadado de versão não é um gerenciador completo de migrações."
+        },
+        {
+          "question": "Um teste negativo passou porque o nome da tabela estava errado. Isso valida a constraint desejada?",
+          "options": [
+            "Sim, qualquer erro prova integridade.",
+            "Sim, tabelas ausentes são chaves estrangeiras.",
+            "Não, porque testes não podem capturar exceções.",
+            "Não; a causa observada foi outra e deve falhar no teste."
+          ],
+          "answer": 3,
+          "explanation": "Teste negativo precisa conferir causa e estado final."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Backup e verificação",
+      "tag": "Especialista",
+      "hours": 12,
+      "summary": "Crie cópias consistentes e restaure com conferência funcional.",
+      "skills": [
+        "Online backup",
+        "VACUUM INTO",
+        "integrity_check"
+      ],
+      "project": "Recuperação local demonstrada",
+      "deliverables": [
+        "Cópia com Connection.backup e abertura independente.",
+        "Cópia compacta com VACUUM INTO em destino novo.",
+        "integrity_check e foreign_key_check com resultados interpretados."
+      ],
+      "rubric": [
+        "Não copia apenas o .db aberto em WAL como backup.",
+        "Confere conteúdo e regras após restauração.",
+        "Distingue integridade estrutural de correção de negócio."
+      ],
+      "challenge": [
+        {
+          "question": "Um backup local correto protege sozinho contra perder o disco que contém origem e backup?",
+          "options": [
+            "Não; as duas cópias podem desaparecer juntas.",
+            "Sim, extensão db protege o disco.",
+            "Sim, WAL garante cópia remota.",
+            "Não, porque backup nunca funciona em arquivo."
+          ],
+          "answer": 0,
+          "explanation": "A independência do destino também depende de sua localização e retenção."
+        },
+        {
+          "question": "VACUUM INTO terminou, mas ninguém abriu o destino. Que etapa ainda falta?",
+          "options": [
+            "Afirmar que houve failover automático.",
+            "Verificar que a cópia pode ser aberta e contém o estado esperado.",
+            "Desativar todas as constraints.",
+            "Apagar imediatamente a origem."
+          ],
+          "answer": 1,
+          "explanation": "Recuperabilidade precisa de evidência de leitura do destino."
+        },
+        {
+          "question": "Um arquivo íntegro contém duas reservas abertas proibidas pelo produto. O diagnóstico estrutural basta?",
+          "options": [
+            "Sim, ok valida qualquer regra.",
+            "Sim, duas reservas são sempre corretas.",
+            "Não; essa regra de domínio precisa estar modelada e testada.",
+            "Não, porque bancos não aceitam constraints."
+          ],
+          "answer": 2,
+          "explanation": "Regras de produto não surgem automaticamente do formato do arquivo."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Projeto e limites de operação",
+      "tag": "Especialista",
+      "hours": 12,
+      "summary": "Entregue um aplicativo local de pedidos com decisões e limites explícitos.",
+      "skills": [
+        "Schema",
+        "Consultas-alvo",
+        "Runbook"
+      ],
+      "project": "Aplicativo local de pedidos com restauração",
+      "deliverables": [
+        "DDL, dados fictícios, migrações e consultas de uso.",
+        "Ensaio de concorrência e backup restaurado.",
+        "README de caminhos, permissões de arquivo e critérios de migração de engine."
+      ],
+      "rubric": [
+        "Uma pessoa consegue reproduzir o projeto do zero.",
+        "Limites de escrita e rede são justificados com carga real.",
+        "A entrega separa medições executadas de hipóteses futuras."
+      ],
+      "challenge": [
+        {
+          "question": "Uma operação altera dois arquivos em WAL. É correto prometer atomicidade conjunta só porque usou BEGIN?",
+          "options": [
+            "Sim, BEGIN elimina qualquer condição.",
+            "Sim, ATTACH cria consenso remoto.",
+            "Não, porque BEGIN só funciona em PostgreSQL.",
+            "Não; as condições e limites de múltiplos bancos devem ser verificados."
+          ],
+          "answer": 3,
+          "explanation": "A fronteira da garantia precisa corresponder ao armazenamento envolvido."
+        },
+        {
+          "question": "Ter muitos registros é o único critério para rejeitar SQLite?",
+          "options": [
+            "Não; padrão de escrita, implantação e operação também importam.",
+            "Sim, toda tabela acima de cem linhas é inválida.",
+            "Sim, tamanho elimina necessidade de medir.",
+            "Não, porque SQLite não armazena tabelas."
+          ],
+          "answer": 0,
+          "explanation": "Adequação depende do trabalho exigido e do ambiente."
+        },
+        {
+          "question": "A tela checa disponibilidade antes de gravar. Isso torna dispensável a restrição de uma reserva aberta?",
+          "options": [
+            "Sim, a interface elimina concorrência.",
+            "Não; outra requisição pode mudar o estado entre a checagem e a escrita.",
+            "Sim, SELECT bloqueia qualquer computador.",
+            "Não, porque índices não podem impor regras."
+          ],
+          "answer": 1,
+          "explanation": "A defesa no banco protege a invariante na escrita."
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": 1,
+      "level": 1,
+      "title": "Banco embutido, arquivo e conexão",
+      "goal": "Identificar onde o banco está e qual biblioteca executa a consulta.",
+      "theory": [
+        {
+          "title": "Dentro do processo",
+          "text": "SQLite é uma biblioteca embutida: o aplicativo acessa o arquivo diretamente, sem um servidor SQL separado obrigatório. A CLI e o Python são clientes diferentes da biblioteca. Cada um pode carregar outra versão, portanto confirme a versão no caminho de execução real."
+        },
+        {
+          "title": "Memória e persistência",
+          "text": "O nome especial :memory: cria um banco temporário associado à conexão; outra conexão :memory: não o compartilha por padrão. Um caminho de arquivo cria ou abre um banco persistente. Um caminho errado pode criar outro arquivo vazio, parecendo que seus dados desapareceram."
+        },
+        {
+          "title": "Inspeção inicial",
+          "text": "sqlite_version() informa a biblioteca da conexão. PRAGMA database_list mostra os bancos anexados e seus caminhos. Antes de alterar dados persistentes confira caminho, permissões e se o arquivo é o laboratório esperado; o nome de uma tabela não identifica o arquivo por si só."
+        }
+      ],
+      "code": "SELECT sqlite_version() AS versao;\nPRAGMA database_list;\nSELECT 'SQLite embutido' AS ambiente, 2+3 AS resultado;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "Versão da sua biblioteca; database_list mostra main com caminho vazio em :memory:; última consulta retorna SQLite embutido|5.",
+      "quiz": {
+        "question": "Uma conexão :memory: nova compartilha automaticamente o banco de outra conexão :memory:?",
+        "options": [
+          "Sim, porque o nome é igual.",
+          "Não; cada conexão normalmente recebe seu próprio banco em memória.",
+          "Sim, entre todos os processos do computador.",
+          "Sim, até reiniciar o sistema operacional."
+        ],
+        "answer": 1,
+        "explanation": ":memory: identifica um banco privado da conexão no uso comum; compartilhamento exige configuração específica."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confira o destino",
+          "prompt": "Registre sqlite_version() e PRAGMA database_list no seu laboratório.",
+          "hint": "O caminho vazio é esperado em memória.",
+          "solution": "Execute as duas instruções e anote versão e nome main; ao usar arquivo, confira seu caminho absoluto antes de escrever.",
+          "criteria": [
+            "Registra versão real.",
+            "Distingue memória de caminho persistente."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Outro arquivo",
+          "prompt": "Explique como um caminho relativo errado pode resultar em banco sem tabelas.",
+          "hint": "SQLite pode criar um arquivo novo ao conectar.",
+          "solution": "Se o diretório de trabalho mudou, dados.db pode apontar a outro local; use caminho absoluto e modo de abertura apropriado para evitar criação involuntária.",
+          "criteria": [
+            "Relaciona caminho relativo ao diretório.",
+            "Propõe verificação de arquivo existente."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Sem servidor",
+          "prompt": "Compare a implantação de SQLite com um banco cliente-servidor em duas frases técnicas.",
+          "hint": "Pense em processo e transporte.",
+          "solution": "SQLite executa no processo do aplicativo e usa arquivo; um banco cliente-servidor recebe comandos por conexão a outro processo. Isso muda distribuição, permissões e concorrência, não elimina necessidade de SQL.",
+          "criteria": [
+            "Identifica localização da execução.",
+            "Cita consequência operacional concreta."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/whentouse.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 2,
+      "level": 1,
+      "title": "Classes de armazenamento e afinidade",
+      "goal": "Observar conversões e evitar assumir tipagem rígida em tabelas comuns.",
+      "theory": [
+        {
+          "title": "Valor e coluna",
+          "text": "SQLite associa a cada valor uma classe de armazenamento: NULL, INTEGER, REAL, TEXT ou BLOB. Em tabelas comuns, o tipo declarado fornece afinidade, uma preferência de conversão; ele não proíbe automaticamente todo valor de outra classe. typeof revela a classe efetivamente armazenada."
+        },
+        {
+          "title": "Conversão por afinidade",
+          "text": "Uma coluna INTEGER pode converter texto numérico para inteiro, mas conservar texto não numérico. Isso afeta comparações e validação de domínio. Tipos como VARCHAR(20) não impõem por si sós o limite 20; use CHECK se esse limite é uma regra necessária."
+        },
+        {
+          "title": "Preservar significado",
+          "text": "CEP, códigos e identificadores com zeros iniciais normalmente são texto, mesmo contendo dígitos. Dinheiro pode ser representado por inteiros em centavos. Antes de escolher um tipo, declare operações e limites; não confunda aparência textual numérica com quantidade."
+        }
+      ],
+      "code": "CREATE TABLE amostra(codigo TEXT,quantidade INTEGER);\nINSERT INTO amostra VALUES('0012','12'),('0013','doze');\nSELECT codigo,quantidade,typeof(quantidade) AS classe FROM amostra ORDER BY codigo;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "0012|12|integer; 0013|doze|text. O código preserva zeros por ter afinidade TEXT.",
+      "quiz": {
+        "question": "Numa tabela comum, declarar INTEGER impede sempre armazenar texto não numérico?",
+        "options": [
+          "Sim; qualquer texto é rejeitado em toda tabela.",
+          "Sim; texto vira zero automaticamente.",
+          "Não; afinidade tenta conversão, mas pode conservar texto.",
+          "Não; porque SQLite não armazena inteiros."
+        ],
+        "answer": 2,
+        "explanation": "Tabelas comuns são flexíveis; STRICT oferece um contrato de tipos mais restrito."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Inspecione valores",
+          "prompt": "Insira NULL e 1.5 na coluna quantidade e consulte typeof.",
+          "hint": "Use IDs ou códigos diferentes para reconhecer linhas.",
+          "solution": "NULL tem classe null; 1.5 permanece real por não ser inteiro exato. Compare com texto numérico '12', convertido em integer.",
+          "criteria": [
+            "Registra as classes observadas.",
+            "Não confunde tipo declarado com typeof."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Limite real",
+          "prompt": "Crie nome TEXT com no máximo 20 caracteres.",
+          "hint": "Combine NOT NULL e CHECK(length(nome)<=20).",
+          "solution": "CREATE TABLE nomes(nome TEXT NOT NULL CHECK(length(nome)<=20)); teste 20 e 21 caracteres. VARCHAR(20) sozinho não impõe a regra no SQLite.",
+          "criteria": [
+            "20 é aceito.",
+            "21 é rejeitado."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Código não é quantidade",
+          "prompt": "Explique por que 0012 deve ser TEXT quando os zeros pertencem ao identificador.",
+          "hint": "Aritmética não é a operação de negócio do código.",
+          "solution": "INTEGER converte a representação para 12; TEXT preserva o código 0012. Use CHECK de formato conforme o contrato, sem converter para número para ordenar códigos arbitrariamente.",
+          "criteria": [
+            "Preserva zeros.",
+            "Justifica tipo por significado."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/datatype3.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 3,
+      "level": 1,
+      "title": "Detectar STRICT, JSON1 e FTS5",
+      "goal": "Verificar a biblioteca usada pelo Python e falhar com diagnóstico claro.",
+      "theory": [
+        {
+          "title": "Versão embutida",
+          "text": "sqlite3.sqlite_version informa a biblioteca ligada ao módulo Python, não a versão do executável CLI. STRICT exige 3.37 ou superior. Um build pode diferir em extensões e opções de compilação; testar a operação usada é mais direto do que adivinhar pela plataforma."
+        },
+        {
+          "title": "Recursos opcionais",
+          "text": "JSON vem habilitado por padrão em builds modernos a partir de 3.38, mas builds anteriores ou personalizados variam. FTS5 também depende de disponibilidade na compilação. O teste cria tabela virtual temporária e chama json_valid, sem carregar extensões externas."
+        },
+        {
+          "title": "Diagnóstico sem improviso",
+          "text": "Se um recurso falta, obtenha um runtime oficial compatível ou pule explicitamente aquele laboratório até configurar o ambiente. Não reescreva a consulta como se a extensão existisse. Conexões devem ser fechadas mesmo quando a verificação falha."
+        }
+      ],
+      "code": "import sqlite3\n\nprint('STRICT:', sqlite3.sqlite_version_info >= (3, 37, 0))\ncon = sqlite3.connect(':memory:', isolation_level=None)\ntry:\n    try:\n        assert con.execute(\"SELECT json_valid('{\" + '\"ok\":true}' + \"')\").fetchone()[0] == 1\n        print('JSON1: disponível')\n    except sqlite3.Error as exc:\n        raise SystemExit('JSON1 ausente: use um build compatível') from exc\n    try:\n        con.execute('CREATE VIRTUAL TABLE temp.teste_fts USING fts5(texto)')\n        print('FTS5: disponível')\n    except sqlite3.Error as exc:\n        raise SystemExit('FTS5 ausente: use um build compatível') from exc\nfinally:\n    con.close()\n",
+      "filename": "aula.py",
+      "language": "python",
+      "run": "python aula.py",
+      "expected": "Num build compatível: STRICT: True\nJSON1: disponível\nFTS5: disponível",
+      "quiz": {
+        "question": "Qual informação deve ser conferida para saber a versão do SQLite usada por Python?",
+        "options": [
+          "Somente python --version.",
+          "Somente o nome do arquivo .db.",
+          "A versão de um servidor PostgreSQL instalado.",
+          "sqlite3.sqlite_version."
+        ],
+        "answer": 3,
+        "explanation": "A biblioteca embutida no módulo pode diferir de outros clientes instalados."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Teste de JSON simples",
+          "prompt": "Simplifique a verificação usando parâmetros em vez de montar a string do SELECT.",
+          "hint": "con.execute aceita uma tupla de parâmetros.",
+          "solution": "con.execute('SELECT json_valid(?)', ('{\"ok\":true}',)).fetchone()[0] deve retornar 1. Esse binding é retomado na integração.",
+          "criteria": [
+            "Resultado 1.",
+            "Tupla tem um elemento com vírgula."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Versões distintas",
+          "prompt": "Se a CLI diz 3.53 e Python diz 3.36, STRICT no Python está garantido?",
+          "hint": "O código Python usa sua própria biblioteca.",
+          "solution": "Não. O módulo ligado à 3.36 não atende ao requisito de STRICT. Atualize o runtime compatível ou use explicitamente a CLI adequada para SQL; não atribua a falha à sintaxe da tabela.",
+          "criteria": [
+            "Requisito 3.37 reconhecido.",
+            "Identifica o executável que precisa ser corrigido."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Recurso ausente",
+          "prompt": "Explique por que capturar erro de FTS5 e continuar como se a tabela existisse é inadequado.",
+          "hint": "As consultas posteriores dependem do recurso.",
+          "solution": "Emita diagnóstico e interrompa ou marque a aula como indisponível; uma falha de capacidade não é uma conclusão bem-sucedida do exercício.",
+          "criteria": [
+            "Erro comunicado com contexto.",
+            "Não concede conclusão sem executar o recurso."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/sqlite3.html",
+      "caution": "Exige Python com SQLite 3.37+; detecta JSON1 e FTS5, não os instala.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 4,
+      "level": 2,
+      "title": "INTEGER PRIMARY KEY e rowid",
+      "goal": "Usar identidade estável e compreender quando AUTOINCREMENT é necessário.",
+      "theory": [
+        {
+          "title": "Alias de rowid",
+          "text": "Na tabela comum com rowid, uma coluna declarada exatamente INTEGER PRIMARY KEY normalmente é alias do identificador interno rowid. Inserir sem esse valor permite a escolha de um inteiro. INT PRIMARY KEY não tem esse mesmo contrato de alias; grafia e opções do modelo importam."
+        },
+        {
+          "title": "AUTOINCREMENT",
+          "text": "AUTOINCREMENT acrescenta garantia específica de não reutilização de rowids já confirmados nessa tabela, com custo e estado adicional. Não garante sequência sem lacunas e raramente é necessário para uma chave técnica local. Um ID não deve expressar posição ou contagem de registros."
+        },
+        {
+          "title": "WITHOUT ROWID",
+          "text": "Uma tabela WITHOUT ROWID usa sua PRIMARY KEY como estrutura principal e tem outras características. Ela pode servir a chaves compostas, mas não usa a geração por INTEGER PRIMARY KEY como uma tabela comum. Escolha por contrato e padrão de acesso, não como otimização universal."
+        }
+      ],
+      "code": "CREATE TABLE produtos(id INTEGER PRIMARY KEY,nome TEXT NOT NULL);\nINSERT INTO produtos(nome) VALUES('Livro'),('Caderno');\nSELECT id,rowid,nome FROM produtos ORDER BY id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "1|1|Livro; 2|2|Caderno num banco novo. id e rowid representam o mesmo identificador nesse modelo.",
+      "quiz": {
+        "question": "AUTOINCREMENT garante IDs sem lacunas?",
+        "options": [
+          "Não; lacunas continuam possíveis.",
+          "Sim, inclusive após qualquer erro ou exclusão.",
+          "Sim, e dispensa PRIMARY KEY.",
+          "Não; porque SQLite nunca gera IDs."
+        ],
+        "answer": 0,
+        "explanation": "AUTOINCREMENT limita reutilização de IDs confirmados, não promete sequência contínua."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "ID explícito",
+          "prompt": "Insira id=10 e depois outra linha sem id.",
+          "hint": "A escolha automática considera o maior rowid existente no caso comum.",
+          "solution": "INSERT INTO produtos VALUES(10,'Caneta'); INSERT INTO produtos(nome) VALUES('Pasta'); a nova linha recebe 11 nessa amostra.",
+          "criteria": [
+            "IDs 10 e 11 observados.",
+            "Não generaliza como contagem de linhas."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Grafia importa",
+          "prompt": "Compare INTEGER PRIMARY KEY e INT PRIMARY KEY em tabelas comuns.",
+          "hint": "Inspecione id e rowid após inserir apenas nome.",
+          "solution": "INTEGER PRIMARY KEY recebe rowid gerado. INT PRIMARY KEY é outra chave com afinidade inteira; no modo comum pode ter NULL pelo comportamento histórico, então use NOT NULL/STRICT quando adequado.",
+          "criteria": [
+            "Distingue alias e índice de chave.",
+            "Não usa INT como sinônimo automático nesse contrato."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Chave composta",
+          "prompt": "Proponha chave para itens com pedido_id e numero_linha e avalie WITHOUT ROWID.",
+          "hint": "A tupla identifica cada item.",
+          "solution": "PRIMARY KEY(pedido_id,numero_linha) pode ser usada em tabela WITHOUT ROWID; compare tamanho e acessos. Não presuma uma coluna rowid acessível nesse modelo.",
+          "criteria": [
+            "Chave composta explícita.",
+            "Explica a ausência de rowid."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/autoinc.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 5,
+      "level": 2,
+      "title": "STRICT e constraints de domínio",
+      "goal": "Combinar tipagem restrita, presença e validade de valores.",
+      "theory": [
+        {
+          "title": "STRICT por tabela",
+          "text": "A opção STRICT vale para a tabela criada e limita nomes de tipo a INT, INTEGER, REAL, TEXT, BLOB e ANY. Conversões sem perda ainda podem ocorrer: texto numérico não é necessariamente rejeitado. ANY preserva a classe do valor, útil quando a flexibilidade é intencional."
+        },
+        {
+          "title": "Regra além do tipo",
+          "text": "Um INTEGER pode representar um número negativo válido para o tipo, mas inválido para o estoque. NOT NULL define presença e CHECK define a regra de domínio. Como outros SQLs, CHECK aceita expressão NULL; presença precisa ser declarada separadamente."
+        },
+        {
+          "title": "Testar o contrato",
+          "text": "Inclua casos de conversão aceita, tipo incompatível e limite inválido. Não basta criar uma tabela STRICT e concluir que todo documento ou texto está validado. Regras de comprimento, unicidade e relação ainda dependem de constraints próprias."
+        }
+      ],
+      "code": "CREATE TABLE estoque(id INTEGER PRIMARY KEY,sku TEXT NOT NULL UNIQUE,qtd INTEGER NOT NULL CHECK(qtd>=0)) STRICT;\nINSERT INTO estoque(sku,qtd) VALUES('A','5');\nSELECT sku,qtd,typeof(qtd) FROM estoque;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "A|5|integer. O texto numérico foi convertido sem perda para o tipo exigido.",
+      "quiz": {
+        "question": "STRICT rejeita obrigatoriamente o texto '5' numa coluna INTEGER?",
+        "options": [
+          "Sim; qualquer texto é rejeitado.",
+          "Não; pode convertê-lo sem perda para inteiro.",
+          "Não; porque STRICT não verifica tipos.",
+          "Sim; e também proíbe NULL em toda coluna."
+        ],
+        "answer": 1,
+        "explanation": "STRICT aplica regras de armazenamento restrito após conversões permitidas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Tipo inválido",
+          "prompt": "Tente inserir qtd='cinco' e depois qtd=-1 em comandos separados.",
+          "hint": "Um erro é de tipo, outro de CHECK.",
+          "solution": "O texto não conversível é rejeitado por STRICT; -1 é inteiro válido mas viola CHECK. Nenhuma linha inválida deve ser adicionada.",
+          "criteria": [
+            "Distingue as duas regras.",
+            "Conta apenas a linha válida após testes."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Presença",
+          "prompt": "Explique por que CHECK(qtd>=0) não substitui NOT NULL.",
+          "hint": "Comparações com NULL produzem desconhecido.",
+          "solution": "CHECK não rejeita expressão NULL; NOT NULL impede ausência. Use ambos se quantidade precisa existir e ser não negativa.",
+          "criteria": [
+            "Demonstra tentativa com NULL.",
+            "Mantém duas regras separadas."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Dinheiro STRICT",
+          "prompt": "Declare preço em centavos numa tabela STRICT e justifique por que DECIMAL(10,2) não é usado.",
+          "hint": "STRICT aceita apenas a lista de tipos documentada.",
+          "solution": "preco_centavos INTEGER NOT NULL CHECK(preco_centavos>=0) é aceito; DECIMAL(10,2) não é tipo permitido em STRICT. Defina limites de negócio e overflow das operações.",
+          "criteria": [
+            "Tipo permitido.",
+            "Explica escala em centavos e limites."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/stricttables.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 6,
+      "level": 2,
+      "title": "Foreign keys por conexão",
+      "goal": "Ativar referências antes da transação e testar comportamento de exclusão.",
+      "theory": [
+        {
+          "title": "Ativação explícita",
+          "text": "PRAGMA foreign_keys=ON deve ser configurado em cada conexão antes de iniciar transações de escrita e conferido depois. Não dependa do default de um build. Alterar essa configuração dentro de transação não efetiva a troca como se fosse uma regra imediata."
+        },
+        {
+          "title": "Pai e filho",
+          "text": "Uma foreign key referencia uma chave primária ou unicidade compatível do pai. Ela protege existência, não a quantidade de filhos. NOT NULL na coluna do filho impede referência ausente; sem isso, NULL pode representar ausência conforme o domínio."
+        },
+        {
+          "title": "Ações e verificação",
+          "text": "ON DELETE RESTRICT, CASCADE e SET NULL têm efeitos distintos. Escolha pelo ciclo de vida dos dados e teste. PRAGMA foreign_key_check procura violações existentes, mas precisa ser acompanhado da validação normal nas novas escritas e não substitui regras de negócio."
+        }
+      ],
+      "code": "PRAGMA foreign_keys=ON;\nCREATE TABLE categorias(id INTEGER PRIMARY KEY,nome TEXT NOT NULL) STRICT;\nCREATE TABLE produtos(id INTEGER PRIMARY KEY,categoria_id INTEGER NOT NULL REFERENCES categorias(id) ON DELETE RESTRICT,nome TEXT NOT NULL) STRICT;\nINSERT INTO categorias VALUES(1,'Livros');\nINSERT INTO produtos VALUES(1,1,'Go');\nPRAGMA foreign_keys;\nPRAGMA foreign_key_check;\nSELECT p.nome,c.nome FROM produtos p JOIN categorias c ON c.id=p.categoria_id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "foreign_keys retorna 1; foreign_key_check retorna zero linhas; consulta retorna Go|Livros.",
+      "quiz": {
+        "question": "Quando configurar PRAGMA foreign_keys=ON para uma conexão de escrita?",
+        "options": [
+          "Somente depois do COMMIT final de todas as operações.",
+          "Somente uma vez no computador para todos os aplicativos.",
+          "Antes de abrir a transação, e conferir o valor na própria conexão.",
+          "Somente quando a consulta usa JOIN."
+        ],
+        "answer": 2,
+        "explanation": "A configuração pertence à conexão e não deve depender de defaults."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Órfão rejeitado",
+          "prompt": "Insira produto com categoria_id=999 em comando isolado.",
+          "hint": "A categoria não existe e FK está ativa.",
+          "solution": "A inserção falha por FOREIGN KEY constraint failed; a contagem de produtos continua 1.",
+          "criteria": [
+            "Confirma foreign_keys=1.",
+            "Registra falha e contagem final."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Exclusão restringida",
+          "prompt": "Tente excluir categoria1 enquanto o produto a referencia.",
+          "hint": "ON DELETE RESTRICT protege a referência.",
+          "solution": "DELETE FROM categorias WHERE id=1; deve falhar. Remover o produto primeiro permite excluir a categoria se o domínio autorizar.",
+          "criteria": [
+            "Pai não é removido com filho presente.",
+            "Não desliga FK para contornar a regra."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Duas conexões",
+          "prompt": "Explique o que configurar numa conexão nova aberta pela aplicação.",
+          "hint": "A primeira conexão não configura a segunda.",
+          "solution": "Execute PRAGMA foreign_keys=ON e leia PRAGMA foreign_keys em cada conexão antes de transações; centralize isso na fábrica de conexões.",
+          "criteria": [
+            "Configura por conexão.",
+            "Teste mostra 1 na conexão usada."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/foreignkeys.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 7,
+      "level": 3,
+      "title": "DML e RETURNING",
+      "goal": "Reservar estoque e observar linhas realmente alteradas.",
+      "theory": [
+        {
+          "title": "Escrita no servidor embutido",
+          "text": "INSERT, UPDATE e DELETE podem retornar colunas com RETURNING, disponível desde 3.35 e compatível com o requisito 3.37 da trilha. O retorno pertence às linhas efetivamente afetadas. Em drivers, consuma o cursor corretamente antes de concluir o ciclo de vida da instrução."
+        },
+        {
+          "title": "Reserva condicional",
+          "text": "UPDATE estoque SET qtd=qtd-pedido WHERE sku=? AND qtd>=pedido combina verificação e mudança numa instrução. Zero linhas significa que não houve reserva elegível. Ler o saldo e depois gravar um valor calculado fora da transação abre espaço a condições de disputa."
+        },
+        {
+          "title": "Limites do retorno",
+          "text": "RETURNING não é uma ferramenta genérica de composição como em todos os outros dialetos. Não suponha que DML RETURNING pode ser colocado em qualquer CTE no SQLite. Use a documentação do mecanismo e um contrato simples para buscar o resultado da instrução."
+        }
+      ],
+      "code": "CREATE TABLE estoque(sku TEXT PRIMARY KEY NOT NULL,qtd INTEGER NOT NULL CHECK(qtd>=0)) STRICT;\nINSERT INTO estoque VALUES('A',5) RETURNING sku,qtd;\nUPDATE estoque SET qtd=qtd-2 WHERE sku='A' AND qtd>=2 RETURNING sku,qtd;\nUPDATE estoque SET qtd=qtd-4 WHERE sku='A' AND qtd>=4 RETURNING sku,qtd;\nSELECT * FROM estoque;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "Primeiro retorno A|5; segundo A|3; terceiro retorna zero linhas; saldo final A|3.",
+      "quiz": {
+        "question": "Zero linhas em UPDATE ... WHERE qtd>=4 RETURNING indica o quê nesse exemplo?",
+        "options": [
+          "Reserva de 4 sempre ocorreu.",
+          "Saldo virou zero automaticamente.",
+          "O CHECK foi desligado.",
+          "Nenhuma linha elegível foi alterada."
+        ],
+        "answer": 3,
+        "explanation": "A condição bloqueou a atualização porque restavam somente 3."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Exclusão com evidência",
+          "prompt": "Adicione B com saldo zero e exclua somente itens zerados com RETURNING.",
+          "hint": "DELETE admite WHERE e RETURNING.",
+          "solution": "INSERT INTO estoque VALUES('B',0); DELETE FROM estoque WHERE qtd=0 RETURNING sku; retorna B e preserva A.",
+          "criteria": [
+            "Somente B excluído.",
+            "Saldo de A preservado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Identidade retornada",
+          "prompt": "Crie produto INTEGER PRIMARY KEY e obtenha id na própria inserção.",
+          "hint": "Não use SELECT MAX(id) em outra instrução.",
+          "solution": "INSERT INTO produtos(nome) VALUES('Livro') RETURNING id; devolve a identidade dessa linha. Em integração, consuma fetchone/fetchall e finalize o cursor.",
+          "criteria": [
+            "Usa RETURNING.",
+            "Explica risco de MAX(id) em cenários concorrentes."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Reserva recusada",
+          "prompt": "Defina resposta da aplicação quando o retorno da reserva está vazio.",
+          "hint": "Diferencie ausência de estoque e falha de SQL.",
+          "solution": "Trate como condição de negócio não atendida; consulte contexto se precisar diferenciar SKU ausente e insuficiência. Não repita sem condição nem transforme saldo negativo em sucesso.",
+          "criteria": [
+            "Não altera saldo na recusa.",
+            "Define retorno de negócio explícito."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_returning.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 8,
+      "level": 3,
+      "title": "UPSERT e diferença de REPLACE",
+      "goal": "Resolver conflito de unicidade sem apagar semanticamente o registro.",
+      "theory": [
+        {
+          "title": "Conflito nomeado",
+          "text": "INSERT ... ON CONFLICT(chave) DO UPDATE resolve um conflito de unicidade compatível com o alvo declarado. excluded contém os valores propostos para a inserção. Isso permite somar quantidade ou substituir um atributo segundo a regra, sem uma consulta anterior separada."
+        },
+        {
+          "title": "REPLACE tem outro efeito",
+          "text": "INSERT OR REPLACE remove linhas conflitantes e insere outra linha segundo regras de conflito; não é simplesmente um UPDATE. Isso pode afetar identidade, referências e comportamento de triggers. Evite empregá-lo como atalho para manter uma entidade existente."
+        },
+        {
+          "title": "Idempotência",
+          "text": "Uma chave única de requisição pode impedir duplicação de uma ação quando ela é repetida. UPSERT não torna toda operação idempotente: incrementar saldo novamente em cada repetição pode duplicar o efeito. Defina qual conflito significa repetição e qual significa atualização legítima."
+        }
+      ],
+      "code": "CREATE TABLE contadores(chave TEXT PRIMARY KEY NOT NULL,valor INTEGER NOT NULL) STRICT;\nINSERT INTO contadores VALUES('visitas',2);\nINSERT INTO contadores VALUES('visitas',3) ON CONFLICT(chave) DO UPDATE SET valor=contadores.valor+excluded.valor;\nSELECT * FROM contadores;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "visitas|5.",
+      "quiz": {
+        "question": "excluded.valor representa o quê no DO UPDATE do UPSERT?",
+        "options": [
+          "O valor que a nova inserção tentou fornecer.",
+          "Sempre o valor antigo da tabela.",
+          "Um valor removido por VACUUM.",
+          "Uma palavra equivalente a NULL."
+        ],
+        "answer": 0,
+        "explanation": "A linha proposta fica disponível pelo nome excluded durante o tratamento do conflito."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Não faça nada",
+          "prompt": "Repita a inserção com DO NOTHING e confira o contador.",
+          "hint": "Conflito pode ser aceito sem alterar a linha.",
+          "solution": "INSERT INTO contadores VALUES('visitas',99) ON CONFLICT(chave) DO NOTHING; o contador permanece 5.",
+          "criteria": [
+            "Valor final 5.",
+            "Distingue ignorar conflito e acumular."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Repetição perigosa",
+          "prompt": "Explique por que repetir o UPSERT incremental duas vezes não é idempotente.",
+          "hint": "O mesmo +3 será aplicado de novo.",
+          "solution": "Após primeira execução fica 5; após repetir a mesma operação fica 8. Para requisições únicas, registre request_id com unicidade e associe o efeito à primeira confirmação.",
+          "criteria": [
+            "Demonstra 5→8.",
+            "Propõe chave de requisição única."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "REPLACE versus UPDATE",
+          "prompt": "Explique um risco de trocar o UPSERT por INSERT OR REPLACE numa tabela com filhos.",
+          "hint": "Considere que uma linha pode ser removida e reinserida.",
+          "solution": "A remoção pode interagir com ações de foreign key e identidade; um UPDATE preserva outra semântica. Teste explicitamente referências e triggers em vez de tratar REPLACE como sinônimo.",
+          "criteria": [
+            "Identifica semântica de exclusão/inserção.",
+            "Inclui teste de filhos no plano."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_upsert.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 9,
+      "level": 3,
+      "title": "Dinheiro e datas sem tipo mágico",
+      "goal": "Documentar unidades e formatos para cálculos previsíveis.",
+      "theory": [
+        {
+          "title": "Centavos inteiros",
+          "text": "SQLite não oferece um tipo decimal rígido com escala como alguns bancos servidores. INTEGER em centavos evita erros binários comuns em valores monetários dentro dos limites de inteiro; defina moeda, arredondamento e teto de operação. REAL representa ponto flutuante e não deve prometer exatidão decimal."
+        },
+        {
+          "title": "Tempo com convenção",
+          "text": "Datas podem ser armazenadas como texto ISO, valores numéricos ou outros contratos suportados pelas funções. Não há um tipo timestamptz que faça toda validação sozinho. Escolha UTC para instantes e documente formato, precisão e conversão de exibição; datas de calendário têm outro significado."
+        },
+        {
+          "title": "Formato e validação",
+          "text": "Texto ordenável exige formato padronizado. CHECK de comprimento não prova que toda data seja válida. Use validação de domínio e testes de limites no aplicativo, e funções de data com expectativas explícitas para evitar aceitar normalizações surpreendentes."
+        }
+      ],
+      "code": "CREATE TABLE vendas(id INTEGER PRIMARY KEY,total_centavos INTEGER NOT NULL CHECK(total_centavos>=0),criada_em TEXT NOT NULL) STRICT;\nINSERT INTO vendas VALUES(1,1990,'2026-10-24T15:00:00Z'),(2,2010,'2026-10-24T16:00:00Z');\nSELECT sum(total_centavos) AS centavos FROM vendas;\nSELECT datetime('2026-10-24T12:00:00-03:00') AS utc;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "centavos=4000; utc=2026-10-24 15:00:00.",
+      "quiz": {
+        "question": "Declarar DECIMAL(10,2) numa tabela comum garante armazenamento decimal exato?",
+        "options": [
+          "Sim, em qualquer SQLite.",
+          "Não; a declaração não cria um decimal exato com escala rígida.",
+          "Sim, inclusive numa tabela STRICT com esse tipo.",
+          "Não; porque SQLite não calcula somas."
+        ],
+        "answer": 1,
+        "explanation": "Escolha representação e arredondamento explicitamente; centavos inteiros são uma opção comum."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Some centavos",
+          "prompt": "Some três itens de 199 centavos e produza o total inteiro.",
+          "hint": "Multiplicação de inteiros não exige REAL.",
+          "solution": "SELECT 3*199; retorna 597 centavos. Formate 5,97 na camada de apresentação conforme moeda, sem perder a unidade interna.",
+          "criteria": [
+            "597 inteiro.",
+            "Documenta unidade centavos."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Instantes iguais",
+          "prompt": "Normalize 12:00-03 e 15:00Z com datetime e compare.",
+          "hint": "As funções entendem os offsets suportados.",
+          "solution": "SELECT datetime('2026-10-24T12:00:00-03:00')=datetime('2026-10-24T15:00:00Z'); retorna 1.",
+          "criteria": [
+            "Resultado 1.",
+            "Não confunde texto original com instante normalizado."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Período",
+          "prompt": "Filtre textos UTC padronizados de outubro usando limites fechado-abertos.",
+          "hint": "Use >= início e < início do mês seguinte.",
+          "solution": "WHERE criada_em>='2026-10-01T00:00:00Z' AND criada_em<'2026-11-01T00:00:00Z'; só é comparação cronológica confiável com a convenção uniforme declarada.",
+          "criteria": [
+            "Dois limites explícitos.",
+            "Cita pré-condição de formato e fuso uniformes."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_datefunc.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 10,
+      "level": 4,
+      "title": "JOIN e pais sem filhos",
+      "goal": "Produzir relatórios por entidade com cardinalidade conhecida.",
+      "theory": [
+        {
+          "title": "Granularidade",
+          "text": "JOIN pode multiplicar cada pai por seus filhos. Defina se a saída é por cliente, pedido ou item antes de somar valores. SQLite não corrige automaticamente duplicação de um total do pai por cada linha do filho."
+        },
+        {
+          "title": "Preservação",
+          "text": "LEFT JOIN mantém pais sem correspondência. COUNT(filho.id) conta filhos reais; COUNT(*) conta também a linha preservada do pai. Filtros do filho no WHERE podem eliminar a ausência e mudar a intenção da junção."
+        },
+        {
+          "title": "Agregação disciplinada",
+          "text": "SQLite aceita alguns SELECTs agregados com colunas não agrupadas, mas o valor pode não representar o contrato pretendido. Para resultados claros, agrupe a identidade e as colunas da entidade ou agregue previamente; não dependa de coluna arbitrária escolhida num grupo."
+        }
+      ],
+      "code": "CREATE TABLE clientes(id INTEGER PRIMARY KEY,nome TEXT);\nCREATE TABLE pedidos(id INTEGER PRIMARY KEY,cliente_id INTEGER,total INTEGER);\nINSERT INTO clientes VALUES(1,'Ana'),(2,'Bia');\nINSERT INTO pedidos VALUES(10,1,3000),(11,1,2000);\nSELECT c.id,c.nome,count(p.id) AS pedidos,coalesce(sum(p.total),0) AS total\nFROM clientes c LEFT JOIN pedidos p ON p.cliente_id=c.id GROUP BY c.id,c.nome ORDER BY c.id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "1|Ana|2|5000; 2|Bia|0|0.",
+      "quiz": {
+        "question": "Por que COUNT(p.id) dá zero para Bia e COUNT(*) daria um?",
+        "options": [
+          "COUNT começa em números diferentes aleatoriamente.",
+          "COUNT(*) ignora clientes.",
+          "A linha preservada tem p.id NULL, ignorado por COUNT(p.id).",
+          "Bia tem um pedido oculto."
+        ],
+        "answer": 2,
+        "explanation": "A escolha da expressão contada precisa refletir a entidade que se quer medir."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Filtro no ON",
+          "prompt": "Mostre pedidos maiores que 2500 preservando todos os clientes.",
+          "hint": "A condição de filho pertence ao ON para essa intenção.",
+          "solution": "LEFT JOIN pedidos p ON p.cliente_id=c.id AND p.total>2500; Ana mantém só pedido10 e Bia permanece com NULL.",
+          "criteria": [
+            "Bia presente.",
+            "Pedido11 excluído do lado filho."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Total duplicado",
+          "prompt": "Explique o erro de somar total do pedido depois de unir seus dois itens.",
+          "hint": "O valor do pedido se repete por item.",
+          "solution": "Um pedido de 5000 com dois itens vira 10000 nessa soma errada. Agregue itens antes ou some pedidos no conjunto correto, sem SUM(DISTINCT total) genérico.",
+          "criteria": [
+            "Mostra a repetição.",
+            "Propõe correção por granularidade."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Relatório ordenado",
+          "prompt": "Adicione ordenação por total decrescente e id como desempate.",
+          "hint": "Ordem de saída não vem do GROUP BY.",
+          "solution": "ORDER BY total DESC,c.id; mantém resultados determinísticos quando totais empatam.",
+          "criteria": [
+            "Ordenação explícita.",
+            "Chave no desempate."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_select.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 11,
+      "level": 4,
+      "title": "EXISTS e semântica de NULL",
+      "goal": "Consultar existência sem listas de comparação ambíguas.",
+      "theory": [
+        {
+          "title": "Existência correlacionada",
+          "text": "EXISTS pergunta se ao menos uma linha satisfaz a subconsulta. A correlação usa a chave da linha externa. Assim cada cliente pode aparecer uma vez, mesmo tendo muitos pedidos, sem precisar usar DISTINCT para desfazer multiplicação de JOIN."
+        },
+        {
+          "title": "NOT IN e ausência",
+          "text": "Se a lista consultada contém NULL, NOT IN pode avaliar a comparação como desconhecida. WHERE só aceita verdadeiro, então um cliente sem pedido pode desaparecer indevidamente. NOT EXISTS correlacionado evita essa armadilha para a pergunta de ausência de correspondência."
+        },
+        {
+          "title": "Comportamento antes de custo",
+          "text": "Subconsulta não é sinônimo de lentidão. O planejador escolhe estratégias conforme a consulta e os índices. Preserve o significado e depois use EXPLAIN QUERY PLAN e dados representativos para investigar acessos; não troque uma forma correta por um JOIN semanticamente diferente."
+        }
+      ],
+      "code": "CREATE TABLE clientes(id INTEGER PRIMARY KEY,nome TEXT);\nCREATE TABLE pedidos(cliente_id INTEGER);\nINSERT INTO clientes VALUES(1,'Ana'),(2,'Bia');\nINSERT INTO pedidos VALUES(1),(1),(NULL);\nSELECT nome FROM clientes c WHERE NOT EXISTS(SELECT 1 FROM pedidos p WHERE p.cliente_id=c.id) ORDER BY nome;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "Uma linha: Bia.",
+      "quiz": {
+        "question": "Qual forma consulta ausência de correspondência sem depender de uma lista sem NULL?",
+        "options": [
+          "NOT IN sem tratar NULL.",
+          "WHERE id=NULL.",
+          "JOIN sem condição.",
+          "NOT EXISTS correlacionado pela chave."
+        ],
+        "answer": 3,
+        "explanation": "NOT EXISTS testa correspondência de linhas; NULL projetado na subconsulta não muda a pergunta."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Compare o resultado",
+          "prompt": "Execute NOT IN na mesma amostra e compare.",
+          "hint": "Há NULL em pedidos.cliente_id.",
+          "solution": "WHERE id NOT IN(SELECT cliente_id FROM pedidos) não seleciona Bia; NOT EXISTS a seleciona. Registre a lógica de três valores.",
+          "criteria": [
+            "Dois resultados registrados.",
+            "Identifica o NULL na lista."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compra presente",
+          "prompt": "Retorne clientes com ao menos um pedido sem DISTINCT.",
+          "hint": "Troque NOT EXISTS por EXISTS.",
+          "solution": "SELECT nome FROM clientes c WHERE EXISTS(SELECT 1 FROM pedidos p WHERE p.cliente_id=c.id); retorna Ana uma vez.",
+          "criteria": [
+            "Ana uma vez.",
+            "Sem multiplicação externa."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Índice para correlação",
+          "prompt": "Proponha índice para pedidos(cliente_id) e como avaliar.",
+          "hint": "O acesso interno busca pela chave do cliente.",
+          "solution": "CREATE INDEX pedidos_cliente ON pedidos(cliente_id); observe EQP em carga maior. Não prometa ganho numa tabela de três linhas.",
+          "criteria": [
+            "Índice na coluna usada.",
+            "Limite da amostra reconhecido."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_expr.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 12,
+      "level": 4,
+      "title": "CTEs e etapas de consulta",
+      "goal": "Nomear agregações e filtros sem presumir materialização.",
+      "theory": [
+        {
+          "title": "Organização",
+          "text": "WITH nomeia consultas auxiliares dentro de uma instrução. Isso ajuda a explicitar a granularidade de uma etapa e evita repetir expressões extensas. Uma CTE não é uma tabela persistente nem fica disponível depois que a instrução termina."
+        },
+        {
+          "title": "Planejamento",
+          "text": "O SQLite pode incorporar ou materializar etapas conforme suas regras. Hints de materialização têm contrato específico e não tornam toda CTE uma otimização. Use clareza como ponto inicial e observe EQP antes de introduzir decisões de performance."
+        },
+        {
+          "title": "Contrato do resultado",
+          "text": "Separe cálculo agregado de filtro e apresente colunas explicitamente. ORDER BY final define a exibição. Teste conjunto vazio e valores nulos; o fato de a consulta estar dividida em etapas não modifica a semântica de SUM e COUNT."
+        }
+      ],
+      "code": "WITH vendas(cliente,valor) AS(VALUES('Ana',3000),('Ana',2000),('Bia',1000)),\n totais AS(SELECT cliente,sum(valor) AS total FROM vendas GROUP BY cliente)\nSELECT cliente,total FROM totais WHERE total>=4000 ORDER BY cliente;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "Ana|5000.",
+      "quiz": {
+        "question": "Por quanto tempo o nome de uma CTE comum existe?",
+        "options": [
+          "Somente durante a instrução em que foi declarada.",
+          "Para sempre no arquivo.",
+          "Até reiniciar o computador.",
+          "Até VACUUM obrigatório."
+        ],
+        "answer": 0,
+        "explanation": "WITH cria uma consulta auxiliar de escopo local à instrução."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Nova etapa",
+          "prompt": "Acrescente CTE que calcule total em centavos por cliente e filtre total>1500.",
+          "hint": "Use o resultado de totais numa etapa seguinte.",
+          "solution": "maiores AS(SELECT cliente,total FROM totais WHERE total>1500) e SELECT final de maiores retornam Ana nessa amostra.",
+          "criteria": [
+            "Resultado correto.",
+            "Explica a granularidade da CTE."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Conjunto vazio",
+          "prompt": "Troque o filtro para total>99999 e diga a saída esperada.",
+          "hint": "Nenhum grupo atende.",
+          "solution": "A consulta retorna zero linhas, sem inventar um cliente com total0. Isso difere de uma agregação global sem GROUP BY.",
+          "criteria": [
+            "Zero linhas.",
+            "Distingue filtro de grupos e agregado global."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Não presuma cache",
+          "prompt": "Explique por que WITH não é garantia universal de calcular uma expressão uma única vez.",
+          "hint": "O planejador pode transformar a consulta.",
+          "solution": "A forma declarativa permite estratégias diferentes; verifique a documentação e o plano antes de depender de avaliação para performance. Evite funções com efeitos colaterais nessa suposição.",
+          "criteria": [
+            "Não promete materialização automática.",
+            "Relaciona decisão ao plano."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_with.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 13,
+      "level": 5,
+      "title": "Janelas e acumulados",
+      "goal": "Calcular análise por linha com ordem e frame explícitos.",
+      "theory": [
+        {
+          "title": "Sem colapsar linhas",
+          "text": "Funções de janela operam sobre linhas relacionadas à linha corrente, preservando a granularidade de cada registro. GROUP BY produz uma linha por grupo; SUM(...) OVER pode produzir uma soma por janela em cada linha original."
+        },
+        {
+          "title": "Ordem e partição",
+          "text": "PARTITION BY separa conjuntos e ORDER BY dentro de OVER ordena a janela. O resultado final ainda precisa de ORDER BY próprio. Quando valores de ordenação empatam, inclua uma chave única se o contrato exige progressão linha a linha reproduzível."
+        },
+        {
+          "title": "Frame e empates",
+          "text": "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW define acumulado por linhas. O frame padrão pode incluir pares empatados e surpreender. row_number, rank e dense_rank têm políticas distintas de empate; escolha a que corresponde à pergunta."
+        }
+      ],
+      "code": "WITH vendas(id,valor) AS(VALUES(1,10),(2,20),(3,5))\nSELECT id,valor,sum(valor) OVER(ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS acumulado\nFROM vendas ORDER BY id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "1|10|10; 2|20|30; 3|5|35.",
+      "quiz": {
+        "question": "Qual forma calcula acumulado sem reduzir três vendas a uma linha?",
+        "options": [
+          "SUM(valor) sozinho sem GROUP BY.",
+          "SUM(valor) OVER com ordem e frame.",
+          "HAVING id.",
+          "DISTINCT valor em qualquer consulta."
+        ],
+        "answer": 1,
+        "explanation": "A janela preserva cada linha e calcula sobre seu frame."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Partição",
+          "prompt": "Acrescente regiao e reinicie acumulado a cada região.",
+          "hint": "PARTITION BY regiao define os conjuntos.",
+          "solution": "sum(valor) OVER(PARTITION BY regiao ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW); faça dois grupos e confira somas independentes.",
+          "criteria": [
+            "Regiões não se misturam.",
+            "Frame e ordem explícitos."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Empates",
+          "prompt": "Compare rank e dense_rank para pontos 100,100,80 em ordem decrescente.",
+          "hint": "A lacuna diferencia as duas funções.",
+          "solution": "rank() dá 1,1,3; dense_rank() dá 1,1,2. Use uma coluna id para ordenar a apresentação sem alterar o critério de empate do ranking.",
+          "criteria": [
+            "Resultados corretos.",
+            "Distingue empate e desempate visual."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Anterior",
+          "prompt": "Calcule valor-lag(valor) por id na amostra.",
+          "hint": "A primeira linha não tem anterior.",
+          "solution": "Os resultados são NULL,10,-15. Não substitua NULL por0 sem explicar por que ausência deveria valer zero.",
+          "criteria": [
+            "Três resultados corretos.",
+            "Explica o NULL inicial."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/windowfunctions.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 14,
+      "level": 5,
+      "title": "JSON textual e validação",
+      "goal": "Consultar documentos com JSON1 e distinguir ausência de null.",
+      "theory": [
+        {
+          "title": "JSON no contrato",
+          "text": "A trilha usa JSON em TEXT e funções JSON1, evitando depender do JSONB mais recente. Um TEXT qualquer não é automaticamente JSON válido: CHECK(json_valid(coluna)) verifica a sintaxe. A forma do documento e os campos obrigatórios ainda exigem regras adicionais."
+        },
+        {
+          "title": "Extração tipada",
+          "text": "json_extract pode retornar valores SQL como integer, text ou NULL conforme o conteúdo e o caminho. json_type identifica o tipo JSON e distingue uma chave ausente, que retorna SQL NULL, de JSON null, que retorna texto null."
+        },
+        {
+          "title": "Busca e custo",
+          "text": "Uma expressão de extração frequentemente usada pode ser candidata a índice, respeitando determinismo e forma da consulta. Não suponha que qualquer busca em JSON tenha índice automático. Campos relacionais frequentes podem merecer colunas próprias com constraints simples."
+        }
+      ],
+      "code": "CREATE TABLE produtos(id INTEGER PRIMARY KEY,atributos TEXT NOT NULL CHECK(json_valid(atributos))) STRICT;\nINSERT INTO produtos VALUES(1,'{\"cor\":\"azul\",\"peso\":2}'),(2,'{\"cor\":null}'),(3,'{}');\nSELECT id,json_extract(atributos,'$.cor') AS cor,json_type(atributos,'$.cor') AS tipo FROM produtos ORDER BY id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "id1: azul|text; id2: SQL NULL|texto null; id3: SQL NULL|SQL NULL. A representação de NULL depende do cliente.",
+      "quiz": {
+        "question": "Como distinguir chave ausente de uma chave com JSON null?",
+        "options": [
+          "Usar apenas json_extract e tratar ambos como iguais.",
+          "Comparar resultado =NULL.",
+          "Consultar json_type no caminho e interpretar SQL NULL versus texto null.",
+          "Converter todo documento para INTEGER."
+        ],
+        "answer": 2,
+        "explanation": "A função de tipo expõe a diferença de presença e conteúdo."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "JSON inválido",
+          "prompt": "Tente inserir o texto {sem aspas} e registre a falha.",
+          "hint": "json_valid retorna0 para sintaxe inválida.",
+          "solution": "INSERT INTO produtos VALUES(4,'{sem aspas}'); viola CHECK. Não remova a constraint para aceitar entrada malformada.",
+          "criteria": [
+            "Linha rejeitada.",
+            "Contagem preservada em3."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Peso",
+          "prompt": "Retorne IDs com peso maior que1 quando o contrato garante número.",
+          "hint": "json_extract retorna número para um número JSON.",
+          "solution": "WHERE json_extract(atributos,'$.peso')>1 seleciona1. Sem contrato de tipo, valide json_type antes de assumir comparação numérica.",
+          "criteria": [
+            "Seleciona id1.",
+            "Declara pré-condição do campo."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Mude uma propriedade",
+          "prompt": "Mude cor para verde preservando peso.",
+          "hint": "Use json_set com caminho e valor SQL textual.",
+          "solution": "UPDATE produtos SET atributos=json_set(atributos,'$.cor','verde') WHERE id=1; json_extract de peso continua2.",
+          "criteria": [
+            "Cor verde.",
+            "Peso preservado."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/json1.html",
+      "caution": "Requer JSON1 detectado na aula3; não utiliza JSONB.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 15,
+      "level": 5,
+      "title": "FTS5 e linguagem MATCH",
+      "goal": "Criar uma busca textual e tratar sua linguagem própria.",
+      "theory": [
+        {
+          "title": "Tabela virtual",
+          "text": "FTS5 cria uma tabela virtual especializada em indexação textual. O exemplo usa armazenamento de conteúdo próprio para reduzir complexidade. Outros modos, como external content, exigem sincronização e contratos adicionais; não os trate como simples tabela comum."
+        },
+        {
+          "title": "Consulta de texto",
+          "text": "MATCH recebe uma linguagem de pesquisa com termos, frases e operadores. Binding protege a estrutura SQL, mas não transforma a linguagem MATCH em texto literal automaticamente. Se aceita pesquisa livre, defina como tratar aspas, operadores e entradas inválidas dessa linguagem."
+        },
+        {
+          "title": "Normalização",
+          "text": "Tokenizadores definem como texto vira termos. unicode61 oferece comportamento Unicode padrão, mas não deve ser anunciado como stemmer completo de português. Teste acentos, plural, palavras e frases com resultados observados; relevância precisa de critério e desempate."
+        }
+      ],
+      "code": "CREATE VIRTUAL TABLE artigos USING fts5(titulo, tokenize='unicode61');\nINSERT INTO artigos(rowid,titulo) VALUES(1,'SQLite para estudar'),(2,'Python para automatizar'),(3,'Python e SQLite');\nSELECT rowid,titulo FROM artigos WHERE artigos MATCH 'SQLite' ORDER BY rowid;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "1|SQLite para estudar; 3|Python e SQLite.",
+      "quiz": {
+        "question": "Vincular MATCH ? transforma qualquer entrada em busca literal sem operadores FTS?",
+        "options": [
+          "Sim; parâmetros desligam a gramática FTS.",
+          "Sim; FTS5 não tem operadores.",
+          "Não; porque binding não protege SQL.",
+          "Não; o valor continua sendo interpretado pela linguagem MATCH."
+        ],
+        "answer": 3,
+        "explanation": "Binding separa SQL e valor; a gramática da busca precisa de tratamento próprio."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Dois termos",
+          "prompt": "Busque artigos que contenham Python e SQLite.",
+          "hint": "Use expressão MATCH compatível com AND.",
+          "solution": "WHERE artigos MATCH 'Python AND SQLite' retorna rowid3. Confira a sintaxe oficial antes de compor consultas do usuário.",
+          "criteria": [
+            "Só artigo3.",
+            "Não confunde AND SQL com texto da consulta FTS."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Frase",
+          "prompt": "Busque a frase Python para.",
+          "hint": "Aspas duplas dentro da expressão MATCH delimitam frase.",
+          "solution": "MATCH '\"Python para\"' encontra artigo2 na amostra. A frase exige sequência de termos, não só presença separada.",
+          "criteria": [
+            "Retorna artigo2.",
+            "Explica sequência de termos."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Capacidade",
+          "prompt": "Explique o que fazer se CREATE VIRTUAL TABLE ... fts5 falhar com módulo ausente.",
+          "hint": "A aula3 detecta o build.",
+          "solution": "Use runtime compatível ou marque recurso indisponível; não declare a busca concluída com uma tabela comum que oferece outra semântica.",
+          "criteria": [
+            "Diagnóstico claro.",
+            "Não instala extensões desconhecidas automaticamente."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/fts5.html",
+      "caution": "Requer FTS5 detectado na aula3.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 16,
+      "level": 6,
+      "title": "Views como contrato de leitura",
+      "goal": "Reutilizar consultas e reconhecer limites de atualização.",
+      "theory": [
+        {
+          "title": "Definição reutilizável",
+          "text": "Uma view comum guarda a definição de consulta e usa as linhas visíveis quando consultada. Ela não é uma cópia de resultados e não usa REFRESH como uma materialized view de outros mecanismos. Colunas explícitas tornam o contrato de leitura mais previsível."
+        },
+        {
+          "title": "Atualização",
+          "text": "Views no SQLite são normalmente somente leitura; INSTEAD OF triggers podem implementar comportamento de escrita. Não presuma atualização automática porque a view parece simples. Prefira deixar DML na camada que conhece o contrato, a menos que a view tenha uma função clara de interface."
+        },
+        {
+          "title": "Segurança do arquivo",
+          "text": "SQLite não possui o mesmo sistema de usuários e GRANT de um servidor como PostgreSQL. Proteger uma view não restringe por si só quem tem acesso direto ao arquivo. Autorização da aplicação e permissões do sistema operacional pertencem ao desenho."
+        }
+      ],
+      "code": "CREATE TABLE vendas(cliente TEXT,centavos INTEGER);\nINSERT INTO vendas VALUES('Ana',3000),('Ana',2000),('Bia',1000);\nCREATE VIEW totais(cliente,total_centavos) AS SELECT cliente,sum(centavos) FROM vendas GROUP BY cliente;\nSELECT cliente,total_centavos FROM totais ORDER BY cliente;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "Ana|5000; Bia|1000.",
+      "quiz": {
+        "question": "Uma view comum SQLite precisa de REFRESH após cada INSERT na tabela?",
+        "options": [
+          "Não; ela armazena a definição e consulta os dados visíveis.",
+          "Sim, REFRESH VIEW é obrigatório.",
+          "Sim, até reiniciar a conexão.",
+          "Não; porque nunca vê mudanças novas."
+        ],
+        "answer": 0,
+        "explanation": "Views comuns não são cópias materializadas de resultados."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Nova venda",
+          "prompt": "Insira venda de1000 para Bia e consulte a view novamente.",
+          "hint": "A definição lê as linhas atuais.",
+          "solution": "INSERT INTO vendas VALUES('Bia',1000); Bia passa a totalizar2000, sem REFRESH.",
+          "criteria": [
+            "Total2000.",
+            "Não recria a view."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Escrita na view",
+          "prompt": "Tente UPDATE direto na view e explique a falha no modelo sem trigger.",
+          "hint": "A view não tem implementação INSTEAD OF.",
+          "solution": "SQLite rejeita modificação dessa view; altere vendas pela regra de negócio ou crie um trigger INSTEAD OF explicitamente testado.",
+          "criteria": [
+            "Erro registrado.",
+            "Não promete atualização automática."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Arquivo acessível",
+          "prompt": "Explique por que ocultar vendas atrás de uma view não protege o arquivo de outro processo autorizado a lê-lo.",
+          "hint": "O controle efetivo inclui permissões e arquitetura do aplicativo.",
+          "solution": "Outro processo com acesso ao arquivo pode abrir o banco diretamente. Restrinja arquivo e API, valide autorização e não trate a view como autenticação.",
+          "criteria": [
+            "Identifica acesso direto.",
+            "Propõe controles na camada correta."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_createview.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 17,
+      "level": 6,
+      "title": "Triggers de auditoria",
+      "goal": "Registrar mudanças por linha e testar seu comportamento transacional.",
+      "theory": [
+        {
+          "title": "FOR EACH ROW",
+          "text": "SQLite oferece triggers por linha; OLD e NEW representam valores conforme o evento. Defina operação, momento e condição. Um UPDATE que menciona uma coluna pode não mudar seu valor; WHEN ajuda a evitar auditoria redundante."
+        },
+        {
+          "title": "Mesma transação",
+          "text": "A inserção de auditoria feita pelo trigger participa da mesma transação da mudança original. ROLLBACK desfaz ambas. Esse log registra mudanças confirmadas, mas não é um registro externo inviolável de todas as tentativas."
+        },
+        {
+          "title": "Comportamento visível",
+          "text": "Triggers podem esconder trabalho significativo por trás de DML simples. Mantenha regras pequenas, documente seus efeitos e teste mudanças em lote. RAISE pode impor validação com semântica específica; não use uma cascata de triggers sem compreender a ordem e as dependências."
+        }
+      ],
+      "code": "CREATE TABLE produtos(id INTEGER PRIMARY KEY,preco INTEGER NOT NULL);\nCREATE TABLE auditoria(id INTEGER,antes INTEGER,depois INTEGER);\nCREATE TRIGGER preco_mudou AFTER UPDATE OF preco ON produtos\nWHEN OLD.preco IS NOT NEW.preco\nBEGIN\n INSERT INTO auditoria VALUES(NEW.id,OLD.preco,NEW.preco);\nEND;\nINSERT INTO produtos VALUES(1,1000);\nUPDATE produtos SET preco=1200 WHERE id=1;\nUPDATE produtos SET preco=1200 WHERE id=1;\nSELECT * FROM auditoria;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "Uma linha:1|1000|1200. A segunda atualização não gera mudança de valor.",
+      "quiz": {
+        "question": "O rollback da atualização também desfaz a linha de auditoria do trigger?",
+        "options": [
+          "Não; AFTER confirma separadamente.",
+          "Sim; ambas participam da mesma transação.",
+          "Não; triggers sempre usam outra conexão.",
+          "Sim; mas apaga toda auditoria anterior."
+        ],
+        "answer": 1,
+        "explanation": "O rollback desfaz apenas as mudanças da transação correspondente, inclusive efeitos do trigger."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Rollback",
+          "prompt": "Faça BEGIN, mude preço para1500, consulte auditoria e execute ROLLBACK.",
+          "hint": "A nova auditoria existe apenas dentro da transação até confirmar.",
+          "solution": "Durante a transação há segundo evento; após rollback só resta1000→1200 e preço1200.",
+          "criteria": [
+            "Confere auditoria e preço.",
+            "Não trata AFTER como autocommit."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "INSERT e DELETE",
+          "prompt": "Descreva o que adaptar para auditar inserção e exclusão.",
+          "hint": "NEW não existe no mesmo sentido no DELETE.",
+          "solution": "Crie triggers apropriados aos eventos, use NEW em INSERT e OLD em DELETE e registre operação e campos aplicáveis. Teste cada um com rollback.",
+          "criteria": [
+            "OLD/NEW corretos.",
+            "Três eventos testados separadamente."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Condição nula",
+          "prompt": "Compare OLD.preco IS NOT NEW.preco com <> se a coluna fosse anulável.",
+          "hint": "IS NOT trata igualdade/diferença envolvendo NULL de forma definida.",
+          "solution": "NULL<>valor produz desconhecido; IS NOT identifica diferença de NULL para valor e de valor para NULL. No modelo atual NOT NULL elimina esse caso, mas a condição é robusta.",
+          "criteria": [
+            "Explica a lógica de NULL.",
+            "Distingue modelo atual e extensão futura."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_createtrigger.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 18,
+      "level": 6,
+      "title": "Recursão e caminhos",
+      "goal": "Percorrer relações hierárquicas com término explícito.",
+      "theory": [
+        {
+          "title": "Âncora e expansão",
+          "text": "WITH RECURSIVE contém termo inicial e passo que usa resultados anteriores. Uma hierarquia precisa de direção clara e definição de raiz. UNION ALL conserva ocorrências, então um ciclo pode gerar expansão sem fim se não houver proteção."
+        },
+        {
+          "title": "Caminho verificável",
+          "text": "Um caminho de IDs pode impedir revisita; no SQLite, texto delimitado é uma opção didática quando IDs são inteiros bem definidos. Delimitadores são essenciais para não confundir1 com11. Em aplicações complexas, considere um modelo de caminho mais estruturado e testes de escala."
+        },
+        {
+          "title": "Limites",
+          "text": "Profundidade máxima e detecção de ciclo são regras diferentes. LIMIT externo não deve ser usado como única proteção de dados inválidos. Uma FK autorreferente valida existência, mas não garante que a relação seja uma árvore."
+        }
+      ],
+      "code": "WITH RECURSIVE contador(n) AS(VALUES(1) UNION ALL SELECT n+1 FROM contador WHERE n<5)\nSELECT n,n*n AS quadrado FROM contador ORDER BY n;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "1|1;2|4;3|9;4|16;5|25.",
+      "quiz": {
+        "question": "Qual condição termina o contador do exemplo?",
+        "options": [
+          "ORDER BY do resultado.",
+          "O nome contador.",
+          "n<5 no passo recursivo.",
+          "O alias quadrado."
+        ],
+        "answer": 2,
+        "explanation": "O passo deixa de gerar novas linhas após o limite."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Árvore pequena",
+          "prompt": "Crie categorias1 raiz,2 filha de1 e3 filha de2; produza id e profundidade.",
+          "hint": "Âncora pai_id IS NULL; passo junta filho.pai_id=atual.id.",
+          "solution": "WITH RECURSIVE arvore(id,nivel) AS(SELECT id,0 FROM categorias WHERE pai_id IS NULL UNION ALL SELECT c.id,a.nivel+1 FROM categorias c JOIN arvore a ON c.pai_id=a.id) SELECT * FROM arvore ORDER BY nivel,id;",
+          "criteria": [
+            "Profundidades0,1,2.",
+            "Define claramente a raiz."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Proteção por caminho",
+          "prompt": "Para IDs inteiros, use caminho como ,1,2, e impeça revisitar2.",
+          "hint": "instr(caminho,','||novo_id||',') deve ser0.",
+          "solution": "Inicialize caminho com vírgulas em torno da raiz e acrescente novo_id seguido de vírgula; siga somente quando instr encontrar0. Teste IDs1 e11 para não gerar falso positivo.",
+          "criteria": [
+            "Delimitadores dos dois lados.",
+            "Teste de ciclo e de ID11."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "FK não é árvore",
+          "prompt": "Explique por que referências1→2 e2→1 podem satisfazer uma FK.",
+          "hint": "Ambos os IDs existem.",
+          "solution": "A FK garante referência válida, não ausência de ciclo. O modelo deve prevenir ou reportar o ciclo; a consulta deve terminar de forma definida.",
+          "criteria": [
+            "Distingue existência e aciclicidade.",
+            "Inclui proteção no percurso."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_with.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 19,
+      "level": 7,
+      "title": "Índices compostos e cobertura",
+      "goal": "Relacionar filtro, ordenação e colunas de uma consulta.",
+      "theory": [
+        {
+          "title": "Estrutura de acesso",
+          "text": "B-trees fornecem um caminho por chaves ordenadas. Um índice composto tem ordem de colunas que importa: igualdade na primeira coluna seguida da ordenação é um padrão útil. Não crie um índice só porque uma coluna existe; ligue-o a uma consulta ou constraint."
+        },
+        {
+          "title": "Cobertura",
+          "text": "Um índice pode conter informações suficientes para atender a uma consulta sem buscar todas as colunas da tabela. EQP pode indicar covering index. Incluir muitas colunas aumenta espaço e manutenção, então a cobertura tem custo de escrita e cache."
+        },
+        {
+          "title": "Medição",
+          "text": "Use uma amostra com volume e distribuição conhecidos. Índice não promete menor tempo para filtros amplos, e uma consulta pequena pode não representar a aplicação. Valide o resultado e registre plano, versão e condições do teste antes de falar em ganho."
+        }
+      ],
+      "code": "CREATE TABLE eventos(id INTEGER PRIMARY KEY,cliente_id INTEGER NOT NULL,instante INTEGER NOT NULL);\nWITH RECURSIVE n(x) AS(VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<1000)\nINSERT INTO eventos SELECT x,x%10,x FROM n;\nCREATE INDEX eventos_cliente_instante ON eventos(cliente_id,instante DESC,id DESC);\nEXPLAIN QUERY PLAN SELECT id FROM eventos WHERE cliente_id=7 ORDER BY instante DESC,id DESC LIMIT 3;\nSELECT id FROM eventos WHERE cliente_id=7 ORDER BY instante DESC,id DESC LIMIT 3;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "O plano varia e deve ser inspecionado; os IDs do resultado são997,987,977 nessa ordem.",
+      "quiz": {
+        "question": "Qual índice corresponde diretamente a WHERE cliente_id=? ORDER BY instante DESC,id DESC?",
+        "options": [
+          "(instante,cliente_id) sempre equivalente.",
+          "Somente índice em qualquer campo textual.",
+          "CHECK(cliente_id>=0) substitui o índice.",
+          "(cliente_id,instante DESC,id DESC)."
+        ],
+        "answer": 3,
+        "explanation": "A igualdade na primeira coluna seguida da ordem requerida atende esse padrão de acesso."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Três eventos recentes",
+          "prompt": "Mude LIMIT3 do objetivo conceitual para a cláusula válida LIMIT 3 no arquivo, se necessário, e confira a consulta fornecida com LIMIT 3.",
+          "hint": "A amostra usa clientes por resto da divisão por10.",
+          "solution": "Para cliente7, os três maiores IDs compatíveis são997,987,977; o arquivo fornecido já contém LIMIT 3, separado corretamente.",
+          "criteria": [
+            "SQL executa sem erro.",
+            "Retorno997,987,977."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Filtro amplo",
+          "prompt": "Compare EQP para cliente_id>=0 sem LIMIT.",
+          "hint": "A consulta devolve todas as linhas.",
+          "solution": "Acesso por SCAN pode ser adequado ao conjunto de1000 linhas; não force o índice apenas para vê-lo no plano.",
+          "criteria": [
+            "Conta1000 resultados.",
+            "Relaciona acesso a seletividade."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Custo da cobertura",
+          "prompt": "Explique um custo de adicionar texto grande ao índice só para cobrir uma consulta rara.",
+          "hint": "Espaço, cache e manutenção das escritas.",
+          "solution": "O índice passa a armazenar mais dados e precisa manutenção; meça benefício da consulta frente ao custo em tamanho e DML, em vez de duplicar colunas indiscriminadamente.",
+          "criteria": [
+            "Um custo de espaço.",
+            "Um custo de manutenção ou cache."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/queryplanner.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 20,
+      "level": 7,
+      "title": "Índices parciais",
+      "goal": "Indexar um subconjunto útil com predicado compatível.",
+      "theory": [
+        {
+          "title": "Subconjunto",
+          "text": "Um índice parcial tem WHERE na definição e armazena apenas linhas que atendem esse predicado. Pode ser menor quando pedidos abertos são minoria. A consulta precisa permitir ao planejador reconhecer que o conjunto buscado está contido no subconjunto do índice."
+        },
+        {
+          "title": "Unicidade condicionada",
+          "text": "UNIQUE num índice parcial pode impor regra como uma inscrição ativa por aluno e curso sem impedir múltiplos históricos inativos. Esse é um contrato de domínio, não só uma otimização; teste conflitos permitidos e proibidos."
+        },
+        {
+          "title": "Predicados simples",
+          "text": "A inferência do SQLite não é um provador geral de álgebra para qualquer expressão equivalente. Mantenha as formas de predicado alinhadas e observe EQP. Parâmetros, expressões e diferenças de forma podem mudar o reconhecimento, então valide o caminho real da aplicação."
+        }
+      ],
+      "code": "CREATE TABLE pedidos(id INTEGER PRIMARY KEY,estado TEXT NOT NULL,cliente_id INTEGER);\nINSERT INTO pedidos VALUES(1,'aberto',10),(2,'fechado',10),(3,'aberto',20);\nCREATE INDEX pedidos_abertos_cliente ON pedidos(cliente_id) WHERE estado='aberto';\nEXPLAIN QUERY PLAN SELECT id FROM pedidos WHERE estado='aberto' AND cliente_id=10;\nSELECT id FROM pedidos WHERE estado='aberto' AND cliente_id=10;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "A consulta retorna id1; EQP mostra a estratégia escolhida, que pode depender da versão e estatísticas.",
+      "quiz": {
+        "question": "O índice parcial WHERE estado='aberto' contém pedidos fechados?",
+        "options": [
+          "Não; apenas as linhas que atendem o predicado.",
+          "Sim; WHERE é só comentário.",
+          "Sim, mas escondidos pelo cliente.",
+          "Não; e por isso apaga os fechados da tabela."
+        ],
+        "answer": 0,
+        "explanation": "O índice contém um subconjunto; a tabela original continua com todos os registros."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Outra condição",
+          "prompt": "Consulte pedidos fechados do cliente10 e explique o limite do índice parcial.",
+          "hint": "A linha está fora do índice parcial.",
+          "solution": "A consulta retorna2 por outro acesso disponível; o índice dos abertos não contém essa linha.",
+          "criteria": [
+            "Resultado2.",
+            "Não confunde ausência no índice com ausência na tabela."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Unicidade ativa",
+          "prompt": "Imponha só uma matrícula ativa por aluno/curso permitindo históricos inativos.",
+          "hint": "UNIQUE composto com WHERE ativo=1.",
+          "solution": "CREATE UNIQUE INDEX matricula_ativa ON matriculas(aluno_id,curso_id) WHERE ativo=1; teste duas ativas iguais, duas inativas e uma de cada.",
+          "criteria": [
+            "Duplicata ativa falha.",
+            "Históricos inativos são permitidos conforme contrato."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Forma da consulta",
+          "prompt": "Compare EQP com formas diferentes de expressar estado aberto.",
+          "hint": "Não assuma inferência universal de equivalência.",
+          "solution": "Registre os planos de estado='aberto' e expressão alternativa usada de verdade; prefira forma simples e consistente se o índice depende desse predicado.",
+          "criteria": [
+            "Planos observados.",
+            "Conclusão limitada à versão e consultas testadas."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/partialindex.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 21,
+      "level": 7,
+      "title": "Índices de expressão e comparação textual",
+      "goal": "Indexar uma transformação determinística com semântica conhecida.",
+      "theory": [
+        {
+          "title": "Expressão correspondente",
+          "text": "Um índice sobre lower(email) pode apoiar uma busca que usa essa expressão. O planejador do SQLite exige correspondência de forma relevante: expressões matematicamente equivalentes não são sempre reconhecidas como o mesmo índice. Use a mesma expressão no contrato de consulta."
+        },
+        {
+          "title": "Determinismo",
+          "text": "Funções usadas em índices de expressão precisam satisfazer os requisitos de determinismo. Não indexe uma função dependente do relógio ou de estado mutável como se retornasse sempre o mesmo resultado para a mesma entrada."
+        },
+        {
+          "title": "Texto e Unicode",
+          "text": "lower e collations embutidas têm limites de processamento Unicode; não prometa normalização internacional completa de endereços ou nomes. O exemplo usa ASCII de forma deliberada. Para regras linguísticas mais amplas, escolha solução documentada e teste equivalências reais."
+        }
+      ],
+      "code": "CREATE TABLE usuarios(id INTEGER PRIMARY KEY,email TEXT NOT NULL);\nINSERT INTO usuarios VALUES(1,'Ana@Exemplo.test'),(2,'Bia@Exemplo.test');\nCREATE INDEX usuarios_email_lower ON usuarios(lower(email));\nEXPLAIN QUERY PLAN SELECT id FROM usuarios WHERE lower(email)='ana@exemplo.test';\nSELECT id FROM usuarios WHERE lower(email)='ana@exemplo.test';\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "A busca retorna id1. Plano é evidência de acesso na sua versão, não formato fixo para o aplicativo.",
+      "quiz": {
+        "question": "Qual consulta corresponde ao índice lower(email)?",
+        "options": [
+          "WHERE email=? garante o mesmo uso em qualquer caso.",
+          "WHERE lower(email)=?.",
+          "WHERE length(email)=?.",
+          "Qualquer função de texto corresponde automaticamente."
+        ],
+        "answer": 1,
+        "explanation": "A expressão procurada precisa corresponder à expressão indexada."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Unicidade normalizada",
+          "prompt": "Imponha unicidade de lower(email) para a regra ASCII do exemplo.",
+          "hint": "CREATE UNIQUE INDEX pode usar expressão.",
+          "solution": "CREATE UNIQUE INDEX usuarios_email_unico ON usuarios(lower(email)); novo ANA@EXEMPLO.TEST conflita com Ana@Exemplo.test.",
+          "criteria": [
+            "Duplicata normalizada rejeitada.",
+            "Declara limite ASCII da demonstração."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Não é álgebra universal",
+          "prompt": "Explique por que índice em x+y pode não atender WHERE y+x=10 automaticamente.",
+          "hint": "O planejador compara formas de expressão, não toda equivalência algébrica.",
+          "solution": "Use a expressão compatível x+y na consulta se esse é o índice planejado; compare EQP e não dependa de comutatividade reconhecida.",
+          "criteria": [
+            "Identifica correspondência estrutural.",
+            "Propõe consulta e teste concretos."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Regra Unicode",
+          "prompt": "Documente por que a amostra não certifica comparação de todos os nomes internacionais.",
+          "hint": "Dois e-mails ASCII não cobrem todas as regras de caixa Unicode.",
+          "solution": "Registre o limite de lower/collation disponíveis, escolha normalização de domínio e construa casos com caracteres reais antes de prometer equivalência geral.",
+          "criteria": [
+            "Limitação específica.",
+            "Plano de testes com caracteres além de ASCII."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/expridx.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 22,
+      "level": 8,
+      "title": "EXPLAIN QUERY PLAN e estatísticas",
+      "goal": "Interpretar estratégia sem depender de uma saída textual estável.",
+      "theory": [
+        {
+          "title": "Plano de alto nível",
+          "text": "EQP descreve acessos e operações como SCAN, SEARCH e uso de B-tree temporária. SEARCH indica busca com termos de restrição; SCAN pode significar percorrer tabela ou índice. Não conclua que qualquer SCAN é um erro sem considerar o conjunto solicitado."
+        },
+        {
+          "title": "Formato não é API",
+          "text": "A saída de EXPLAIN QUERY PLAN pode mudar entre versões e serve à investigação interativa. Não escreva o aplicativo para decidir regras de negócio por texto de plano. Registre versão e a consulta-alvo ao comparar resultados."
+        },
+        {
+          "title": "Estatísticas e volume",
+          "text": "ANALYZE coleta informações usadas pelo planejador. PRAGMA optimize oferece outra interface de manutenção com comportamento dependente da versão. Meça com distribuição realista; planos e tempos observados numa amostra não são promessas para qualquer banco."
+        }
+      ],
+      "code": "CREATE TABLE dados(id INTEGER PRIMARY KEY,categoria INTEGER NOT NULL);\nWITH RECURSIVE n(x) AS(VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<1000) INSERT INTO dados SELECT x,x%100 FROM n;\nCREATE INDEX dados_categoria ON dados(categoria);\nANALYZE;\nEXPLAIN QUERY PLAN SELECT id FROM dados WHERE categoria=7 ORDER BY id;\nSELECT count(*) AS quantidade FROM dados WHERE categoria=7;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "quantidade=10. Inspecione se o plano usa SEARCH e o índice candidato; não exija IDs internos ou texto exato de plano.",
+      "quiz": {
+        "question": "É apropriado tratar o texto de EQP como API estável para lógica de negócio?",
+        "options": [
+          "Sim; é uma especificação imutável de todas as versões.",
+          "Sim; basta remover espaços.",
+          "Não; o formato pode mudar e foi feito para diagnóstico.",
+          "Não; porque EQP executa DELETE."
+        ],
+        "answer": 2,
+        "explanation": "Use o plano como evidência de investigação e teste funcional separado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Antes/depois",
+          "prompt": "Colete EQP antes e depois de criar dados_categoria.",
+          "hint": "A consulta e a carga devem permanecer iguais.",
+          "solution": "Registre SCAN/SEARCH observado, versão e quantidade10; não altere a pergunta para forçar diferença de plano.",
+          "criteria": [
+            "Resultado preservado.",
+            "Comparação usa os mesmos dados."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ordenação",
+          "prompt": "Use consulta ORDER BY categoria,id e observe necessidade de ordenação temporária com índices diferentes.",
+          "hint": "A ordem do índice influencia cobertura da ordenação.",
+          "solution": "Compare planos e procure indicação de B-tree temporária; explique conforme as colunas do índice. O texto exato varia.",
+          "criteria": [
+            "Duas estratégias observadas.",
+            "Liga índice à ordenação real."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Mantenha evidência",
+          "prompt": "O plano melhorou, mas tempo de uma execução piorou. Que hipótese testar?",
+          "hint": "Cache, ruído, custo de medição e distribuição.",
+          "solution": "Repita uma medição controlada e limitada, compare resultados e vários tempos; não deduza regressão ou ganho universal de um único número.",
+          "criteria": [
+            "Condições de teste descritas.",
+            "Conclusão proporcional à evidência."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/eqp.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 23,
+      "level": 8,
+      "title": "BEGIN, COMMIT e ROLLBACK",
+      "goal": "Definir uma unidade atômica e compreender o modo de início.",
+      "theory": [
+        {
+          "title": "Transação explícita",
+          "text": "BEGIN inicia uma transação; COMMIT confirma e ROLLBACK desfaz mudanças não confirmadas. Sem uma transação explícita, instruções podem ter seus próprios limites segundo a API. Confira o modo do driver para não misturar controle implícito e SQL explícito sem intenção."
+        },
+        {
+          "title": "DEFERRED e IMMEDIATE",
+          "text": "BEGIN DEFERRED adia aquisição de lock de escrita até ser necessária. BEGIN IMMEDIATE tenta iniciar uma transação de escrita desde o começo e pode receber BUSY se outro escritor estiver ativo. Não habilita mais de um escritor nem elimina necessidade de tratar conflito."
+        },
+        {
+          "title": "Efeitos fora do arquivo",
+          "text": "Rollback não desfaz uma chamada de rede nem um arquivo externo já escrito. Uma transação deve conter a unidade de dados, com efeitos externos coordenados por padrão adequado e idempotência. Mantenha o bloco curto e feche-o em todo caminho de erro."
+        }
+      ],
+      "code": "CREATE TABLE contas(id INTEGER PRIMARY KEY,saldo INTEGER NOT NULL CHECK(saldo>=0));\nINSERT INTO contas VALUES(1,100),(2,50);\nBEGIN IMMEDIATE;\nUPDATE contas SET saldo=saldo-30 WHERE id=1;\nUPDATE contas SET saldo=saldo+30 WHERE id=2;\nROLLBACK;\nSELECT * FROM contas ORDER BY id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "Saldos permanecem1|100 e2|50; a transferência foi desfeita.",
+      "quiz": {
+        "question": "BEGIN IMMEDIATE garante dois escritores simultâneos no mesmo banco?",
+        "options": [
+          "Sim, esse é seu objetivo.",
+          "Sim, se existir índice.",
+          "Não; porque não abre transação alguma.",
+          "Não; tenta adquirir o direito de escrita cedo e pode receber BUSY."
+        ],
+        "answer": 3,
+        "explanation": "SQLite mantém um escritor por vez; o modo muda quando a disputa é enfrentada."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Confirme",
+          "prompt": "Troque ROLLBACK por COMMIT e confira saldos e soma.",
+          "hint": "O par de UPDATE deve confirmar junto.",
+          "solution": "Saldos tornam-se70 e80, total150. Teste também falha de constraint com rollback explícito.",
+          "criteria": [
+            "70 e80 corretos.",
+            "Soma150 preservada."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Falha intermediária",
+          "prompt": "Explique por que capturar erro e continuar sem entender o estado transacional é perigoso.",
+          "hint": "O comportamento de rollback depende da falha e API.",
+          "solution": "Após erro, decida rollback da unidade e verifique in_transaction no Python quando apropriado; não marque transferência como sucesso só porque um UPDATE executou.",
+          "criteria": [
+            "Unidade de negócio preservada.",
+            "Não assume que qualquer erro desfaz tudo automaticamente."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Transação curta",
+          "prompt": "Diga onde colocar uma confirmação humana de compra em relação ao BEGIN de escrita.",
+          "hint": "Evite manter lock enquanto aguarda interação.",
+          "solution": "Obtenha a intenção antes; dentro da transação releia/valide estado, aplique mudanças e confirme rapidamente. Se o estado mudou, peça decisão nova fora do lock.",
+          "criteria": [
+            "Sem espera humana sob lock.",
+            "Revalida o estado dentro da unidade."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_transaction.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 24,
+      "level": 8,
+      "title": "Savepoints e importação parcial",
+      "goal": "Recuperar uma etapa opcional sem confundir RELEASE com confirmação global.",
+      "theory": [
+        {
+          "title": "Marcação interna",
+          "text": "SAVEPOINT cria um ponto nomeado que permite ROLLBACK TO desfazer mudanças posteriores sem encerrar o bloco externo. RELEASE remove o ponto e incorpora a etapa à transação envolvente. Só o encerramento externo define confirmação durável do conjunto."
+        },
+        {
+          "title": "Erros controlados",
+          "text": "Uma importação pode decidir descartar uma linha inválida e continuar, mas isso precisa ser regra explícita. Não use savepoints para esconder erro de integridade que deveria invalidar o pedido inteiro. Registre a recusa e teste o que fica após rollback."
+        },
+        {
+          "title": "Limite externo",
+          "text": "Se a transação externa sofre ROLLBACK, etapas já liberadas por RELEASE também são desfeitas. O nome savepoint não representa outro arquivo nem outra conexão e não coordena efeitos externos."
+        }
+      ],
+      "code": "CREATE TABLE importados(id INTEGER PRIMARY KEY,nome TEXT NOT NULL);\nBEGIN;\nINSERT INTO importados VALUES(1,'Ana');\nSAVEPOINT opcional;\nINSERT INTO importados VALUES(2,'Rascunho');\nROLLBACK TO opcional;\nRELEASE opcional;\nINSERT INTO importados VALUES(3,'Bia');\nCOMMIT;\nSELECT * FROM importados ORDER BY id;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "CLI: sqlite3 :memory: e, no prompt do cliente, .read aula.sql (ou execute as instruções numa conexão SQLite nova).",
+      "expected": "1|Ana e3|Bia; id2 foi desfeito antes da confirmação externa.",
+      "quiz": {
+        "question": "RELEASE de um savepoint interno confirma independentemente a transação externa?",
+        "options": [
+          "Não; o rollback externo ainda pode desfazer aquela etapa.",
+          "Sim; vira outra conexão confirmada.",
+          "Sim; qualquer RELEASE grava resultado permanente separado.",
+          "Não; RELEASE apaga todas as linhas anteriores."
+        ],
+        "answer": 0,
+        "explanation": "O savepoint é uma marca dentro do limite transacional envolvente."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Rollback externo",
+          "prompt": "Troque o COMMIT final por ROLLBACK e diga quantas linhas restam.",
+          "hint": "Todas as inserções ocorreram após BEGIN.",
+          "solution": "Restam zero linhas; a tabela criada antes de BEGIN permanece. A etapa Ana também é desfeita.",
+          "criteria": [
+            "Zero linhas.",
+            "Distingue criação anterior e dados transacionais."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Tentativa opcional",
+          "prompt": "Explique quando uma linha rejeitada pode ser tratada por savepoint numa importação.",
+          "hint": "A unidade de negócio precisa permitir aceitação parcial.",
+          "solution": "Se cada registro é independente e o contrato prevê relatório de recusas, use savepoint por tentativa e registre erro. Se itens formam um pedido atômico, não confirme apenas parte sem regra expressa.",
+          "criteria": [
+            "Contrato de aceitação parcial explícito.",
+            "Relatório de falhas preservado."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Reutilização",
+          "prompt": "Após ROLLBACK TO, por que o exemplo também usa RELEASE?",
+          "hint": "A marca continua existindo após voltar a ela.",
+          "solution": "ROLLBACK TO desfaz mudanças posteriores mas não remove a marca; RELEASE limpa o savepoint quando a tentativa terminou e evita acumular escopos desnecessários.",
+          "criteria": [
+            "Explica persistência da marca.",
+            "Mantém a transação externa aberta."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_savepoint.html",
+      "caution": "",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 25,
+      "level": 9,
+      "title": "Disputa de escrita e SQLITE_BUSY",
+      "goal": "Reproduzir contenção real entre duas conexões.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "SQLite permite um escritor por vez por arquivo. Uma segunda conexão que tenta BEGIN IMMEDIATE enquanto há um escritor pode receber SQLITE_BUSY; aumentar timeout só muda a espera, não cria paralelismo de escrita."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "Duas conexões no mesmo processo bastam para estudar o lock do arquivo. O exemplo fixa timeout=0 para não introduzir uma espera longa e confirma o código do erro, em vez de capturar qualquer exceção como sucesso."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "A aplicação deve encerrar a transação em todo caminho e decidir se refaz a unidade com limite de tentativas. O código libera a primeira conexão e demonstra que a segunda consegue escrever depois."
+        }
+      ],
+      "code": "import sqlite3\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\nwith TemporaryDirectory() as pasta:\n    arquivo = Path(pasta) / 'lab.db'\n    a = sqlite3.connect(arquivo, timeout=0, isolation_level=None)\n    b = sqlite3.connect(arquivo, timeout=0, isolation_level=None)\n    try:\n        a.execute('CREATE TABLE item(id INTEGER PRIMARY KEY,qtd INTEGER)')\n        a.execute('INSERT INTO item VALUES(1,5)')\n        a.execute('BEGIN IMMEDIATE')\n        try:\n            b.execute('BEGIN IMMEDIATE')\n        except sqlite3.OperationalError as erro:\n            if erro.sqlite_errorcode != sqlite3.SQLITE_BUSY:\n                raise\n            print('BUSY detectado')\n        else:\n            raise AssertionError('A segunda escrita deveria disputar o lock')\n        a.rollback()\n        b.execute('BEGIN IMMEDIATE')\n        b.execute('UPDATE item SET qtd=qtd-1 WHERE id=1')\n        b.commit()\n        print(a.execute('SELECT qtd FROM item').fetchone()[0])\n    finally:\n        if a.in_transaction: a.rollback()\n        if b.in_transaction: b.rollback()\n        b.close()\n        a.close()\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "Salve como main.py em uma pasta vazia desta aula. Execute python main.py (ou python3 main.py no Linux/macOS).",
+      "expected": "BUSY detectado\n4",
+      "quiz": {
+        "question": "Aumentar busy_timeout permite dois escritores simultâneos?",
+        "options": [
+          "Sim, remove os locks.",
+          "Não; altera a política de espera por disponibilidade.",
+          "Sim, converte SQLite em cluster.",
+          "Não, porque timeout apaga o arquivo."
+        ],
+        "answer": 1,
+        "explanation": "Espera e capacidade de escrita são propriedades diferentes."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Observe o código do erro",
+          "prompt": "Observe o código do erro.",
+          "hint": "sqlite_errorcode deve identificar a causa prevista.",
+          "solution": "O exemplo aceita apenas SQLITE_BUSY; outro erro é propagado. Isso evita confundir falha de sintaxe ou permissão com contenção.",
+          "criteria": [
+            "Registra BUSY detectado somente para o código correto.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Libere o lock antes de B tentar",
+          "prompt": "Libere o lock antes de B tentar.",
+          "hint": "Antecipe a.rollback para antes de b.execute.",
+          "solution": "B passa a obter a transação; ajuste a expectativa do teste porque já não há disputa.",
+          "criteria": [
+            "Demonstra o caminho sem concorrente mantendo estado correto.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Projete retry limitado",
+          "prompt": "Projete retry limitado.",
+          "hint": "Refaça leitura e regra de negócio, não apenas a última linha.",
+          "solution": "Ao receber BUSY, encerre a unidade quando apropriado, aguarde com limite e variação e repita a decisão completa; após esgotar, devolva falha explícita.",
+          "criteria": [
+            "Inclui limite e revalidação do estado.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_transaction.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 26,
+      "level": 9,
+      "title": "WAL e snapshots de leitura",
+      "goal": "Demonstrar leitor estável enquanto outro cliente confirma uma escrita.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "WAL permite leitores coexistirem com o escritor: mudanças são anexadas ao log e um leitor conserva sua visão conforme o início da leitura. Continua existindo apenas um escritor por vez."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "A conexão B inicia uma transação e lê o valor 1. A confirma 2. B ainda enxerga 1 até encerrar sua transação; a próxima leitura em outra transação vê 2."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "O experimento usa arquivo temporário local. WAL exige coordenação por memória compartilhada no mesmo host e não deve ser tratado como solução genérica para um arquivo compartilhado por rede. Leitores longos podem dificultar avanço de checkpoint."
+        }
+      ],
+      "code": "import sqlite3\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\nwith TemporaryDirectory() as pasta:\n    arquivo = Path(pasta) / 'wal.db'\n    a = sqlite3.connect(arquivo, isolation_level=None)\n    b = sqlite3.connect(arquivo, isolation_level=None)\n    try:\n        modo = a.execute('PRAGMA journal_mode=WAL').fetchone()[0]\n        assert modo == 'wal'\n        a.execute('CREATE TABLE item(id INTEGER PRIMARY KEY,valor INTEGER)')\n        a.execute('INSERT INTO item VALUES(1,1)')\n        b.execute('BEGIN')\n        print(b.execute('SELECT valor FROM item').fetchone()[0])\n        a.execute('UPDATE item SET valor=2 WHERE id=1')\n        print(b.execute('SELECT valor FROM item').fetchone()[0])\n        b.commit()\n        print(b.execute('SELECT valor FROM item').fetchone()[0])\n    finally:\n        if b.in_transaction: b.rollback()\n        b.close()\n        a.close()\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "Salve como main.py em uma pasta vazia desta aula. Execute python main.py (ou python3 main.py no Linux/macOS).",
+      "expected": "1\n1\n2",
+      "quiz": {
+        "question": "B conserva a leitura 1 após A confirmar 2. Isso significa que a escrita de A falhou?",
+        "options": [
+          "Sim, qualquer leitor impede commit em WAL.",
+          "Sim, WAL nunca escreve.",
+          "Não; B mantém o snapshot de sua transação.",
+          "Não, porque SELECT sempre inventa dados."
+        ],
+        "answer": 2,
+        "explanation": "A visibilidade segue o limite transacional do leitor."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Encerre B antes da segunda leitura",
+          "prompt": "Encerre B antes da segunda leitura.",
+          "hint": "Commit fecha o snapshot antigo.",
+          "solution": "Se B fizer commit após ler 1, a leitura seguinte pode ver 2 confirmado por A.",
+          "criteria": [
+            "Explica a mudança de snapshot.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique o efeito de leitor que permanece aberto por horas",
+          "prompt": "Explique o efeito de leitor que permanece aberto por horas.",
+          "hint": "Checkpoint precisa respeitar snapshots ainda usados.",
+          "solution": "Ele pode impedir reaproveitar partes do WAL e aumentar o log; monitore duração e finalize transações de leitura.",
+          "criteria": [
+            "Relaciona leitor longo e avanço de checkpoint.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Compare WAL com replicação",
+          "prompt": "Compare WAL com replicação.",
+          "hint": "WAL é um mecanismo local de journaling.",
+          "solution": "Ativar WAL não cria outra máquina ou cópia remota; disponibilidade e backup exigem mecanismos adicionais.",
+          "criteria": [
+            "Não anuncia replicação automática.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/wal.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 27,
+      "level": 9,
+      "title": "Checkpoint e arquivos auxiliares",
+      "goal": "Inspecionar o ciclo de vida do WAL num arquivo local.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "Checkpoint transfere páginas confirmadas do WAL para o arquivo principal conforme o modo e os leitores ativos. Ele não é um backup nem uma operação que pode descartar arbitrariamente dados ainda necessários."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "O exemplo usa um arquivo novo e nenhuma outra conexão. TRUNCATE tenta concluir o checkpoint e reduzir o WAL; sob leitores concorrentes o resultado pode indicar trabalho não concluído."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "Não apague arquivos -wal ou -shm manualmente para liberar espaço enquanto conexões estão ativas. Fechamento correto e APIs do motor coordenam seu uso."
+        }
+      ],
+      "code": "PRAGMA journal_mode=WAL;\nCREATE TABLE evento(id INTEGER PRIMARY KEY,valor TEXT);\nINSERT INTO evento VALUES(1,'confirmado');\nPRAGMA wal_checkpoint(TRUNCATE);\nSELECT valor FROM evento;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "Em uma pasta nova e vazia, abra sqlite3 aula27.db. No cliente use .headers off, .mode list e .read aula.sql. O arquivo precisa ser local e não estar em uso por outra instância deste ensaio.",
+      "expected": "Em um arquivo novo, com nenhuma outra conexão: wal; checkpoint TRUNCATE normalmente retorna 0|0|0; consulta final confirmado. Sob leitores concorrentes o status pode mudar.",
+      "quiz": {
+        "question": "Apagar manualmente -wal com conexões ativas é uma estratégia válida de manutenção?",
+        "options": [
+          "Sim, WAL só contém comentários.",
+          "Sim, é o mesmo que backup online.",
+          "Somente se o arquivo estiver grande.",
+          "Não; pode eliminar dados e violar a coordenação do motor."
+        ],
+        "answer": 3,
+        "explanation": "O motor precisa coordenar checkpoint e ciclo de vida dos arquivos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Identifique as três colunas retornadas pelo checkpoint",
+          "prompt": "Identifique as três colunas retornadas pelo checkpoint.",
+          "hint": "Consulte busy, páginas do log e páginas processadas.",
+          "solution": "Interprete o resultado conforme o modo e a versão; neste ensaio isolado TRUNCATE deve concluir e zerar o arquivo. Sob concorrência não assuma sucesso só pela ausência de exceção.",
+          "criteria": [
+            "Registra retorno e condições do ensaio.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Leia a linha após o checkpoint",
+          "prompt": "Leia a linha após o checkpoint.",
+          "hint": "O estado confirmado deve permanecer.",
+          "solution": "SELECT valor FROM evento; conserva confirmado; checkpoint não é exclusão de dados.",
+          "criteria": [
+            "A linha continua acessível.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Diferencie checkpoint e backup",
+          "prompt": "Diferencie checkpoint e backup.",
+          "hint": "Um reorganiza persistência local, o outro cria cópia recuperável.",
+          "solution": "Checkpoint não gera automaticamente uma segunda cópia independente; use backup API ou outro procedimento apropriado para recuperação.",
+          "criteria": [
+            "Distingue os destinos das operações.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/pragma.html#pragma_wal_checkpoint",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 28,
+      "level": 10,
+      "title": "Binding e ciclo de conexão no Python",
+      "goal": "Vincular valores e fechar conexões explicitamente.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "Placeholders do sqlite3 vinculam valores ao comando. Eles não substituem identificadores, operadores ou palavras-chave. A representação de parâmetros é específica da API do driver."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "Uma conexão aberta possui estado transacional próprio. O gerenciador de contexto da conexão controla commit/rollback conforme o modo, mas não é um substituto universal para close; feche explicitamente quando terminar."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "O texto parecido com SQL permanece um nome textual quando vinculado. Teste esse caso e uma consulta legítima para demonstrar os dois caminhos."
+        }
+      ],
+      "code": "import sqlite3\ndb = sqlite3.connect(':memory:')\ntry:\n    with db:\n        db.execute('CREATE TABLE aluno(id INTEGER PRIMARY KEY,nome TEXT)')\n        db.executemany('INSERT INTO aluno VALUES(?,?)', [(1,'Ana'),(2,'Bia')])\n    nome = \"Ana' OR 1=1 --\"\n    print(db.execute('SELECT COUNT(*) FROM aluno WHERE nome=?', (nome,)).fetchone()[0])\n    print(db.execute('SELECT id FROM aluno WHERE nome=?', ('Ana',)).fetchone()[0])\nfinally:\n    db.close()\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "Salve como main.py em uma pasta vazia desta aula. Execute python main.py (ou python3 main.py no Linux/macOS).",
+      "expected": "0\n1",
+      "quiz": {
+        "question": "O placeholder ? pode substituir com segurança um nome de tabela escolhido livremente?",
+        "options": [
+          "Não; ele representa um valor, e identificadores exigem opções controladas.",
+          "Sim, substitui qualquer sintaxe.",
+          "Sim, cria tabela automaticamente.",
+          "Não, porque binding não aceita texto."
+        ],
+        "answer": 0,
+        "explanation": "Valores e estrutura do SQL têm tratamentos diferentes."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Pesquise Bia com o mesmo comando",
+          "prompt": "Pesquise Bia com o mesmo comando.",
+          "hint": "Mantenha o parâmetro separado do SQL.",
+          "solution": "Com ('Bia',) o SELECT de id retorna 2.",
+          "criteria": [
+            "Retorna 2 sem concatenar a entrada.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique a finalidade de finally",
+          "prompt": "Explique a finalidade de finally.",
+          "hint": "A conexão deve fechar também em erro.",
+          "solution": "finally executa close mesmo se a consulta ou escrita falhar, liberando recursos e o arquivo.",
+          "criteria": [
+            "Inclui caminho de exceção.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Escolha ordenação entre nome e id",
+          "prompt": "Escolha ordenação entre nome e id.",
+          "hint": "Permita somente identificadores previstos.",
+          "solution": "Use um mapa fixo de opções aceitas e só componha um identificador escolhido nesse mapa; continue vinculando valores do filtro.",
+          "criteria": [
+            "Rejeita identificadores não previstos.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/sqlite3.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 29,
+      "level": 10,
+      "title": "Migrações e PRAGMA user_version",
+      "goal": "Aplicar alterações com versão e preservar dados existentes.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "user_version é um inteiro disponível para a aplicação registrar a versão de seu esquema. O motor não gera nem aplica migrations por alterar esse número."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "A versão deve avançar junto de uma alteração bem-sucedida. Execute migrações em série e mantenha histórico dos scripts; um único inteiro não coordena executores concorrentes."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "ALTER TABLE possui limitações e recursos que mudam por versão. Quando uma reconstrução de tabela for necessária, siga o procedimento oficial e verifique índices, triggers, views e referências, em vez de editar sqlite_schema à mão."
+        }
+      ],
+      "code": "CREATE TABLE cliente(id INTEGER PRIMARY KEY,nome TEXT NOT NULL);\nINSERT INTO cliente VALUES(1,'Ana');\nBEGIN IMMEDIATE;\nALTER TABLE cliente ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1;\nPRAGMA user_version=1;\nCOMMIT;\nSELECT id,nome,ativo FROM cliente;\nPRAGMA user_version;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "Abra uma sessão nova em memória: sqlite3 :memory:\nNo prompt, use .headers off e .mode list; depois .read aula.sql\nCada exemplo contém sua própria preparação e não depende da aula anterior.",
+      "expected": "1|Ana|1\n1",
+      "quiz": {
+        "question": "Mudar user_version de 0 para 1 aplica automaticamente o ALTER TABLE?",
+        "options": [
+          "Sim, o motor descobre o script pelo número.",
+          "Não; a aplicação precisa executar e controlar a migração.",
+          "Sim, cria qualquer coluna solicitada.",
+          "Só depois de SELECT COUNT."
+        ],
+        "answer": 1,
+        "explanation": "O inteiro é metadado de uso da aplicação."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Verifique versão antes de reaplicar",
+          "prompt": "Verifique versão antes de reaplicar.",
+          "hint": "Repetir ADD COLUMN sem controle falha.",
+          "solution": "Consulte PRAGMA user_version e aplique a v1 apenas quando ainda não estiver aplicada; rejeite versão futura desconhecida.",
+          "criteria": [
+            "Não executa o mesmo ADD COLUMN cegamente.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Desfaça o ensaio trocando COMMIT por ROLLBACK",
+          "prompt": "Desfaça o ensaio trocando COMMIT por ROLLBACK.",
+          "hint": "O ALTER do exemplo e a versão estão na mesma transação.",
+          "solution": "A coluna ativo e user_version=1 são desfeitos; consulte PRAGMA table_info(cliente) e user_version=0.",
+          "criteria": [
+            "Verifica esquema e versão após desfazer.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Planeje acrescentar uma coluna obrigatória sem default em tabela populada",
+          "prompt": "Planeje acrescentar uma coluna obrigatória sem default em tabela populada.",
+          "hint": "Dados antigos precisam receber valores válidos.",
+          "solution": "Adicione representação compatível, preencha e valide; se a restrição exigir reconstrução, copie para tabela nova conforme procedimento oficial e confira dependências.",
+          "criteria": [
+            "Inclui dados anteriores e objetos dependentes.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_altertable.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 30,
+      "level": 10,
+      "title": "Testes de regras e erros esperados",
+      "goal": "Executar cenários positivos e negativos em conexões isoladas.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "Um teste de persistência deve conferir resultado e estado após a tentativa. Capturar qualquer erro sem verificar sua causa pode declarar sucesso por um motivo errado."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "A fixture deste programa tem um pai e um filho. Testa a consulta parametrizada, a chave única e a referência inválida. isolation_level=None deixa explícito o autocommit usado neste pequeno ensaio."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "Cada suíte real deve incluir transações, falhas e migrações relevantes ao produto. Três asserções não provam o projeto inteiro nem comportamento em todos os builds de SQLite."
+        }
+      ],
+      "code": "import sqlite3\ndb = sqlite3.connect(':memory:', isolation_level=None)\ntry:\n    db.execute('PRAGMA foreign_keys=ON')\n    db.execute('CREATE TABLE pai(id INTEGER PRIMARY KEY)')\n    db.execute('CREATE TABLE filho(id INTEGER PRIMARY KEY,pai_id INTEGER NOT NULL REFERENCES pai(id))')\n    db.execute('INSERT INTO pai VALUES(1)')\n    db.execute('INSERT INTO filho VALUES(10,1)')\n    assert db.execute('SELECT pai_id FROM filho WHERE id=?', (10,)).fetchone() == (1,)\n    try:\n        db.execute('INSERT INTO filho VALUES(10,1)')\n    except sqlite3.IntegrityError as erro:\n        assert erro.sqlite_errorname == 'SQLITE_CONSTRAINT_PRIMARYKEY'\n    else:\n        raise AssertionError('Duplicação deveria falhar')\n    try:\n        db.execute('INSERT INTO filho VALUES(11,99)')\n    except sqlite3.IntegrityError as erro:\n        assert erro.sqlite_errorname == 'SQLITE_CONSTRAINT_FOREIGNKEY'\n    else:\n        raise AssertionError('Referência inexistente deveria falhar')\n    assert db.execute('SELECT COUNT(*) FROM filho').fetchone()[0] == 1\n    print('3 cenários passaram; 1 filho preservado')\nfinally:\n    db.close()\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "Salve como main.py em uma pasta vazia desta aula. Execute python main.py (ou python3 main.py no Linux/macOS).",
+      "expected": "3 cenários passaram; 1 filho preservado",
+      "quiz": {
+        "question": "Por que o teste confirma o código da IntegrityError?",
+        "options": [
+          "Para esconder qualquer erro.",
+          "Porque toda exceção significa FK.",
+          "Para verificar que a falha ocorreu pela regra esperada.",
+          "Porque sqlite3 não oferece códigos."
+        ],
+        "answer": 2,
+        "explanation": "A causa da falha faz parte do comportamento testado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Desative foreign_keys antes da fixture",
+          "prompt": "Desative foreign_keys antes da fixture.",
+          "hint": "A referência inválida passará indevidamente.",
+          "solution": "O teste deve falhar, porque INSERT do pai 99 não será rejeitado; essa sensibilidade comprova que exercita a configuração.",
+          "criteria": [
+            "O teste detecta a retirada da verificação.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Adicione teste de exclusão do pai referenciado",
+          "prompt": "Adicione teste de exclusão do pai referenciado.",
+          "hint": "A FK sem CASCADE protege a referência.",
+          "solution": "DELETE FROM pai WHERE id=1 deve falhar com FOREIGNKEY e preservar pai e filho.",
+          "criteria": [
+            "Confirma falha específica e estado preservado.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Separe fixtures por teste em uma suíte maior",
+          "prompt": "Separe fixtures por teste em uma suíte maior.",
+          "hint": "Evite dependência na ordem dos testes.",
+          "solution": "Crie conexão em memória nova por cenário, prepare dados mínimos e feche ao terminar; cada teste deve funcionar sozinho.",
+          "criteria": [
+            "O teste não depende de execução anterior.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/foreignkeys.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 31,
+      "level": 11,
+      "title": "API de backup e reabertura do arquivo",
+      "goal": "Criar cópia consistente e conferir o ponto recuperado.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "Connection.backup usa a API do motor para copiar uma base para outra conexão. Ela evita tratar a cópia isolada de um arquivo ativo em WAL como se fosse automaticamente consistente."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "O programa cria dois arquivos em diretório temporário, copia o estado 1, altera a origem para 2 e reabre o destino. Isso demonstra que a cópia é independente do novo estado da origem."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "Retenção, armazenamento fora da máquina e ensaio de desastre continuam sendo decisões operacionais. A API local por si só não envia a cópia a outro host nem garante que haja espaço em qualquer destino."
+        }
+      ],
+      "code": "import sqlite3\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\nwith TemporaryDirectory() as pasta:\n    origem_path = Path(pasta) / 'origem.db'\n    backup_path = Path(pasta) / 'backup.db'\n    origem = sqlite3.connect(origem_path, isolation_level=None)\n    try:\n        origem.execute('PRAGMA journal_mode=WAL')\n        origem.execute('CREATE TABLE marco(id INTEGER PRIMARY KEY,valor INTEGER)')\n        origem.execute('INSERT INTO marco VALUES(1,1)')\n        destino = sqlite3.connect(backup_path)\n        try:\n            origem.backup(destino)\n        finally:\n            destino.close()\n        origem.execute('UPDATE marco SET valor=2 WHERE id=1')\n        print('origem=' + str(origem.execute('SELECT valor FROM marco').fetchone()[0]))\n    finally:\n        origem.close()\n    restaurado = sqlite3.connect(backup_path)\n    try:\n        print('backup=' + str(restaurado.execute('SELECT valor FROM marco').fetchone()[0]))\n        print(restaurado.execute('PRAGMA integrity_check').fetchone()[0])\n    finally:\n        restaurado.close()\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "Salve como main.py em uma pasta vazia desta aula. Execute python main.py (ou python3 main.py no Linux/macOS).",
+      "expected": "origem=2\nbackup=1\nok",
+      "quiz": {
+        "question": "Por que o arquivo reaberto mostra 1 enquanto a origem mostrou 2?",
+        "options": [
+          "Porque backup sempre inventa 1.",
+          "Porque UPDATE não executou.",
+          "Porque as conexões compartilham a mesma tabela em memória.",
+          "O backup preservou o ponto anterior à alteração posterior na origem."
+        ],
+        "answer": 3,
+        "explanation": "A cópia tem estado próprio correspondente ao momento copiado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Altere a origem antes de chamar backup",
+          "prompt": "Altere a origem antes de chamar backup.",
+          "hint": "Mude a ordem das etapas no ensaio.",
+          "solution": "Se a origem for 2 antes da cópia, o destino também deverá conter 2.",
+          "criteria": [
+            "A verificação corresponde ao ponto da cópia.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare cópia do ",
+          "prompt": "Compare cópia do .db ativo com API de backup.",
+          "hint": "No WAL podem existir páginas confirmadas fora do arquivo principal.",
+          "solution": "Copiar só o .db pode omitir o estado do log; use API coordenada ou procedimento oficial adequado.",
+          "criteria": [
+            "Explica o papel do WAL sem propor apagar arquivos auxiliares.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina evidência de restauração",
+          "prompt": "Defina evidência de restauração.",
+          "hint": "Abrir destino e conferir regras são etapas necessárias.",
+          "solution": "Registre versão, data da cópia, dados conhecidos, integrity_check e consultas de domínio no arquivo reaberto; meça duração do procedimento.",
+          "criteria": [
+            "Inclui leitura do destino e medida do tempo.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/backup.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 32,
+      "level": 11,
+      "title": "VACUUM INTO e cópia compacta",
+      "goal": "Gerar um segundo arquivo e verificar seu conteúdo.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "VACUUM INTO produz uma cópia compactada em outro arquivo. O destino deve ser novo ou vazio conforme a documentação; a operação não é uma ordem para sobrescrever uma cópia existente sem verificação."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "Neste laboratório o nome é fixo apenas dentro de uma pasta vazia. ATTACH abre o destino para conferir os dados da cópia, e DETACH encerra esse vínculo após a leitura."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "A cópia pode demandar tempo e espaço. Planeje interrupção, validade do arquivo gerado e retenção; copiar não equivale a exercitar todo o plano de desastre do produto."
+        }
+      ],
+      "code": "CREATE TABLE livro(id INTEGER PRIMARY KEY,titulo TEXT);\nINSERT INTO livro VALUES(1,'SQLite');\nVACUUM INTO 'copia32.db';\nATTACH DATABASE 'copia32.db' AS copia;\nSELECT id,titulo FROM copia.livro ORDER BY id;\nDETACH DATABASE copia;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "Use uma pasta nova e vazia por tentativa, sem copia32.db existente. Abra sqlite3 origem32.db e execute .read aula.sql. O exemplo grava uma cópia nessa pasta; confira-a antes de limpar o laboratório.",
+      "expected": "Em pasta vazia: a cópia é criada e a consulta no destino retorna 1|SQLite.",
+      "quiz": {
+        "question": "O destino copia32.db pode ser reutilizado cegamente em execuções posteriores?",
+        "options": [
+          "Não; confira o estado e use um destino novo apropriado.",
+          "Sim, VACUUM sempre mescla cópias.",
+          "Sim, qualquer arquivo pode ser sobrescrito.",
+          "Não, porque VACUUM INTO não cria arquivo."
+        ],
+        "answer": 0,
+        "explanation": "A preparação do destino faz parte do procedimento."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Reabra a cópia em um cliente separado",
+          "prompt": "Reabra a cópia em um cliente separado.",
+          "hint": "Feche a sessão de origem antes da conferência independente.",
+          "solution": "Abra sqlite3 copia32.db e SELECT id,titulo FROM livro; deve retornar 1|SQLite.",
+          "criteria": [
+            "O destino é verificado sem depender da conexão original.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Altere o título na origem após copiar",
+          "prompt": "Altere o título na origem após copiar.",
+          "hint": "A cópia não recebe replicação automática.",
+          "solution": "UPDATE livro SET titulo='Novo' WHERE id=1; a cópia mantém SQLite.",
+          "criteria": [
+            "Demonstra independência da cópia.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Planeje nomes com data e política de retenção",
+          "prompt": "Planeje nomes com data e política de retenção.",
+          "hint": "Não destrua a única cópia boa antes de validar a nova.",
+          "solution": "Gere destino único, valide integridade e conteúdo e só depois aplique retenção às cópias anteriores segundo o RPO.",
+          "criteria": [
+            "Preserva uma cópia válida durante a rotação.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_vacuum.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 33,
+      "level": 11,
+      "title": "Integridade estrutural e referencial",
+      "goal": "Combinar verificações que respondem perguntas diferentes.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "integrity_check inspeciona estruturas e diversas restrições internas do arquivo. foreign_key_check verifica referências e possui seu próprio relatório. Nenhuma dessas operações conhece sozinha toda a regra de negócio."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "Um teste também precisa confirmar medidas de domínio, como quantidades e totais. Um banco pode estar estruturalmente válido e representar um pedido com estado incorreto para o produto."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "Execute diagnósticos numa base conhecida e registre erro ou sucesso real. Uma consulta retornar ok não substitui uma cópia nem um ensaio de restauração."
+        }
+      ],
+      "code": "PRAGMA foreign_keys=ON;\nCREATE TABLE pai(id INTEGER PRIMARY KEY);\nCREATE TABLE filho(id INTEGER PRIMARY KEY,pai_id INTEGER NOT NULL REFERENCES pai(id));\nINSERT INTO pai VALUES(1); INSERT INTO filho VALUES(10,1);\nPRAGMA integrity_check;\nPRAGMA foreign_key_check;\nSELECT COUNT(*) FROM filho;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "Abra uma sessão nova em memória: sqlite3 :memory:\nNo prompt, use .headers off e .mode list; depois .read aula.sql\nCada exemplo contém sua própria preparação e não depende da aula anterior.",
+      "expected": "ok\n1",
+      "quiz": {
+        "question": "Qual verificação do exemplo procura referências órfãs diretamente?",
+        "options": [
+          "PING.",
+          "PRAGMA foreign_key_check.",
+          "PRAGMA user_version apenas.",
+          "SELECT sqlite_version() apenas."
+        ],
+        "answer": 1,
+        "explanation": "Cada diagnóstico tem um escopo próprio."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Liste as três evidências de sucesso do exemplo",
+          "prompt": "Liste as três evidências de sucesso do exemplo.",
+          "hint": "Há estrutura, referência e contagem.",
+          "solution": "integrity_check retorna ok; foreign_key_check retorna zero linhas; COUNT(*) retorna 1.",
+          "criteria": [
+            "Registra as três respostas separadamente.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Explique por que ok não comprova saldo correto",
+          "prompt": "Explique por que ok não comprova saldo correto.",
+          "hint": "O motor não conhece a soma que o domínio espera.",
+          "solution": "Adicione testes específicos do invariante financeiro; arquivo íntegro pode conter valores semanticamente errados.",
+          "criteria": [
+            "Distingue estrutura de regra de negócio.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Planeje resposta a erro de integridade",
+          "prompt": "Planeje resposta a erro de integridade.",
+          "hint": "Preserve evidências e evite improvisar escrita no arquivo.",
+          "solution": "Interrompa o uso conforme o incidente, preserve cópia e logs e avalie recuperação a partir de backup validado; não use writable_schema como conserto genérico.",
+          "criteria": [
+            "Prioriza diagnóstico e recuperação reproduzível.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/pragma.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 34,
+      "level": 12,
+      "title": "ATTACH e fronteiras entre arquivos",
+      "goal": "Consultar dois bancos sem supor garantias distribuídas.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "ATTACH associa outro banco a um nome na conexão. A qualificação schema.tabela informa em qual banco buscar o objeto. Esse vínculo não cria replicação ou servidor compartilhado."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "O exemplo usa dois bancos em memória para mostrar escopos. A atomicidade de transações que envolvem vários arquivos possui condições; em WAL não presuma uma confirmação atômica conjunta de todos os arquivos."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "Use caminhos e permissões controlados quando anexar arquivos reais. Um nome vindo da interface deve ser validado; separar arquivos não constitui sozinho controle de acesso entre usuários do mesmo processo."
+        }
+      ],
+      "code": "CREATE TABLE main.origem(id INTEGER PRIMARY KEY);\nINSERT INTO main.origem VALUES(1);\nATTACH DATABASE ':memory:' AS apoio;\nCREATE TABLE apoio.rotulo(id INTEGER PRIMARY KEY,nome TEXT);\nINSERT INTO apoio.rotulo VALUES(1,'SQL');\nSELECT o.id,r.nome FROM main.origem o JOIN apoio.rotulo r ON r.id=o.id;\nDETACH DATABASE apoio;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "Abra uma sessão nova em memória: sqlite3 :memory:\nNo prompt, use .headers off e .mode list; depois .read aula.sql\nCada exemplo contém sua própria preparação e não depende da aula anterior.",
+      "expected": "1|SQL",
+      "quiz": {
+        "question": "ATTACH cria automaticamente replicação entre main e apoio?",
+        "options": [
+          "Sim, sincroniza qualquer escrita futura.",
+          "Sim, cria outro servidor remoto.",
+          "Não; associa outro banco à conexão para acesso qualificado.",
+          "Somente se a tabela se chamar origem."
+        ],
+        "answer": 2,
+        "explanation": "Acesso a mais de um banco não é replicação."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Qualifique todas as tabelas da junção",
+          "prompt": "Qualifique todas as tabelas da junção.",
+          "hint": "Use main. e apoio. explicitamente.",
+          "solution": "main.origem e apoio.rotulo removem ambiguidade de nomes iguais em bancos diferentes.",
+          "criteria": [
+            "As duas origens são identificadas.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Tente consultar apoio",
+          "prompt": "Tente consultar apoio.rotulo após DETACH.",
+          "hint": "A associação acabou nesta conexão.",
+          "solution": "A consulta deve falhar por tabela/banco não disponível; o objeto em memória anexado já não é acessível.",
+          "criteria": [
+            "O teste distingue escopo antes e depois.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Avalie uma transferência entre arquivos em WAL",
+          "prompt": "Avalie uma transferência entre arquivos em WAL.",
+          "hint": "Não transfira garantias de um único arquivo automaticamente.",
+          "solution": "Confirme os limites na documentação e prefira manter invariantes indivisíveis no mesmo banco quando precisar de atomicidade local simples.",
+          "criteria": [
+            "Reconhece o limite sem prometer commit distribuído.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/lang_attach.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 35,
+      "level": 12,
+      "title": "Limites de implantação e acesso ao arquivo",
+      "goal": "Escolher SQLite conforme o padrão de acesso e o ambiente.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "SQLite é uma biblioteca embutida. Sua aplicação e o sistema operacional participam do controle de acesso ao arquivo. Ela não oferece a mesma administração de usuários por conexão de um servidor SQL tradicional."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "query_only impede diversas escritas naquela conexão, mas não é uma barreira de segurança completa contra código que pode mudar a configuração ou abrir outro arquivo. Considere permissões de sistema e URI de abertura adequada."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "Avalie duração de transações, volume de escrita, backup e coordenação do arquivo. Muitos leitores podem ser adequados; alta disputa de escritores ou acesso remoto direto ao mesmo arquivo pode pedir outra arquitetura."
+        }
+      ],
+      "code": "CREATE TABLE item(id INTEGER PRIMARY KEY);\nINSERT INTO item VALUES(1);\nPRAGMA query_only=ON;\nSELECT COUNT(*) FROM item;\nPRAGMA query_only;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "Abra uma sessão nova em memória: sqlite3 :memory:\nNo prompt, use .headers off e .mode list; depois .read aula.sql\nCada exemplo contém sua própria preparação e não depende da aula anterior.",
+      "expected": "1\n1",
+      "quiz": {
+        "question": "PRAGMA query_only sozinho cria usuários e autorização equivalente a um servidor multiusuário?",
+        "options": [
+          "Sim, cria roles por nome de tabela.",
+          "Sim, cada SELECT autentica um usuário.",
+          "Não, porque SQLite não lê arquivos.",
+          "Não; controla a conexão e não substitui a segurança do processo e arquivo."
+        ],
+        "answer": 3,
+        "explanation": "Implantação embutida tem fronteiras de acesso próprias."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Tente escrita após query_only",
+          "prompt": "Tente escrita após query_only.",
+          "hint": "Use uma tentativa separada e observe a falha.",
+          "solution": "INSERT INTO item VALUES(2); deve falhar como escrita não permitida nesse modo.",
+          "criteria": [
+            "A contagem continua 1.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Compare API remota com arquivo remoto compartilhado",
+          "prompt": "Compare API remota com arquivo remoto compartilhado.",
+          "hint": "Clientes podem falar HTTP com uma aplicação em vez de abrir o arquivo.",
+          "solution": "Uma API pode centralizar acesso local ao arquivo no servidor da aplicação; isso difere de múltiplas máquinas abrirem o mesmo arquivo pela rede.",
+          "criteria": [
+            "Distingue os dois caminhos de acesso.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Defina um critério de migração de arquitetura",
+          "prompt": "Defina um critério de migração de arquitetura.",
+          "hint": "Use uma necessidade medida, não só o número de linhas.",
+          "solution": "Registre contenção de escrita, tempo de transação, requisitos de disponibilidade e operação; compare outra solução quando esses limites não forem atendidos.",
+          "criteria": [
+            "A decisão se apoia em requisitos e medições.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/whentouse.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    },
+    {
+      "id": 36,
+      "level": 12,
+      "title": "Projeto local com invariantes e recuperação",
+      "goal": "Entregar uma aplicação persistente cuja recuperação é demonstrável.",
+      "theory": [
+        {
+          "title": "Contrato do motor",
+          "text": "O projeto integra constraints, consulta, transação, binding, migração e cópia. Cada passo deve poder ser reproduzido num diretório novo, sem arquivo oculto de uma tentativa anterior."
+        },
+        {
+          "title": "Aplicação no laboratório",
+          "text": "O exemplo garante no máximo uma reserva aberta por recurso usando índice único parcial. A restrição serve de defesa final mesmo quando duas requisições tentam reservar simultaneamente."
+        },
+        {
+          "title": "Verificação e limites",
+          "text": "Complete o cliente e prove tanto o caminho válido quanto a recusa de duplicação, rollback e reabertura da cópia. Documente a versão e as extensões usadas; uma fatia SQL não certifica todo o produto."
+        }
+      ],
+      "code": "PRAGMA foreign_keys=ON;\nCREATE TABLE recurso(id INTEGER PRIMARY KEY,nome TEXT NOT NULL) STRICT;\nCREATE TABLE reserva(id INTEGER PRIMARY KEY,recurso_id INTEGER NOT NULL REFERENCES recurso(id),fim TEXT) STRICT;\nCREATE UNIQUE INDEX uma_aberta ON reserva(recurso_id) WHERE fim IS NULL;\nINSERT INTO recurso VALUES(1,'Sala');\nBEGIN IMMEDIATE; INSERT INTO reserva VALUES(1,1,NULL); COMMIT;\nSELECT r.nome,COUNT(v.id) FROM recurso r LEFT JOIN reserva v ON v.recurso_id=r.id AND v.fim IS NULL GROUP BY r.id,r.nome;\n",
+      "filename": "aula.sql",
+      "language": "sql",
+      "run": "Abra uma sessão nova em memória: sqlite3 :memory:\nNo prompt, use .headers off e .mode list; depois .read aula.sql\nCada exemplo contém sua própria preparação e não depende da aula anterior.",
+      "expected": "Sala|1",
+      "quiz": {
+        "question": "O índice parcial proíbe várias reservas históricas já encerradas do recurso?",
+        "options": [
+          "Não; sua unicidade é apenas para linhas com fim IS NULL.",
+          "Sim, proíbe todo histórico.",
+          "Sim, permite um recurso no banco inteiro.",
+          "Não, porque índices parciais nunca são únicos."
+        ],
+        "answer": 0,
+        "explanation": "O predicado define o conjunto sujeito à unicidade."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Tente outra reserva aberta para o recurso 1",
+          "prompt": "Tente outra reserva aberta para o recurso 1.",
+          "hint": "A restrição compara as duas linhas abertas.",
+          "solution": "INSERT INTO reserva VALUES(2,1,NULL); deve falhar e conservar uma reserva aberta.",
+          "criteria": [
+            "Demonstra rejeição e estado final preservado.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Encerre a primeira e crie outra",
+          "prompt": "Encerre a primeira e crie outra.",
+          "hint": "A antiga deixa o índice parcial.",
+          "solution": "UPDATE reserva SET fim='2026-10-24' WHERE id=1; INSERT INTO reserva VALUES(2,1,NULL); há duas históricas e só uma aberta.",
+          "criteria": [
+            "Preserva histórico e permite a nova reserva.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Monte a demonstração de recuperação do projeto",
+          "prompt": "Monte a demonstração de recuperação do projeto.",
+          "hint": "Combine o cliente com a técnica de cópia já estudada.",
+          "solution": "Crie fixture, rode operação válida e inválida, copie por API, feche, reabra o destino e verifique regras e consultas; registre duração e limites.",
+          "criteria": [
+            "O destino é realmente aberto e conferido.",
+            "Registre o resultado e explique qual regra do banco o produziu."
+          ]
+        }
+      ],
+      "source": "https://www.sqlite.org/partialindex.html",
+      "caution": "Laboratório em SQLite; verifique o dialeto ao migrar para outro SGBD. O editor salva o arquivo, mas a execução é local.",
+      "local": true,
+      "hours": 4,
+      "minutes": 45
+    }
+  ]
+}

@@ -1,0 +1,3503 @@
+{
+  "id": "python",
+  "name": "Python",
+  "title": "Python Forge",
+  "updated": "2026-10-23",
+  "hours": 216,
+  "description": "Do primeiro script à automação, aos serviços e à investigação de sistemas Python, com prática local e biblioteca padrão.",
+  "prerequisites": [
+    "Nenhuma experiência prévia de programação é exigida.",
+    "Computador com Python 3.12 ou superior; os exemplos não exigem recursos experimentais.",
+    "Terminal e editor de texto; acesso à internet para instalar o interpretador e consultar as fontes."
+  ],
+  "outcome": "Construir uma aplicação de ordens de serviço com CLI, dados validados, persistência, interface HTTP didática, testes e documentação operacional.",
+  "extension": "py",
+  "codeLanguage": "python",
+  "setup": [
+    {
+      "title": "Instalação no Windows",
+      "text": "Instale uma versão estável compatível de Python pelo site oficial. No PowerShell, confira py --version e py -c \"import sys; print(sys.executable)\". Caso só python esteja disponível, use python. Nos comandos da trilha, python representa o interpretador escolhido; não misture instalações."
+    },
+    {
+      "title": "Ambiente por projeto",
+      "text": "Crie uma pasta python-forge. Nela rode py -m venv .venv no Windows ou python3 -m venv .venv no Linux/macOS. No Windows use .venv\\Scripts\\python.exe; no Linux/macOS use .venv/bin/python. Esse caminho funciona sem alterar a política do PowerShell. Instale dependências com esse mesmo interpretador e -m pip."
+    },
+    {
+      "title": "Prática local e dados fictícios",
+      "text": "Cada aula usa sua própria pasta e um main.py. Execute python main.py com o Python do ambiente. Exemplos de rede usam somente servidores locais quando necessário. A interface da plataforma salva o código, mas não executa Python. Não use dados pessoais, tokens reais nem arquivos de produção."
+    }
+  ],
+  "references": [
+    {
+      "title": "Tutorial oficial",
+      "description": "Sintaxe, estruturas de dados, funções, módulos e classes.",
+      "url": "https://docs.python.org/pt-br/3/tutorial/"
+    },
+    {
+      "title": "Biblioteca padrão",
+      "description": "Contratos e exemplos de APIs usadas na trilha.",
+      "url": "https://docs.python.org/3/library/"
+    },
+    {
+      "title": "Ambientes virtuais",
+      "description": "Criação de ambientes isolados e escolha do interpretador.",
+      "url": "https://docs.python.org/3/library/venv.html"
+    },
+    {
+      "title": "Python Packaging User Guide",
+      "description": "pyproject.toml, distribuição e instalação de projetos.",
+      "url": "https://packaging.python.org/en/latest/tutorials/packaging-projects/"
+    },
+    {
+      "title": "Testes com unittest",
+      "description": "Asserções, fixtures, descoberta e isolamento.",
+      "url": "https://docs.python.org/3/library/unittest.html"
+    },
+    {
+      "title": "Concorrência estruturada",
+      "description": "TaskGroup, cancelamento e resultados de tarefas.",
+      "url": "https://docs.python.org/3/library/asyncio-task.html"
+    },
+    {
+      "title": "Free threading",
+      "description": "Build opcional sem GIL, compatibilidade de extensões e sincronização.",
+      "url": "https://docs.python.org/3/howto/free-threading-python.html"
+    }
+  ],
+  "levels": [
+    {
+      "id": 1,
+      "title": "Ambiente e lógica",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Execute pequenos programas e transforme uma regra em instruções previsíveis.",
+      "skills": [
+        "Interpretador",
+        "Tipos",
+        "Controle de fluxo"
+      ],
+      "project": "Calculadora de horas de estudo",
+      "deliverables": [
+        "Script que recebe horas por dia e dias por semana.",
+        "Relatório de horas semanais e mensais de referência.",
+        "README com instalação e três exemplos de execução."
+      ],
+      "rubric": [
+        "Rejeita valores negativos sem encerrar com traceback para o usuário.",
+        "Usa funções ou blocos compreensíveis e nomes claros.",
+        "Demonstra resultado esperado em pelo menos três entradas."
+      ],
+      "challenge": [
+        {
+          "question": "horas = \"4\" veio de uma entrada textual. O que horas * 3 produz?",
+          "options": [
+            "O inteiro 12 automaticamente.",
+            "Um float 12.0 automaticamente.",
+            "A string \"444\", porque repetir string não é multiplicação numérica.",
+            "Uma exceção em qualquer versão."
+          ],
+          "answer": 2,
+          "explanation": "Uma string pode ser repetida por um inteiro. Converta e valide a entrada quando o domínio exige uma quantidade numérica."
+        },
+        {
+          "question": "Uma regra aprova notas >= 7. O primeiro ramo do programa testa nota >= 5 e devolve recuperação. O que revisar?",
+          "options": [
+            "A extensão do arquivo apenas.",
+            "O nome da variável apenas.",
+            "A instalação do interpretador sempre.",
+            "A ordem dos ramos, pois notas de aprovação já entram na condição mais ampla."
+          ],
+          "answer": 3,
+          "explanation": "if/elif escolhe o primeiro ramo verdadeiro. Testar a condição de aprovação antes da mais ampla evita capturar 7 como recuperação."
+        },
+        {
+          "question": "Você precisa percorrer os IDs 1 até 5, incluindo 5. Qual expressão de range atende?",
+          "options": [
+            "range(1, 6).",
+            "range(1, 5).",
+            "range(0, 5).",
+            "range(5, 1)."
+          ],
+          "answer": 0,
+          "explanation": "O limite final é excluído. O valor seguinte ao último ID desejado deve ser usado como parada."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Coleções e funções",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Organize dados em memória e extraia regras reutilizáveis.",
+      "skills": [
+        "Listas",
+        "Dicionários",
+        "Funções"
+      ],
+      "project": "Controle de tarefas no terminal",
+      "deliverables": [
+        "Lista de tarefas com identificador, título e estado.",
+        "Funções de cadastrar, concluir e listar sem duplicar IDs.",
+        "Cenários de lista vazia, item existente e item ausente."
+      ],
+      "rubric": [
+        "Não altera coleções recebidas sem declarar esse contrato.",
+        "Não compartilha listas por argumento padrão mutável.",
+        "Diferencia chave ausente de valor falso ou zero."
+      ],
+      "challenge": [
+        {
+          "question": "tarefas2 = tarefas; tarefas2.clear(). O que ocorre com a lista observada por tarefas?",
+          "options": [
+            "Mantém o conteúdo por causa de cópia profunda.",
+            "Ela também fica vazia, porque os dois nomes referenciam o mesmo objeto.",
+            "Vira None automaticamente.",
+            "Só muda se os nomes tiverem o mesmo tamanho."
+          ],
+          "answer": 1,
+          "explanation": "Atribuição não copia a lista. clear altera o objeto compartilhado, e ambos os nomes observam a mudança."
+        },
+        {
+          "question": "Uma função adiciona itens a um parâmetro criado como lista padrão. Chamadas independentes acumulam itens antigos. Qual é a correção adequada?",
+          "options": [
+            "Chamar print antes de cada append.",
+            "Renomear o argumento para global.",
+            "Criar a lista dentro da função usando um padrão sentinela como None.",
+            "Converter a função em comentário."
+          ],
+          "answer": 2,
+          "explanation": "O objeto de um argumento padrão é criado ao definir a função. Uma lista nova no corpo evita compartilhamento involuntário entre chamadas sem coleção explícita."
+        },
+        {
+          "question": "O estoque possui {\"sensor\": 0}. A expressão if estoque.get(\"sensor\") trata isso como ausência. Qual problema existe?",
+          "options": [
+            "Dicionários nunca aceitam zero.",
+            "get remove a chave ao consultá-la.",
+            "O operador if ordena o dicionário.",
+            "O valor zero é falso em condição, mas a chave continua cadastrada."
+          ],
+          "answer": 3,
+          "explanation": "Presença da chave e verdade do valor são contratos diferentes. Use in quando o domínio precisa distinguir ausência de quantidade zero."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Módulos, erros e arquivos",
+      "tag": "Fundamentos",
+      "hours": 18,
+      "summary": "Separe responsabilidades e preserve os dados ao lidar com falhas.",
+      "skills": [
+        "Imports",
+        "Exceptions",
+        "JSON e pathlib"
+      ],
+      "project": "Agenda persistida em JSON",
+      "deliverables": [
+        "Módulos de regras, armazenamento e entrada do usuário.",
+        "Leitura e escrita UTF-8 em uma pasta de laboratório.",
+        "Tratamento de arquivo ausente e JSON inválido com mensagem útil."
+      ],
+      "rubric": [
+        "Importar o módulo de regras não inicia o menu.",
+        "Recursos são fechados com with.",
+        "Erro de formato não é silenciosamente tratado como agenda vazia."
+      ],
+      "challenge": [
+        {
+          "question": "Um módulo de cálculos mostra um menu ao ser importado pelos testes. Qual estrutura reduz esse efeito?",
+          "options": [
+            "Mover a execução da interface para um bloco protegido por __name__ == \"__main__\".",
+            "Colocar todas as operações num except vazio.",
+            "Excluir a função de cálculo.",
+            "Dar ao arquivo o nome json.py."
+          ],
+          "answer": 0,
+          "explanation": "Definições e funções reutilizáveis podem ser importadas sem iniciar a interface. A execução direta continua chamando o ponto de entrada protegido."
+        },
+        {
+          "question": "Ao ler um cadastro, arquivo ausente e JSON malformado viram uma lista vazia pelo mesmo except amplo. Qual é o risco?",
+          "options": [
+            "Nenhum, pois toda exceção significa ausência.",
+            "Esconder corrupção e tratar dados inválidos como um cadastro legitimamente vazio.",
+            "A leitura passa a validar o domínio.",
+            "O JSON passa a se corrigir sozinho."
+          ],
+          "answer": 1,
+          "explanation": "Falhas de acesso e de parsing têm causas distintas. A recuperação precisa ser decidida por contrato, preservando evidência de corrupção."
+        },
+        {
+          "question": "Um caminho relativo funciona no terminal da pasta do script, mas falha em outro diretório. Por quê?",
+          "options": [
+            "Python proíbe executar scripts fora de sua pasta.",
+            "Todo caminho relativo é relativo à biblioteca padrão.",
+            "Ele normalmente é resolvido a partir do diretório de trabalho do processo.",
+            "UTF-8 desativa caminhos relativos."
+          ],
+          "answer": 2,
+          "explanation": "A localização do arquivo-fonte não determina automaticamente a base de todos os caminhos. Configure uma pasta de dados ou construa o caminho explicitamente."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Modelagem e contratos",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Expresse invariantes e comportamentos sem depender de hierarquias profundas.",
+      "skills": [
+        "Dataclasses",
+        "Protocols",
+        "Composição"
+      ],
+      "project": "Catálogo de equipamentos fictícios",
+      "deliverables": [
+        "Modelo de equipamento com preço em centavos e validação.",
+        "Serviço que recebe um repositório por contrato explícito.",
+        "Implementação em memória com cenários de cadastro e duplicidade."
+      ],
+      "rubric": [
+        "Type hints não são confundidos com validação de entrada.",
+        "Coleções de instâncias não são compartilhadas por acidente.",
+        "Regras permanecem no domínio e não apenas na interface."
+      ],
+      "challenge": [
+        {
+          "question": "Uma dataclass frozen tem campo itens contendo uma lista. Por que itens.append ainda pode funcionar?",
+          "options": [
+            "Porque dataclasses ignoram qualquer anotação.",
+            "Porque append sempre cria outra instância da dataclass.",
+            "Porque uma lista deixa de ser mutável dentro de uma classe.",
+            "frozen protege atribuição dos campos, sem congelar profundamente o objeto lista referenciado."
+          ],
+          "answer": 3,
+          "explanation": "Imutabilidade da referência do campo não equivale à imutabilidade de todo o grafo de objetos. Escolha valores internos compatíveis com a invariável."
+        },
+        {
+          "question": "Um cliente retorna str onde o Protocol declara int. Apenas executar a função anotada garante detecção?",
+          "options": [
+            "Não; ferramentas estáticas podem detectar incompatibilidade, mas anotações não impõem essa validação automaticamente no runtime.",
+            "Sim, Protocol instala um validador HTTP.",
+            "Sim, toda função anotada rejeita retornos incorretos.",
+            "A anotação converte a string em inteiro."
+          ],
+          "answer": 0,
+          "explanation": "Type hints comunicam um contrato para ferramentas e leitores. Validação de entradas e testes de contrato continuam necessários."
+        },
+        {
+          "question": "Duas interfaces precisam da mesma regra de concluir uma OS. Qual uso de composição é mais claro?",
+          "options": [
+            "Duplicar a regra inteira na CLI e na rota.",
+            "Receber um serviço de aplicação compartilhado que aplica a transição.",
+            "Fazer a entidade herdar do servidor HTTP.",
+            "Guardar toda decisão num atributo global sem testes."
+          ],
+          "answer": 1,
+          "explanation": "Colaboradores explícitos permitem reutilização e teste sem forçar uma hierarquia artificial entre domínio e interface."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Iteração e abstrações",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Processe dados de forma incremental e administre ciclos de vida.",
+      "skills": [
+        "Generators",
+        "Decorators",
+        "Context managers"
+      ],
+      "project": "Importador incremental de registros",
+      "deliverables": [
+        "Gerador que lê registros sem carregar todo o arquivo.",
+        "Decorador que contabiliza chamadas preservando metadados.",
+        "Gerenciador de contexto com limpeza comprovada após exceção."
+      ],
+      "rubric": [
+        "Iteradores não são reutilizados após esgotamento sem recriação.",
+        "Sem função de produção que retorna dados fictícios para esconder erro.",
+        "Um teste ou demonstração confirma a limpeza no caminho de falha."
+      ],
+      "challenge": [
+        {
+          "question": "Um gerador converte linhas em int. A terceira linha é inválida, mas criar o generator não falhou. O que explica isso?",
+          "options": [
+            "O gerador apagou a terceira linha automaticamente.",
+            "int não valida strings dentro de geradores.",
+            "O corpo é executado sob demanda, e o erro pode aparecer somente ao consumir a terceira linha.",
+            "Todas as exceções são ignoradas por yield."
+          ],
+          "answer": 2,
+          "explanation": "Avaliação preguiçosa desloca o momento do trabalho e da falha. O consumidor precisa observar resultados e erros durante a iteração."
+        },
+        {
+          "question": "Um decorador aceita só um argumento posicional, mas a função original permite palavras-chave. Qual é a consequência provável?",
+          "options": [
+            "wraps converte qualquer chamada automaticamente.",
+            "O decorador passa a ter execução paralela.",
+            "Palavras-chave são proibidas em funções decoradas.",
+            "O wrapper pode rejeitar chamadas válidas; precisa propagar os argumentos do contrato que pretende preservar."
+          ],
+          "answer": 3,
+          "explanation": "Um wrapper não ganha encaminhamento de argumentos por usar wraps. Sua assinatura ou *args/**kwargs deve respeitar as chamadas previstas."
+        },
+        {
+          "question": "Um gerenciador de contexto captura uma exceção no bloco e encerra sem relançá-la. O que pode acontecer ao chamador?",
+          "options": [
+            "Ele pode observar o bloco como concluído sem erro, mesmo que a operação tenha falhado.",
+            "finally nunca executa.",
+            "O arquivo fica automaticamente criptografado.",
+            "A exceção é sempre relançada por qualquer contexto."
+          ],
+          "answer": 0,
+          "explanation": "Suprimir exceção é uma decisão de contrato. A limpeza pode ocorrer em finally sem esconder uma falha que o chamador precisa conhecer."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Testes e qualidade",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Construa verificações que detectem regressões e controlem as fronteiras.",
+      "skills": [
+        "unittest",
+        "Mocks",
+        "Fixtures"
+      ],
+      "project": "Suíte de testes do importador",
+      "deliverables": [
+        "Testes de sucesso, fronteira, entrada inválida e regressão.",
+        "Relógio ou cliente substituído na fronteira correta.",
+        "Arquivos temporários e comando de descoberta documentado."
+      ],
+      "rubric": [
+        "Testes passam isolados e em outra ordem.",
+        "Uma implementação deliberadamente incorreta faz ao menos um teste falhar.",
+        "Asserções verificam resultados e regras, não detalhes sem relevância."
+      ],
+      "challenge": [
+        {
+          "question": "Um teste só chama calcular_total(100, 3), sem qualquer asserção. Que propriedade ele verifica de forma limitada?",
+          "options": [
+            "Que todos os preços possíveis estão corretos.",
+            "Que essa chamada terminou sem exceção, sem demonstrar que o total foi 300.",
+            "Que todas as linhas foram cobertas.",
+            "Que o resultado está persistido num banco."
+          ],
+          "answer": 1,
+          "explanation": "Executar não equivale a verificar o resultado. Uma asserção deve exigir o comportamento relevante para detectar regressões."
+        },
+        {
+          "question": "regras.py usa from time import time. Seu teste precisa substituir o relógio consultado por regras. Onde aplicar patch?",
+          "options": [
+            "Em qualquer variável chamada tempo de qualquer módulo.",
+            "Somente no terminal antes de executar Python.",
+            "No nome regras.time que o módulo sob teste consulta.",
+            "Sempre em time.sleep, independentemente da função usada."
+          ],
+          "answer": 2,
+          "explanation": "Patch atua sobre vínculos de nomes. Alterar a origem não necessariamente troca uma referência já importada no módulo consumidor."
+        },
+        {
+          "question": "Uma suíte passa em conjunto, mas o teste de exportar falha sozinho porque depende do cadastro feito por outro teste. O que corrigir?",
+          "options": [
+            "Obrigar os testes a rodar sempre na mesma ordem.",
+            "Remover a asserção do teste isolado.",
+            "Usar sleep entre os testes.",
+            "Preparar os próprios dados na fixture do teste de exportação."
+          ],
+          "answer": 3,
+          "explanation": "Isolamento exige estado inicial conhecido em cada cenário. Dependência da ordem torna o resultado frágil e dificulta a reprodução de falhas."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Ferramentas e automação",
+      "tag": "Intermediário",
+      "hours": 18,
+      "summary": "Transforme scripts em ferramentas instaláveis e observáveis.",
+      "skills": [
+        "pyproject.toml",
+        "argparse",
+        "Logging"
+      ],
+      "project": "CLI instalável de tarefas",
+      "deliverables": [
+        "Projeto com pyproject.toml e metadados coerentes.",
+        "Subcomandos de cadastrar e listar com ajuda automática.",
+        "Logs em stderr e resultados em stdout para integração."
+      ],
+      "rubric": [
+        "Instala em um ambiente virtual novo.",
+        "Argumentos inválidos produzem saída e código de retorno apropriados.",
+        "Nenhum segredo é incluído em logs ou no repositório."
+      ],
+      "challenge": [
+        {
+          "question": "Um projeto declara requests>=2 em metadados. Isso identifica uma resolução completa e exata de todas as dependências?",
+          "options": [
+            "Não; declara uma faixa de compatibilidade, sem fixar toda a resolução transitiva.",
+            "Sim, qualquer >= é um lock completo.",
+            "Sim, se o arquivo tiver extensão .toml.",
+            "Não, porque Python não admite dependências externas."
+          ],
+          "answer": 0,
+          "explanation": "Metadados e travamento de ambiente atendem objetivos diferentes. Reproduzir uma instalação exige registrar a estratégia e a resolução utilizada."
+        },
+        {
+          "question": "Uma ferramenta grava um aviso antes de seu JSON no stdout e um consumidor não consegue ler o resultado. Qual ajuste preserva integração?",
+          "options": [
+            "Adicionar uma terceira chave ao nome do arquivo.",
+            "Enviar o aviso ao stderr e manter stdout com o documento contratado.",
+            "Desativar validação JSON no consumidor.",
+            "Trocar JSON por pickle recebido de qualquer origem."
+          ],
+          "answer": 1,
+          "explanation": "Consumidores precisam de um canal de dados previsível. Diagnósticos separados não corrompem o documento serializado."
+        },
+        {
+          "question": "Um argumento vindo do usuário será usado num subprocesso. O que uma implementação responsável precisa além de shell=False?",
+          "options": [
+            "Somente concatenar o valor depois de remover espaços.",
+            "Garantir que o nome da variável começa por seguro.",
+            "Executável escolhido com confiança, validação dos argumentos, limites e tratamento de falha.",
+            "Nenhuma decisão adicional, pois o processo fica sem permissões."
+          ],
+          "answer": 2,
+          "explanation": "Evitar o shell não torna os efeitos de um executável inofensivos. Argumentos ainda podem selecionar arquivos, destinos ou operações perigosas."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Dados e integrações",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Trate limites de rede e garanta consistência da persistência.",
+      "skills": [
+        "HTTP",
+        "SQLite",
+        "Transações"
+      ],
+      "project": "Sincronizador de catálogo local",
+      "deliverables": [
+        "Cliente que limita tamanho, usa timeout e valida o documento recebido.",
+        "Tabela SQLite com unicidade e consultas parametrizadas.",
+        "Operação composta atômica com cenário comprovado de rollback."
+      ],
+      "rubric": [
+        "Não concatena entrada do usuário ao SQL.",
+        "Fecha conexão explicitamente e entende o contexto transacional.",
+        "Timeout e status HTTP são tratados como contratos diferentes."
+      ],
+      "challenge": [
+        {
+          "question": "Uma requisição recebe corpo HTTP 500 com JSON válido. A integração pode declarar sucesso só por conseguir decodificar JSON?",
+          "options": [
+            "Sim, JSON sempre significa sucesso.",
+            "Sim, se o corpo tiver menos de 1 KB.",
+            "Somente se o pedido usou GET, que nunca pode falhar.",
+            "Não; status HTTP e validade do documento são verificações distintas do contrato."
+          ],
+          "answer": 3,
+          "explanation": "Um documento de erro pode ser JSON perfeitamente válido. Interprete status, formato e regra de domínio separadamente."
+        },
+        {
+          "question": "O usuário escolhe o nome de uma coluna para ordenar. Por que um placeholder de valor não resolve sozinho?",
+          "options": [
+            "Porque parâmetros representam valores, e identificadores SQL exigem seleção por lista controlada.",
+            "Porque SQL nunca pode ordenar.",
+            "Porque placeholders só funcionam com números positivos.",
+            "Porque todo texto precisa ser concatenado sem validação."
+          ],
+          "answer": 0,
+          "explanation": "O driver não transforma um parâmetro de valor num identificador. Mapeie as opções públicas para nomes de coluna previamente permitidos."
+        },
+        {
+          "question": "Depois de with conexao: num programa SQLite, você pode presumir que a conexão foi fechada?",
+          "options": [
+            "Sim, with sempre tem o mesmo significado para todos os tipos.",
+            "Não; esse contexto administra transação segundo a configuração, e o fechamento precisa ser tratado separadamente.",
+            "Sim, pois commit apaga a conexão.",
+            "Só se a tabela tiver coluna id."
+          ],
+          "answer": 1,
+          "explanation": "Cada gerenciador define seu contrato. Use closing ou close ao encerrar o uso de uma conexão que não deve continuar aberta."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Concorrência",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Escolha entre tarefas, threads e processos de acordo com o trabalho.",
+      "skills": [
+        "Threads",
+        "Processos",
+        "asyncio"
+      ],
+      "project": "Processador concorrente de lotes",
+      "deliverables": [
+        "Comparação de uma carga simulada de I/O em sequência e com pool.",
+        "Carga de CPU executada por processos com entrada serializável.",
+        "Versão assíncrona com grupo de tarefas e finalização definida."
+      ],
+      "rubric": [
+        "Não usa sleep para supor que uma tarefa terminou.",
+        "Estado compartilhado tem dono ou sincronização explícita.",
+        "Medições registram ambiente e não prometem ganho universal."
+      ],
+      "challenge": [
+        {
+          "question": "Um worker do ThreadPoolExecutor falhou, mas o chamador nunca consultou o Future. Qual melhoria é necessária?",
+          "options": [
+            "Esperar um número arbitrário de segundos e presumir sucesso.",
+            "Imprimir apenas o nome de uma thread.",
+            "Observar os resultados e exceções das tarefas ao decidir o resultado do lote.",
+            "Aumentar o número de workers para esconder a falha."
+          ],
+          "answer": 2,
+          "explanation": "Trabalho agendado não equivale a trabalho concluído com sucesso. A operação deve consumir ou inspecionar o resultado de suas tarefas."
+        },
+        {
+          "question": "Um ProcessPoolExecutor com spawn recebe uma função local aninhada e falha ao serializar. Como redesenhar o trabalho?",
+          "options": [
+            "Mover a criação do pool para o corpo de outro import.",
+            "Trocar todos os resultados por None sem investigar.",
+            "Passar uma conexão aberta como argumento de qualquer processo.",
+            "Usar uma função importável definida no topo do módulo e argumentos serializáveis."
+          ],
+          "answer": 3,
+          "explanation": "Processos não compartilham implicitamente os objetos Python da forma usada por threads. O contrato de transferência e importação precisa ser respeitado."
+        },
+        {
+          "question": "Uma corrotina executa um laço de CPU de vários segundos sem await. O que ocorre com outras tarefas no mesmo loop usual?",
+          "options": [
+            "Elas podem ficar sem progredir enquanto esse trecho monopoliza a thread do loop.",
+            "Todas rodam automaticamente em novos núcleos.",
+            "O laço é convertido em I/O.",
+            "TaskGroup cancela qualquer cálculo automaticamente após 1 ms."
+          ],
+          "answer": 0,
+          "explanation": "Concorrência cooperativa depende de oportunidades de ceder o controle. async def, sozinho, não desloca trabalho para outra thread ou processo."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "APIs e segurança",
+      "tag": "Avançado",
+      "hours": 18,
+      "summary": "Desenhe fronteiras HTTP e valide dados antes de executar efeitos.",
+      "skills": [
+        "WSGI",
+        "Autorização",
+        "Limites e cancelamento"
+      ],
+      "project": "API local de ordens de serviço",
+      "deliverables": [
+        "Rotas de criar, consultar e concluir OS com respostas JSON.",
+        "Autorização por recurso em cenário de técnicos distintos.",
+        "Limites de entrada, timeout e mensagens públicas sem detalhes internos."
+      ],
+      "rubric": [
+        "Servidor de referência é identificado como laboratório, não produção.",
+        "Uma sessão válida não autoriza acessar qualquer OS.",
+        "Casos de erro têm status, corpo e efeito persistido coerentes."
+      ],
+      "challenge": [
+        {
+          "question": "Um produtor envia um único sentinela para três consumidores que aguardam get. Qual risco existe?",
+          "options": [
+            "A fila cria automaticamente os outros sentinelas.",
+            "Somente um consumidor recebe o fim, e os outros podem continuar esperando.",
+            "Todos os consumidores recebem sempre o mesmo item.",
+            "maxsize garante que nenhum consumidor aguarda."
+          ],
+          "answer": 1,
+          "explanation": "O protocolo de encerramento precisa abranger todos os consumidores, por sentinelas suficientes ou outro mecanismo explícito de cancelamento e término."
+        },
+        {
+          "question": "Uma aplicação WSGI retorna uma string de texto como corpo em vez de um iterável de bytes. Qual contrato precisa ser corrigido?",
+          "options": [
+            "Só o nome da função deve ser app.",
+            "Basta adicionar um comentário dizendo JSON.",
+            "A fronteira WSGI deve produzir partes de corpo em bytes e cabeçalhos/status coerentes.",
+            "O cliente deve instalar o mesmo editor do servidor."
+          ],
+          "answer": 2,
+          "explanation": "A serialização precisa acontecer antes da entrega ao servidor. Protocolo e regra do domínio têm responsabilidades diferentes."
+        },
+        {
+          "question": "Uma API verifica login, mas consulta qualquer OS pelo ID sem conferir o vínculo do técnico. Qual falha persiste?",
+          "options": [
+            "Falta apenas um tema escuro.",
+            "O uso de um ID inteiro garante acesso legítimo.",
+            "A checagem de login substitui a regra de permissão da OS.",
+            "Falta autorização por recurso, mesmo com autenticação válida."
+          ],
+          "answer": 3,
+          "explanation": "Conhecer o ID de uma OS não concede permissão sobre ela. Use a identidade autenticada e aplique o escopo do recurso."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Desempenho e runtime",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Investigue custos reais sem comprometer a correção do programa.",
+      "skills": [
+        "Profiling",
+        "Memória",
+        "Modelo de objetos"
+      ],
+      "project": "Diagnóstico do processador de lotes",
+      "deliverables": [
+        "Perfil de CPU ou cProfile de uma carga reproduzível.",
+        "Comparação de lista e gerador com tracemalloc.",
+        "Relatório de hipótese, alteração e impacto observado."
+      ],
+      "rubric": [
+        "Verifica equivalência dos resultados antes e depois.",
+        "Não usa uma única execução curta como conclusão de desempenho.",
+        "Explica referências, cópia rasa e retenção de memória."
+      ],
+      "challenge": [
+        {
+          "question": "Um profiler mostra alto tempo cumulativo em uma função que quase só chama outra. Qual leitura é adequada?",
+          "options": [
+            "Investigar também as funções chamadas, pois o cumulativo inclui esse trabalho.",
+            "A função necessariamente gastou todo esse tempo só em suas próprias instruções.",
+            "O profiler provou que a arquitetura está errada.",
+            "Somar todos os cumulativos sempre dá o tempo total sem sobreposição."
+          ],
+          "answer": 0,
+          "explanation": "Tempos cumulativos se sobrepõem na árvore de chamadas. Eles orientam investigação, mas não devem ser tratados como parcelas independentes."
+        },
+        {
+          "question": "O pico rastreado pelo Python caiu após uma mudança, mas uma extensão nativa passou a alocar grandes buffers. O que falta medir?",
+          "options": [
+            "Somente o comprimento do nome da função.",
+            "O orçamento do processo e as alocações nativas relevantes além do recorte de tracemalloc.",
+            "Nada, pois tracemalloc mede toda a memória da máquina.",
+            "A quantidade de linhas em branco do arquivo."
+          ],
+          "answer": 1,
+          "explanation": "Uma medição parcial pode ocultar transferência de custo para outra camada. Use instrumentos coerentes com a hipótese e o ambiente."
+        },
+        {
+          "question": "Uma cópia rasa de um relatório contém a mesma lista interna de itens. A cópia modifica itens originais. Isso contradiz copy?",
+          "options": [
+            "Sim, pois qualquer cópia deve clonar todo recurso.",
+            "Sim, listas não podem aparecer dentro de listas.",
+            "Não; uma cópia rasa cria o contêiner externo, mas mantém referências aos objetos internos.",
+            "Não, porque todas as cópias são somente outro nome para o mesmo contêiner externo."
+          ],
+          "answer": 2,
+          "explanation": "O nível de cópia faz parte do contrato. Cópia profunda serve para certos dados, mas não substitui uma decisão sobre identidade e recursos externos."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Arquitetura e projeto final",
+      "tag": "Especialista",
+      "hours": 18,
+      "summary": "Integre contratos, persistência e operação em um sistema compreensível.",
+      "skills": [
+        "Arquitetura",
+        "Idempotência",
+        "Operação"
+      ],
+      "project": "Oficina Python: OS e estoque",
+      "deliverables": [
+        "CLI e interface HTTP didática usando o mesmo serviço de aplicação.",
+        "Confirmação de OS com baixa de estoque e chave de idempotência na mesma transação.",
+        "Testes, backup/restauração e README operacional em ambiente local."
+      ],
+      "rubric": [
+        "Repetir confirmação não dá baixa duas vezes.",
+        "Falha parcial não confirma OS sem atualizar estoque.",
+        "Uma instalação nova consegue rodar, testar, exportar e restaurar dados fictícios."
+      ],
+      "challenge": [
+        {
+          "question": "Um fake de repositório mantém a mesma entidade em memória e o teste passa mesmo sem salvar. Que verificação adicional ajuda?",
+          "options": [
+            "Aceitar o resultado como prova de qualquer banco.",
+            "Remover o método salvar do contrato sem análise.",
+            "Fazer a CLI consultar uma variável global secreta.",
+            "Usar um fake que devolva cópias e testes do adaptador real para verificar persistência."
+          ],
+          "answer": 3,
+          "explanation": "Compartilhamento de referências pode esconder uma chamada de persistência ausente. Um dublê não prova o comportamento transacional de uma implementação SQL."
+        },
+        {
+          "question": "A chave idempotente de confirmar OS 1 é reutilizada para confirmar OS 2. Qual deve ser a decisão do contrato da trilha?",
+          "options": [
+            "Rejeitar o conflito sem executar a nova baixa como se fosse a mesma intenção.",
+            "Devolver sempre sucesso sem comparar o comando.",
+            "Apagar automaticamente a OS anterior.",
+            "Confirmar as duas e descontar só a primeira sem avisar."
+          ],
+          "answer": 0,
+          "explanation": "Uma chave precisa estar ligada à identidade da intenção. Reuso com conteúdo incompatível não pode esconder a segunda operação."
+        },
+        {
+          "question": "O backup existe e tem tamanho maior que zero, mas nunca foi aberto. Qual etapa falta antes de confiar na recuperação?",
+          "options": [
+            "Substituir imediatamente o banco original.",
+            "Restaurar em um destino separado e validar dados, esquema e cenários importantes.",
+            "Renomear o arquivo para confirmado.bak.",
+            "Enviar o arquivo publicamente para provar que existe."
+          ],
+          "answer": 1,
+          "explanation": "Recuperação é um procedimento verificável. Existência e tamanho do arquivo não provam integridade ou compatibilidade da restauração."
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": 1,
+      "level": 1,
+      "title": "Seu primeiro script e o interpretador",
+      "goal": "Executar um arquivo e distinguir código, terminal e resultado.",
+      "theory": [
+        {
+          "title": "Entrada, processamento e saída",
+          "text": "Um programa descreve operações sobre valores. O código-fonte é o texto que você escreve; a saída é o que ele produz ao executar. Python executa instruções em ordem, mas uma função só terá seu corpo executado quando for chamada. Comece prevendo cada linha antes de rodar."
+        },
+        {
+          "title": "Arquivo e interpretador",
+          "text": "Salve o exemplo em main.py, numa pasta própria desta aula. No Windows, confirme py --version e execute py main.py; dentro do ambiente virtual use seu executável. Nos exemplos, python representa esse mesmo interpretador. Digitar print no PowerShell não equivale a escrever Python num arquivo."
+        },
+        {
+          "title": "Erros como evidência",
+          "text": "print é uma função que recebe valores e escreve texto. Aspas delimitam strings e não aparecem na saída normal. Se surgir um traceback, leia primeiro o tipo de erro e a última linha do seu arquivo mencionada. Mude uma coisa de cada vez e compare com sua previsão."
+        }
+      ],
+      "code": "nome = \"Alex\"\nprint(\"Olá, Python!\")\nprint(\"Aluno:\", nome)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "Olá, Python!\nAluno: Alex",
+      "quiz": {
+        "question": "O que python main.py faz?",
+        "options": [
+          "Transforma qualquer texto em comando do PowerShell.",
+          "Pede ao interpretador escolhido para executar o arquivo main.py.",
+          "Instala automaticamente todas as bibliotecas.",
+          "Executa somente funções chamadas main."
+        ],
+        "answer": 1,
+        "explanation": "O nome do arquivo é um argumento do interpretador; Python não exige uma função main."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Seu cartão",
+          "prompt": "Imprima seu nome e seu objetivo de estudo em duas linhas diferentes.",
+          "hint": "Use duas chamadas de print com strings.",
+          "solution": "Use print(\"Alex\") e print(\"Aprender Python para construir ferramentas\"). O texto pode variar; confira a separação de linhas.",
+          "criteria": [
+            "As duas linhas aparecem na ordem prevista.",
+            "Você informa o comando e o interpretador usados."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Diagnostique o nome",
+          "prompt": "Troque print por Print, execute e registre o erro. Depois corrija e explique a diferença.",
+          "hint": "Identificadores diferenciam maiúsculas de minúsculas.",
+          "solution": "Print não está definido nesse programa e gera NameError. Restaurar print usa a função existente, sem instalar nada.",
+          "criteria": [
+            "Registra NameError ou mensagem equivalente da versão.",
+            "Explica por que uma letra mudou a resolução do nome."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Preveja a saída",
+          "prompt": "Acrescente print(nome, nome) e escreva sua previsão antes de executar.",
+          "hint": "O separador padrão de print é um espaço.",
+          "solution": "A terceira linha será Alex Alex. Os nomes são avaliados e seus valores são separados pelo argumento sep, que vale espaço por padrão.",
+          "criteria": [
+            "A previsão inclui o espaço entre os valores.",
+            "Compara previsão e saída real."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/interpreter.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 2,
+      "level": 1,
+      "title": "Valores, nomes, strings e números",
+      "goal": "Escolher tipos e distinguir atribuição de comparação.",
+      "theory": [
+        {
+          "title": "Nomes apontam para objetos",
+          "text": "Em Python, atribuir nome = valor vincula um nome a um objeto. Isso não transforma o nome numa caixa com tipo fixo. int representa inteiros, float representa números de ponto flutuante, str guarda texto e bool guarda True ou False. Saber o tipo ajuda a prever operações."
+        },
+        {
+          "title": "Operadores têm contratos",
+          "text": "O operador + soma números e concatena strings; misturar texto com inteiro sem conversão explícita costuma falhar. A divisão / produz resultado de ponto flutuante e // faz divisão com arredondamento para baixo. Para dinheiro, começaremos usando centavos inteiros para evitar aproximações de float."
+        },
+        {
+          "title": "Texto e formatação",
+          "text": "Uma f-string como f\"Total: {total}\" avalia as expressões nas chaves. == compara valores; = atribui um nome. Leia mensagens de TypeError antes de converter tudo indiscriminadamente: uma entrada textual precisa ser validada, porque int(\"abc\") não descreve um inteiro válido."
+        }
+      ],
+      "code": "preco_centavos = 1250\nquantidade = 3\ntotal = preco_centavos * quantidade\nprint(type(total).__name__)\nprint(f\"Total: {total} centavos\")\nprint(7 // 2, 7 / 2)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "int\nTotal: 3750 centavos\n3 3.5",
+      "quiz": {
+        "question": "Por que usar centavos inteiros neste cálculo?",
+        "options": [
+          "Porque int nunca tem limite de memória.",
+          "Porque strings não podem conter números.",
+          "Para representar os valores monetários do exemplo sem aproximação binária de float.",
+          "Porque divisão inteira sempre arredonda para o inteiro mais próximo."
+        ],
+        "answer": 2,
+        "explanation": "A unidade explícita centavos mantém soma e multiplicação inteiras para esse domínio."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Novo orçamento",
+          "prompt": "Calcule o total de quatro itens a 1990 centavos e imprima com uma f-string.",
+          "hint": "Multiplique antes de formatar.",
+          "solution": "1990 * 4 produz 7960; f\"Total: {total} centavos\" mantém a unidade explícita.",
+          "criteria": [
+            "Produz 7960 centavos.",
+            "Diferencia cálculo e formatação."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Divisão negativa",
+          "prompt": "Preveja -7 // 2 e compare com int(-7 / 2). Explique a diferença.",
+          "hint": "// arredonda para baixo; int trunca em direção a zero.",
+          "solution": "-7 // 2 é -4; int(-7 / 2) é -3. Não são operações equivalentes para negativos.",
+          "criteria": [
+            "Registra os resultados -4 e -3.",
+            "Explica as direções de arredondamento."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Texto numérico",
+          "prompt": "Compare \"2\" + \"3\" com int(\"2\") + int(\"3\"). Trate o caso \"dois\" como uma entrada que precisa de validação.",
+          "hint": "O tipo dos operandos muda o significado de +.",
+          "solution": "Strings concatenam para \"23\"; inteiros somam para 5. \"dois\" não pode ser convertido com int e gera ValueError.",
+          "criteria": [
+            "Apresenta 23 e 5 nos casos válidos.",
+            "Identifica ValueError sem afirmar conversão automática."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/introduction.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 3,
+      "level": 1,
+      "title": "Condições, laços e limites",
+      "goal": "Expressar decisões e repetir operações sem ultrapassar fronteiras.",
+      "theory": [
+        {
+          "title": "Escolher um caminho",
+          "text": "if executa um bloco quando a expressão é verdadeira; elif testa outra condição e else cobre o restante. A indentação pertence à sintaxe. Use quatro espaços por nível e não misture tabs. Comparações podem ser combinadas com and, or e not para descrever uma regra."
+        },
+        {
+          "title": "Repetir com for",
+          "text": "for percorre um objeto iterável. range(1, 4) fornece 1, 2 e 3: o limite final não entra. while repete enquanto uma condição continuar verdadeira e exige uma maneira de progredir. Um contador ou condição que nunca muda pode manter o programa em execução indefinidamente."
+        },
+        {
+          "title": "Conferir a fronteira",
+          "text": "Para uma regra horas >= 6, não basta testar 10. Compare 5, 6 e 7 para examinar antes, no limite e depois. Um teste de fronteira revela o uso incorreto de > no lugar de >=. Registre qual caminho deveria ser escolhido antes de executar."
+        }
+      ],
+      "code": "for horas in [5, 6, 7]:\n    if horas >= 6:\n        estado = \"meta atingida\"\n    else:\n        estado = \"continuar\"\n    print(horas, estado)\nprint(sum(range(1, 4)))\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "5 continuar\n6 meta atingida\n7 meta atingida\n6",
+      "quiz": {
+        "question": "Quais valores range(1, 4) produz?",
+        "options": [
+          "1, 2, 3 e 4.",
+          "0, 1, 2 e 3.",
+          "Somente 1 e 4.",
+          "1, 2 e 3."
+        ],
+        "answer": 3,
+        "explanation": "O início é incluído e o limite final é excluído."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Classificação",
+          "prompt": "Classifique notas de 0 a 10: aprovação em 7 ou mais, recuperação entre 5 e 7, reprovação abaixo de 5.",
+          "hint": "Coloque primeiro a condição mais restrita de aprovação.",
+          "solution": "Use if nota >= 7, elif nota >= 5 e else. Verifique também se a nota pertence ao intervalo aceito.",
+          "criteria": [
+            "Testa notas 4, 5, 6, 7 e 8.",
+            "Não classifica 7 como recuperação."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Acumulador",
+          "prompt": "Some os números de 1 a 5 com um laço e confira o resultado sem usar sum.",
+          "hint": "Inicialize total com zero antes do laço.",
+          "solution": "Faça total = 0; para cada n em range(1, 6), some n. A saída final é 15.",
+          "criteria": [
+            "Produz 15.",
+            "O acumulador não é reinicializado dentro do laço."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Encerre a repetição",
+          "prompt": "Crie um while que imprima 3, 2, 1 e depois \"fim\". Explique o que aconteceria sem decrementar.",
+          "hint": "Atualize o contador em cada iteração.",
+          "solution": "Enquanto contador > 0, imprima e subtraia 1. Sem atualização, a condição permaneceria verdadeira.",
+          "criteria": [
+            "Encerra após três números.",
+            "Explica a condição e a progressão."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/controlflow.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 4,
+      "level": 2,
+      "title": "Listas, referências e mutabilidade",
+      "goal": "Distinguir alterar um objeto de criar uma cópia.",
+      "theory": [
+        {
+          "title": "Uma sequência mutável",
+          "text": "list preserva ordem e permite substituir, inserir e remover elementos. Índices começam em zero, e índices negativos contam a partir do fim. append altera a lista e retorna None; não atribua seu resultado à variável que deve continuar contendo a lista."
+        },
+        {
+          "title": "Dois nomes, um objeto",
+          "text": "b = a não copia a lista: os dois nomes referenciam o mesmo objeto. b.append altera o que será visto por a. Já a.copy() cria outra lista, mas copia apenas as referências dos elementos. Se houver listas internas, elas continuam compartilhadas na cópia rasa."
+        },
+        {
+          "title": "Processar sem surpreender",
+          "text": "Ao receber uma lista, declare se a função vai modificá-la. Uma compreensão como [x * 2 for x in valores] cria uma nova lista. Evite remover itens da mesma lista durante a iteração; filtre para uma lista nova ou percorra uma cópia consciente do custo."
+        }
+      ],
+      "code": "original = [1, 2]\napelido = original\ncopia = original.copy()\napelido.append(3)\nprint(original)\nprint(copia)\nprint([n * 2 for n in original if n > 1])\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "[1, 2, 3]\n[1, 2]\n[4, 6]",
+      "quiz": {
+        "question": "O que b = a faz quando a é uma lista?",
+        "options": [
+          "Vincula b ao mesmo objeto referenciado por a.",
+          "Cria uma cópia profunda.",
+          "Congela a lista original.",
+          "Copia somente os inteiros para outra lista."
+        ],
+        "answer": 0,
+        "explanation": "Atribuição vincula nomes; copiar exige uma operação explícita."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Filtro sem efeitos",
+          "prompt": "Dada [0, 3, -1, 5], crie uma lista só com positivos e prove que a original não mudou.",
+          "hint": "Uma compreensão pode filtrar com if.",
+          "solution": "Use positivos = [n for n in entrada if n > 0]; o resultado é [3, 5], e a entrada conserva seus quatro elementos.",
+          "criteria": [
+            "Produz [3, 5].",
+            "Compara o conteúdo original antes e depois."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Cópia rasa",
+          "prompt": "Faça uma lista com uma lista interna, copie com copy e altere um item interno pela cópia. Explique o que mudou.",
+          "hint": "A cópia externa não recria os objetos internos.",
+          "solution": "Em a = [[1]], b = a.copy(); b[0].append(2), a também passa a conter [1, 2] internamente.",
+          "criteria": [
+            "Demonstra compartilhamento da lista interna.",
+            "Não confunde cópia rasa com b = a."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Retorno de append",
+          "prompt": "Execute itens = [1]; retorno = itens.append(2). Imprima itens e retorno e corrija uma atribuição itens = itens.append(3).",
+          "hint": "Métodos mutadores frequentemente retornam None.",
+          "solution": "itens será [1, 2] e retorno será None. Para acrescentar 3, chame itens.append(3) sem substituir itens pelo retorno.",
+          "criteria": [
+            "Identifica None.",
+            "Mantém a variável itens como lista."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/datastructures.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 5,
+      "level": 2,
+      "title": "Dicionários, conjuntos e ausência",
+      "goal": "Modelar consultas por chave e eliminar duplicações com intenção.",
+      "theory": [
+        {
+          "title": "Consultar pelo identificador",
+          "text": "dict associa uma chave hashable a um valor. Uma chave ausente em d[chave] gera KeyError; d.get(chave) devolve None por padrão. Se None também for um valor legítimo, teste chave in d ou use um sentinela. Ausência e valor zero representam situações diferentes."
+        },
+        {
+          "title": "Unicidade e ordem",
+          "text": "set guarda elementos únicos e permite união, interseção e diferença. Não dependa da ordem de impressão de um conjunto. Dicionários preservam ordem de inserção, mas isso não significa ordenação por chave. Use sorted quando a ordem faz parte do contrato público do relatório."
+        },
+        {
+          "title": "Agrupar com cuidado",
+          "text": "get permite acumular contagens com contagens[chave] = contagens.get(chave, 0) + 1. Para estruturas maiores, collections.Counter ou defaultdict podem expressar a intenção. A chave deve permanecer estável em hash e igualdade; uma lista mutável não é uma chave válida."
+        }
+      ],
+      "code": "estoque = {\"sensor\": 0, \"cabo\": 3}\nfor nome in [\"sensor\", \"bateria\"]:\n    print(nome, nome in estoque, estoque.get(nome))\nprint(sorted({\"cabo\", \"sensor\", \"cabo\"}))\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "sensor True 0\nbateria False None\n['cabo', 'sensor']",
+      "quiz": {
+        "question": "Como diferenciar item cadastrado com quantidade 0 de item ausente?",
+        "options": [
+          "Comparando apenas estoque.get(chave) == 0.",
+          "Verificando se a chave pertence ao dicionário.",
+          "Convertendo o dicionário para uma lista sempre.",
+          "Assumindo que todo valor falso significa ausência."
+        ],
+        "answer": 1,
+        "explanation": "O operador in consulta a existência da chave independentemente do valor armazenado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Contagem",
+          "prompt": "Conte ocorrências em [\"a\", \"b\", \"a\", \"c\", \"b\", \"a\"] usando um dict.",
+          "hint": "Use get com zero como valor inicial.",
+          "solution": "Atualize contagens[item] = contagens.get(item, 0) + 1. O resultado contém a:3, b:2, c:1.",
+          "criteria": [
+            "Apresenta as três contagens corretas.",
+            "Não confunde quantidade com índice."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Diferença de conjuntos",
+          "prompt": "Calcule quais IDs esperados {1, 2, 3} faltam no recebido {2, 3, 4} e quais são extras.",
+          "hint": "A diferença depende da ordem dos operandos.",
+          "solution": "esperados - recebidos produz {1}; recebidos - esperados produz {4}. Ordene apenas ao exibir, se necessário.",
+          "criteria": [
+            "Identifica faltante 1 e extra 4.",
+            "Explica os dois sentidos da diferença."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Estado ausente",
+          "prompt": "Crie um dict com {\"observacao\": None}. Demonstre que get sozinho não distingue essa chave de outra ausente.",
+          "hint": "Compare os resultados de get e de in.",
+          "solution": "Tanto d.get(\"observacao\") quanto d.get(\"outra\") retornam None, mas somente \"observacao\" in d é verdadeiro.",
+          "criteria": [
+            "Mostra os dois None.",
+            "Usa presença da chave na decisão correta."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/stdtypes.html#mapping-types-dict",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 6,
+      "level": 2,
+      "title": "Funções, argumentos e contratos",
+      "goal": "Extrair regras e evitar estado compartilhado por argumento padrão.",
+      "theory": [
+        {
+          "title": "Entrada explícita, resultado explícito",
+          "text": "def cria uma função com parâmetros e um corpo indentado. return encerra a chamada e devolve um resultado; chegar ao final sem return devolve None. Prefira calcular e retornar um valor no domínio, deixando a impressão para a interface. Isso permite reutilizar a regra e testá-la."
+        },
+        {
+          "title": "Valores padrão são criados uma vez",
+          "text": "Um argumento como itens=[] é avaliado quando a função é definida e pode ser compartilhado entre chamadas. Use None como padrão e crie a lista dentro da função quando precisar de uma coleção nova. A anotação de tipo ajuda ferramentas, mas não verifica os argumentos durante a execução."
+        },
+        {
+          "title": "Falhar com intenção",
+          "text": "Uma função deve declarar quais entradas aceita. No exemplo, preço e quantidade negativos geram ValueError em vez de um total sem sentido. Parâmetros somente por nome, após *, tornam chamadas ambíguas mais claras. Nomes locais não substituem o uso de dependências explícitas quando uma regra precisa de dados externos."
+        }
+      ],
+      "code": "def total(preco_centavos: int, quantidade: int, *, desconto: int = 0) -> int:\n    if min(preco_centavos, quantidade, desconto) < 0:\n        raise ValueError(\"valores negativos\")\n    return max(0, preco_centavos * quantidade - desconto)\n\nprint(total(1250, 3, desconto=250))\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "3500",
+      "quiz": {
+        "question": "Por que preferir None a [] como padrão quando a função deve criar uma lista nova?",
+        "options": [
+          "Porque listas não podem ser parâmetros.",
+          "Porque None já é uma lista vazia.",
+          "Porque o objeto usado no padrão é criado uma vez e pode ser compartilhado.",
+          "Porque argumentos padrão são recriados a cada chamada."
+        ],
+        "answer": 2,
+        "explanation": "Criar a lista no corpo evita reusar inadvertidamente o mesmo objeto entre chamadas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Regra pura",
+          "prompt": "Extraia uma função aprovado(nota) que devolva bool, aceitando somente notas entre 0 e 10.",
+          "hint": "Valide o intervalo e depois retorne a comparação.",
+          "solution": "Se nota estiver fora do intervalo, lance ValueError; caso contrário retorne nota >= 7. Imprimir fica fora da função.",
+          "criteria": [
+            "Valida -1 e 11 como erros.",
+            "Retorna True para 7 e False para 6."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Lista independente",
+          "prompt": "Implemente adicionar(item, itens=None) e demonstre que chamadas sem itens não compartilham resultado.",
+          "hint": "Quando itens for None, crie [].",
+          "solution": "Use if itens is None: itens = []; depois append e return itens. Duas chamadas independentes devem produzir listas separadas.",
+          "criteria": [
+            "Duas chamadas sem coleção produzem listas independentes.",
+            "Documenta se altera uma lista explicitamente recebida."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Argumento nomeado",
+          "prompt": "No exemplo, tente total(100, 2, 10), registre o erro e faça a chamada correta.",
+          "hint": "O asterisco torna desconto somente por nome.",
+          "solution": "O terceiro argumento posicional gera TypeError. Use total(100, 2, desconto=10), que devolve 190.",
+          "criteria": [
+            "Identifica TypeError.",
+            "Produz 190 com a chamada corrigida."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 7,
+      "level": 3,
+      "title": "Módulos, imports e ponto de entrada",
+      "goal": "Organizar arquivos sem executar efeitos durante a importação.",
+      "theory": [
+        {
+          "title": "Um módulo tem seu espaço de nomes",
+          "text": "Um arquivo .py pode ser importado como módulo. import regras vincula o módulo, e regras.total acessa um nome definido nele. O código no topo do arquivo executa durante a importação inicial. Evite nesse local menus, rede e escrita de arquivos que surpreendam quem só deseja reutilizar uma função."
+        },
+        {
+          "title": "Um ponto de entrada explícito",
+          "text": "Quando um arquivo roda diretamente, __name__ vale \"__main__\". O bloco if __name__ == \"__main__\": permite chamar a interface somente nesse caso. A função main é uma convenção útil, não uma obrigação da linguagem. Essa separação também ajuda testes e criação de processos."
+        },
+        {
+          "title": "Nomes e diretórios importam",
+          "text": "Não nomeie seu arquivo json.py ou typing.py se pretende usar os módulos de mesmo nome da biblioteca padrão. O caminho de importação pode fazer o arquivo local esconder a biblioteca. Um pacote regular tem __init__.py; mantenha dependências direcionadas para evitar importações circulares."
+        }
+      ],
+      "code": "def total(valores):\n    return sum(valores)\n\ndef main():\n    print(total([10, 20, 30]))\n\nif __name__ == \"__main__\":\n    main()\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "60",
+      "quiz": {
+        "question": "Para que serve o teste de __name__ no exemplo?",
+        "options": [
+          "Garantir que qualquer import rode main.",
+          "Obrigar o nome do arquivo a ser __main__.py.",
+          "Criar um ambiente virtual automaticamente.",
+          "Executar a interface quando o arquivo é executado diretamente."
+        ],
+        "answer": 3,
+        "explanation": "Ao importar, as definições ficam disponíveis sem executar a chamada protegida."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Separe arquivos",
+          "prompt": "Crie regras.py com uma função total e main.py que a importe. Ao importar regras, nenhuma mensagem deve aparecer.",
+          "hint": "Deixe print apenas na interface.",
+          "solution": "Em regras.py defina total; em main.py faça import regras e imprima regras.total([1, 2]). O import isolado deve ser silencioso.",
+          "criteria": [
+            "main.py imprime 3.",
+            "python -c \"import regras\" não inicia interação."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Teste o guarda",
+          "prompt": "Execute o exemplo diretamente e depois importe main a partir de outro arquivo. Registre a diferença de saída.",
+          "hint": "__name__ depende de como o módulo foi carregado.",
+          "solution": "A execução direta imprime 60. O import define funções, mas o bloco protegido não chama main.",
+          "criteria": [
+            "Distingue definição de chamada.",
+            "Importar não imprime 60."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Conflito de nomes",
+          "prompt": "Explique por que criar um arquivo chamado json.py pode quebrar import json e proponha um nome melhor.",
+          "hint": "Diretórios locais participam da busca de módulos.",
+          "solution": "O arquivo local pode ser importado no lugar da biblioteca padrão. Use serializacao.py e remova caches locais pertinentes se a renomeação exigir.",
+          "criteria": [
+            "Explica a resolução do nome.",
+            "Escolhe um nome sem colisão com a biblioteca."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/modules.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 8,
+      "level": 3,
+      "title": "Exceções e falhas com contexto",
+      "goal": "Tratar apenas as falhas esperadas e preservar a causa.",
+      "theory": [
+        {
+          "title": "Diferencie domínio e defeito",
+          "text": "Uma exceção interrompe o fluxo normal até encontrar um tratador compatível. ValueError pode representar texto inválido para uma conversão; FileNotFoundError indica um arquivo ausente. Não use except: para transformar qualquer falha em sucesso, porque isso também esconderia defeitos e sinais que deveriam continuar propagando."
+        },
+        {
+          "title": "Tratar onde existe decisão",
+          "text": "Capture um erro quando houver uma recuperação ou mensagem apropriada. No domínio, lance ValueError para uma regra violada; na interface, converta essa falha esperada em orientação ao usuário. Mantenha o trecho try pequeno para não atribuir ao lugar errado um erro produzido por outra operação."
+        },
+        {
+          "title": "Preservar e limpar",
+          "text": "raise NovoErro(...) from erro mantém a cadeia causal quando você acrescenta contexto. finally executa limpeza mesmo quando há erro; with costuma representar isso de forma mais clara para recursos. Não exponha detalhes internos de banco ou credenciais na mensagem pública de uma aplicação."
+        }
+      ],
+      "code": "def ler_quantidade(texto):\n    try:\n        valor = int(texto)\n    except ValueError as erro:\n        raise ValueError(\"quantidade precisa ser inteira\") from erro\n    if valor < 0:\n        raise ValueError(\"quantidade não pode ser negativa\")\n    return valor\n\nfor entrada in [\"3\", \"x\", \"-1\"]:\n    try:\n        print(ler_quantidade(entrada))\n    except ValueError as erro:\n        print(erro)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "3\nquantidade precisa ser inteira\nquantidade não pode ser negativa",
+      "quiz": {
+        "question": "Qual é a vantagem de raise NovoErro(...) from erro?",
+        "options": [
+          "Acrescentar contexto preservando a causa original.",
+          "Apagar qualquer traceback.",
+          "Transformar a exceção em valor booleano.",
+          "Garantir que a execução continue sem tratador."
+        ],
+        "answer": 0,
+        "explanation": "A cadeia de exceções permite investigar a causa sem depender apenas do novo texto."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Entrada inválida",
+          "prompt": "Acrescente os casos \"0\" e \"2.5\" ao exemplo e explique o que cada um deve fazer.",
+          "hint": "int aceita representação inteira, não decimal com ponto.",
+          "solution": "\"0\" retorna zero; \"2.5\" gera ValueError com a mensagem de quantidade inteira. Não arredonde silenciosamente.",
+          "criteria": [
+            "Zero é aceito.",
+            "Valor decimal textual é rejeitado com motivo."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Exceção específica",
+          "prompt": "Substitua um except Exception genérico de conversão por ValueError e explique o que deve continuar visível.",
+          "hint": "Um NameError não é uma entrada inválida.",
+          "solution": "Capture ValueError somente ao converter. Defeitos como nome incorreto ou método inexistente devem continuar falhando até serem corrigidos.",
+          "criteria": [
+            "O tratador cobre o erro esperado.",
+            "Não mascara um defeito introduzido deliberadamente."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Contexto da causa",
+          "prompt": "Provoque a falha \"abc\" sem capturar no topo e examine __cause__ ou o traceback.",
+          "hint": "A exceção recebida no except foi ligada com from.",
+          "solution": "A nova ValueError informa o domínio e sua __cause__ conserva a ValueError da conversão int.",
+          "criteria": [
+            "Identifica as duas camadas de mensagem.",
+            "Explica por que preservar causa ajuda diagnóstico."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/errors.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 9,
+      "level": 3,
+      "title": "Arquivos, caminhos e JSON",
+      "goal": "Ler e escrever texto UTF-8 com fechamento e formato explícitos.",
+      "theory": [
+        {
+          "title": "Caminhos pertencem ao ambiente",
+          "text": "pathlib.Path representa caminhos com operações adequadas ao sistema. Um caminho relativo é resolvido em relação ao diretório de trabalho, não necessariamente à pasta do script. Use uma pasta exclusiva de estudo ou TemporaryDirectory para não sobrescrever arquivos pessoais ao experimentar."
+        },
+        {
+          "title": "Texto e bytes são contratos diferentes",
+          "text": "Abra texto com encoding=\"utf-8\" quando esse é o formato combinado. with fecha o arquivo quando o bloco termina, inclusive em caso de erro. Ler o arquivo inteiro é simples para documentos pequenos, mas dados grandes exigem leitura incremental e limites conhecidos."
+        },
+        {
+          "title": "Formato não é validação de domínio",
+          "text": "JSON converte estruturas de dados compatíveis em texto e vice-versa. json.loads pode reconhecer um documento sintaticamente válido que ainda não contém os campos que sua aplicação exige. Diferencie arquivo ausente, documento inválido e regra de negócio violada; não substitua todos por uma lista vazia."
+        }
+      ],
+      "code": "import json\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\n\nwith TemporaryDirectory() as pasta:\n    caminho = Path(pasta) / \"tarefas.json\"\n    dados = [{\"id\": 1, \"titulo\": \"Estudar\", \"concluida\": False}]\n    caminho.write_text(json.dumps(dados, ensure_ascii=False), encoding=\"utf-8\")\n    restaurado = json.loads(caminho.read_text(encoding=\"utf-8\"))\n    print(restaurado[0][\"titulo\"], restaurado[0][\"concluida\"])\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "Estudar False",
+      "quiz": {
+        "question": "json.loads garante que um documento tem os campos do seu domínio?",
+        "options": [
+          "Sim, para qualquer JSON válido.",
+          "Não; validar a estrutura e as regras continua sendo responsabilidade da aplicação.",
+          "Somente se o arquivo tiver extensão .json.",
+          "Sim, quando ensure_ascii=False foi usado."
+        ],
+        "answer": 1,
+        "explanation": "Validade sintática JSON não equivale a validade do modelo de tarefas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Persistência",
+          "prompt": "Salve duas tarefas em uma pasta de laboratório e leia de volta. Use um título com acento.",
+          "hint": "Combine dumps/loads com UTF-8.",
+          "solution": "Grave JSON com ensure_ascii=False e encoding=\"utf-8\"; depois leia com o mesmo encoding e confira cada campo.",
+          "criteria": [
+            "Restaura ambas as tarefas.",
+            "Preserva o título acentuado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Falhas distintas",
+          "prompt": "Compare tentar ler arquivo ausente com ler o texto \"{quebrado\" como JSON. Registre os tipos de erro.",
+          "hint": "Um problema é de acesso; o outro é de parsing.",
+          "solution": "O primeiro caso gera FileNotFoundError; o segundo json.JSONDecodeError. Mensagens e recuperação devem refletir causas diferentes.",
+          "criteria": [
+            "Registra os dois tipos de exceção.",
+            "Não trata documento corrompido como lista vazia."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "CSV de relatório",
+          "prompt": "Exporte as tarefas usando csv.DictWriter com cabeçalho, newline=\"\" e UTF-8. Leia com DictReader e compare os títulos.",
+          "hint": "O módulo csv deve cuidar das vírgulas e aspas.",
+          "solution": "Abra com with e newline=\"\"; crie DictWriter com fieldnames, chame writeheader e writerows. A leitura devolve valores textuais.",
+          "criteria": [
+            "Cabeçalho e linhas são legíveis por DictReader.",
+            "Não confunde strings lidas com bool ou int já convertidos."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/pathlib.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 10,
+      "level": 4,
+      "title": "Classes e dataclasses com invariantes",
+      "goal": "Modelar dados e rejeitar estados que não fazem sentido.",
+      "theory": [
+        {
+          "title": "Dados com comportamento",
+          "text": "Uma classe define um tipo de objeto. Métodos recebem a instância como primeiro argumento, chamado self por convenção. __init__ inicializa o objeto, e atributos guardam seu estado. Ter uma classe não melhora automaticamente uma função: use-a quando dados e comportamentos formarem uma unidade útil."
+        },
+        {
+          "title": "Reduzir código repetido",
+          "text": "@dataclass gera métodos como __init__, __repr__ e comparação por campos. Isso não valida valores automaticamente. __post_init__ permite conferir invariantes após a inicialização gerada. Para coleções por instância, use field(default_factory=list), e não uma lista mutável compartilhada como padrão."
+        },
+        {
+          "title": "Imutabilidade tem alcance",
+          "text": "frozen=True impede atribuições normais aos campos, mas não congela profundamente objetos internos. Uma lista dentro de uma dataclass frozen continua sendo uma lista. Prefira tuplas e valores imutáveis quando o domínio precisa dessa garantia; teste a regra de negócio, não apenas a presença do decorador."
+        }
+      ],
+      "code": "from dataclasses import dataclass\n\n@dataclass(frozen=True)\nclass Item:\n    nome: str\n    preco_centavos: int\n    def __post_init__(self):\n        if not self.nome.strip() or self.preco_centavos < 0:\n            raise ValueError(\"item inválido\")\n\nitem = Item(\"Sensor\", 1200)\nprint(item.nome, item.preco_centavos)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "Sensor 1200",
+      "quiz": {
+        "question": "Uma anotação preco_centavos: int em dataclass valida automaticamente o valor?",
+        "options": [
+          "Sim, toda construção rejeita strings automaticamente.",
+          "Sim, se o nome terminar em int.",
+          "Não; a aplicação ainda precisa validar os valores aceitos.",
+          "Somente quando o arquivo se chama main.py."
+        ],
+        "answer": 2,
+        "explanation": "Dataclass gera métodos, mas anotações de tipo não se tornam validação automática."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Rejeite estado inválido",
+          "prompt": "Teste Item com nome vazio, preço negativo e preço zero. Descreva quais devem ser aceitos.",
+          "hint": "A regra permite zero, mas exige um nome com conteúdo.",
+          "solution": "Os dois primeiros casos devem lançar ValueError; Item(\"Brinde\", 0) é válido conforme o contrato definido.",
+          "criteria": [
+            "Rejeita vazio e negativo.",
+            "Aceita zero e explica a regra."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Lista por instância",
+          "prompt": "Crie uma dataclass Pedido com itens usando default_factory=list. Demonstre duas instâncias independentes.",
+          "hint": "Passe a função list, sem chamá-la, ao campo.",
+          "solution": "Use itens: list[str] = field(default_factory=list). Alterar a lista de um pedido não altera a do outro.",
+          "criteria": [
+            "Cada instância começa com lista vazia própria.",
+            "Modificar uma lista não afeta a outra."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Limite de frozen",
+          "prompt": "Inclua uma lista em uma dataclass frozen e experimente append. Compare com tentar substituir o campo inteiro.",
+          "hint": "Congelar a atribuição do campo não congela o objeto referenciado.",
+          "solution": "append pode alterar a lista; atribuir uma nova lista ao campo levanta FrozenInstanceError. Use tupla para um conjunto fixo de itens.",
+          "criteria": [
+            "Mostra as duas operações distintas.",
+            "Propõe representação adequada ao contrato."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/dataclasses.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 11,
+      "level": 4,
+      "title": "Type hints, Protocol e fronteiras",
+      "goal": "Documentar interfaces pequenas e separar tipagem de validação.",
+      "theory": [
+        {
+          "title": "Anotar comunica intenção",
+          "text": "Type hints descrevem os tipos esperados para ferramentas estáticas e leitores. O runtime normalmente não verifica essas anotações. Uma função anotada com int ainda pode receber uma string; dependendo das operações, falhará depois ou produzirá outro resultado. Valide entradas externas explicitamente antes de criar objetos do domínio."
+        },
+        {
+          "title": "Contrato por comportamento",
+          "text": "typing.Protocol descreve um conjunto de membros que um objeto deve oferecer. Uma implementação pode satisfazer esse contrato sem herdar da classe Protocol. Isso permite trocar uma dependência real por uma versão em memória em testes, mantendo a mesma interface esperada pelo consumidor."
+        },
+        {
+          "title": "Escolher o mínimo necessário",
+          "text": "Receba o comportamento que a regra usa, em vez de entregar um objeto com dezenas de métodos. Protocols ajudam a checagem estática, mas não garantem disponibilidade de rede nem validade das respostas. Mesmo runtime_checkable faz uma checagem limitada de atributos, não valida todas as assinaturas e regras."
+        }
+      ],
+      "code": "from typing import Protocol\n\nclass Repositorio(Protocol):\n    def obter(self, identificador: int) -> str | None: ...\n\nclass Memoria:\n    def obter(self, identificador: int) -> str | None:\n        return {1: \"Sensor\"}.get(identificador)\n\ndef exibir(repo: Repositorio, identificador: int) -> str:\n    return repo.obter(identificador) or \"ausente\"\n\nprint(exibir(Memoria(), 1))\nprint(exibir(Memoria(), 9))\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "Sensor\nausente",
+      "quiz": {
+        "question": "Por que Memoria pode satisfazer Repositorio sem herdar dele?",
+        "options": [
+          "Porque todo objeto passa a ter qualquer método.",
+          "Porque Protocol desativa a execução dos métodos.",
+          "Porque anotações sempre geram validação em rede.",
+          "Porque Protocol descreve compatibilidade estrutural de comportamento para tipagem."
+        ],
+        "answer": 3,
+        "explanation": "O consumidor depende do método declarado; a compatibilidade é verificada por ferramentas estáticas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Outro repositório",
+          "prompt": "Crie uma implementação que sempre devolva \"Teste\" e passe-a a exibir sem alterar essa função.",
+          "hint": "Implemente obter com assinatura compatível.",
+          "solution": "Uma classe Dublê com obter(self, identificador: int) -> str | None pode retornar \"Teste\". O consumidor continua usando o mesmo contrato.",
+          "criteria": [
+            "exibir devolve Teste com o dublê.",
+            "Não cria condição especial por classe concreta no consumidor."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Validação real",
+          "prompt": "Implemente ler_id(valor) que rejeite strings, bool e inteiros menores que 1, retornando int válido.",
+          "hint": "bool é subclasse de int; decida o contrato conscientemente.",
+          "solution": "Use type(valor) is int e valor > 0 para esse domínio estrito. Uma anotação sozinha não rejeitaria True nem \"1\".",
+          "criteria": [
+            "Aceita 1 e rejeita 0.",
+            "Rejeita True e \"1\" conforme o contrato."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Contrato pequeno",
+          "prompt": "Seu serviço só usa obter, mas a classe real também remove tabelas e faz backup. Defina um Protocol mínimo e justifique.",
+          "hint": "O consumidor não deve depender de capacidades que não usa.",
+          "solution": "Declare apenas obter. Isso torna a dependência fácil de substituir e documenta qual comportamento o serviço realmente requer.",
+          "criteria": [
+            "Protocol contém apenas o comportamento usado.",
+            "Explica por que tipagem não substitui testes e validação."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/typing.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 12,
+      "level": 4,
+      "title": "Composição, propriedades e estado",
+      "goal": "Proteger mudanças de estado e compor objetos com responsabilidades claras.",
+      "theory": [
+        {
+          "title": "Objetos colaboram",
+          "text": "Composição significa que um objeto usa outro para realizar uma parte do trabalho. Um serviço pode receber um repositório e um relógio, em vez de herdar de uma classe que faz tudo. Essa estrutura deixa explícito o que precisa ser substituído em testes e reduz dependência de estado global."
+        },
+        {
+          "title": "Propriedades não são paredes de segurança",
+          "text": "@property permite expor um atributo calculado ou controlar uma atribuição por setter. Um nome iniciado por _ sinaliza uso interno por convenção; não é uma barreira de autorização. A proteção importante está nas invariantes dos métodos e nas fronteiras que aceitam comandos externos."
+        },
+        {
+          "title": "Transição explícita",
+          "text": "Em vez de permitir qualquer alteração em status, ofereça uma operação como concluir. Ela verifica se a transição é válida e altera o estado de maneira compreensível. Não crie hierarquias profundas para reaproveitar duas linhas; prefira funções simples ou colaboradores quando não existir uma relação real de substituição."
+        }
+      ],
+      "code": "class Ordem:\n    def __init__(self, identificador):\n        self.id = identificador\n        self._concluida = False\n    @property\n    def concluida(self):\n        return self._concluida\n    def concluir(self):\n        if self._concluida:\n            raise ValueError(\"ordem já concluída\")\n        self._concluida = True\n\nordem = Ordem(1)\nordem.concluir()\nprint(ordem.id, ordem.concluida)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "1 True",
+      "quiz": {
+        "question": "O prefixo _ em _concluida significa o quê?",
+        "options": [
+          "Uma convenção de uso interno, não uma barreira de segurança.",
+          "Que o atributo é impossível de ler.",
+          "Que o valor está criptografado.",
+          "Que Python valida automaticamente autorização."
+        ],
+        "answer": 0,
+        "explanation": "O contrato público orienta o uso; validação e autorização exigem regras explícitas."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Transição inválida",
+          "prompt": "Chame concluir duas vezes e verifique o estado após a segunda tentativa.",
+          "hint": "O erro deve acontecer antes de uma segunda mudança.",
+          "solution": "A segunda chamada lança ValueError e concluida permanece True. Não há necessidade de voltar a False para sinalizar a falha.",
+          "criteria": [
+            "Registra a exceção esperada.",
+            "Estado permanece concluído."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Dependência explícita",
+          "prompt": "Crie um serviço que recebe uma lista de ordens por construtor e oferece contar_concluidas.",
+          "hint": "Use composição em vez de herdar de list.",
+          "solution": "Guarde a coleção recebida e some 1 para cada ordem concluída. Explique se o serviço mantém ou copia a coleção externa.",
+          "criteria": [
+            "Conta corretamente zero, uma e duas ordens concluídas.",
+            "Declara o contrato de mutabilidade da coleção."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Propriedade calculada",
+          "prompt": "Modele Item com preço e quantidade e uma propriedade total_centavos sem setter.",
+          "hint": "A propriedade pode calcular em vez de armazenar valor duplicado.",
+          "solution": "@property def total_centavos(self): return self.preco_centavos * self.quantidade. Validar os campos evita totais incoerentes.",
+          "criteria": [
+            "Total reflete os valores atuais.",
+            "Não mantém um terceiro campo que precisa ser sincronizado."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/classes.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 13,
+      "level": 5,
+      "title": "Iteradores, generators e processamento incremental",
+      "goal": "Consumir sequências sem supor que todos os dados já estão em memória.",
+      "theory": [
+        {
+          "title": "Iterável e iterador são diferentes",
+          "text": "Um iterável fornece um iterador por iter(objeto). O iterador guarda o estado da travessia e produz um próximo valor com next. Ao terminar, sinaliza StopIteration. Uma lista normalmente pode iniciar várias travessias; um mesmo iterador consumido não volta ao começo automaticamente."
+        },
+        {
+          "title": "Gerar sob demanda",
+          "text": "Uma função que contém yield cria um generator quando é chamada. Seu corpo avança conforme o consumidor pede itens e preserva as variáveis locais entre pedidos. Isso evita criar uma lista completa de resultados, mas os recursos usados pelo produtor ainda precisam ter um ciclo de vida definido."
+        },
+        {
+          "title": "Compor sem esconder efeitos",
+          "text": "Uma expressão geradora pode alimentar sum, any ou outra redução. O custo total depende do que o consumidor solicita, e erros podem aparecer só no consumo. Registre o que já foi processado e não use list apenas para forçar efeitos colaterais quando um laço explícito expressa melhor a intenção."
+        }
+      ],
+      "code": "def positivos(valores):\n    for valor in valores:\n        if valor > 0:\n            yield valor\n\ng = positivos([-1, 2, 0, 4])\nprint(next(g))\nprint(list(g))\nprint(list(g))\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "2\n[4]\n[]",
+      "quiz": {
+        "question": "Por que o último list(g) do exemplo resulta em []?",
+        "options": [
+          "Porque list apaga a função original.",
+          "Porque esse mesmo generator já foi consumido até o fim.",
+          "Porque yield devolve sempre uma lista vazia.",
+          "Porque o coletor de lixo apaga números positivos."
+        ],
+        "answer": 1,
+        "explanation": "Generators são iteradores de uma passagem; crie outro para iniciar a produção novamente."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Leitura incremental",
+          "prompt": "Crie um gerador que receba linhas de texto e produza inteiros somente para linhas não vazias.",
+          "hint": "Use strip, descarte vazio e aplique int ao consumir.",
+          "solution": "Para cada linha, remova espaços; se restar conteúdo, use yield int(texto). Uma linha inválida deve gerar um erro visível, não zero silencioso.",
+          "criteria": [
+            "Produz [1, 2] para [\"1\", \"\", \" 2 \"].",
+            "Identifica em que momento o erro de conversão acontece."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Consumo parcial",
+          "prompt": "Produza os quadrados de 0 a 999999 sem lista; consuma apenas os três primeiros e explique o trabalho realizado.",
+          "hint": "Uma expressão geradora calcula quando next é chamado.",
+          "solution": "Use (n*n for n in range(1000000)); três next produzem 0, 1 e 4. Os resultados restantes não precisam ser criados.",
+          "criteria": [
+            "Não constrói uma lista com um milhão de valores.",
+            "Explica estado e consumo sob demanda."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Novo percurso",
+          "prompt": "Altere o exemplo para imprimir [2, 4] duas vezes, sem armazenar os resultados numa lista compartilhada.",
+          "hint": "Chame novamente a função geradora.",
+          "solution": "Cada chamada positivos(dados) cria um novo iterador. list(positivos(dados)) em duas chamadas inicia dois percursos independentes.",
+          "criteria": [
+            "As duas saídas contêm 2 e 4.",
+            "Diferencia novo generator de outro nome para o antigo."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/tutorial/classes.html#generators",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 14,
+      "level": 5,
+      "title": "Closures e decorators com metadados",
+      "goal": "Acrescentar comportamento a uma função preservando seu contrato.",
+      "theory": [
+        {
+          "title": "Funções também são valores",
+          "text": "Uma função pode receber outra função, devolvê-la ou guardá-la numa variável. Uma closure mantém acesso aos nomes do escopo em que foi criada. Essa capacidade serve para construir validadores ou adaptar comportamento sem usar uma classe para cada variação pequena."
+        },
+        {
+          "title": "Decoradores transformam funções",
+          "text": "A sintaxe @decorador equivale, de forma simplificada, a vincular o nome ao resultado de decorador(funcao). Um wrapper deve passar os argumentos e devolver o resultado. Esquecer return muda silenciosamente o contrato e pode tornar um cálculo correto numa função que sempre devolve None."
+        },
+        {
+          "title": "Preserve o que ferramentas observam",
+          "text": "functools.wraps copia metadados úteis e mantém uma referência à função embrulhada. Decoradores que guardam contadores ou caches introduzem estado: decida como ele será sincronizado em concorrência e quando será limpo. Não capture exceções apenas para fingir que a função decorada teve sucesso."
+        }
+      ],
+      "code": "from functools import wraps\n\ndef anunciar(funcao):\n    @wraps(funcao)\n    def wrapper(*args, **kwargs):\n        print(\"chamando\", funcao.__name__)\n        return funcao(*args, **kwargs)\n    return wrapper\n\n@anunciar\ndef dobro(valor):\n    return valor * 2\n\nprint(dobro(4))\nprint(dobro.__name__)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "chamando dobro\n8\ndobro",
+      "quiz": {
+        "question": "O que acontece se o wrapper chamar funcao, mas não retornar seu resultado?",
+        "options": [
+          "O resultado é retornado automaticamente.",
+          "A função original deixa de existir em todos os lugares.",
+          "O wrapper devolve None ao terminar, mudando o contrato observado.",
+          "O decorador passa a rodar em outra thread."
+        ],
+        "answer": 2,
+        "explanation": "O retorno da função interna precisa ser propagado explicitamente pelo wrapper."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Retorno preservado",
+          "prompt": "Crie um decorador que conte chamadas sem alterar o resultado de somar(a, b). Demonstre duas chamadas.",
+          "hint": "Guarde contador na closure ou em atributo do wrapper.",
+          "solution": "Use nonlocal para atualizar o contador, retorne funcao(*args, **kwargs) e exponha a contagem por uma operação explícita. Não substitua o resultado pela contagem.",
+          "criteria": [
+            "somar(2, 3) continua devolvendo 5.",
+            "A contagem final é 2."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Closure de regra",
+          "prompt": "Implemente maior_que(limite) que devolve uma função para testar se um valor supera o limite.",
+          "hint": "A função interna captura limite.",
+          "solution": "Retorne uma função que calcula valor > limite. f = maior_que(10) deve devolver False para 10 e True para 11.",
+          "criteria": [
+            "Fronteira 10/11 é respeitada.",
+            "Dois limites criam comportamentos independentes."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Metadados",
+          "prompt": "Remova wraps do exemplo e compare __name__ e a documentação da função. Depois restaure.",
+          "hint": "O wrapper passa a ser o objeto referenciado pelo nome público.",
+          "solution": "Sem wraps, __name__ normalmente é wrapper. Com wraps, os metadados da função original são preservados para inspeção e ferramentas.",
+          "criteria": [
+            "Registra a diferença observada.",
+            "Não afirma que wraps executa validação de tipos."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/functools.html#functools.wraps",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 15,
+      "level": 5,
+      "title": "Context managers e limpeza garantida",
+      "goal": "Definir abertura e encerramento de recursos inclusive quando ocorre uma exceção.",
+      "theory": [
+        {
+          "title": "O protocolo de contexto",
+          "text": "with chama a entrada do gerenciador e garante a passagem pela saída ao deixar o bloco. Isso é adequado para arquivos, locks e transações, mas cada gerenciador tem seu contrato. O contexto de uma conexão SQLite administra transação e não deve ser confundido com fechamento automático da conexão."
+        },
+        {
+          "title": "Construir com contextlib",
+          "text": "@contextmanager transforma uma função geradora num gerenciador de contexto. O código antes do yield prepara o recurso; o valor produzido é o que aparece após as. Um try/finally ao redor do yield permite executar limpeza tanto em sucesso quanto em erro. Deve existir um único yield no percurso."
+        },
+        {
+          "title": "Não suprimir sem intenção",
+          "text": "Capturar uma exceção e não relançá-la pode fazer o bloco externo parecer bem-sucedido. Limpar não significa esconder falhas. Se o recurso precisa ser fechado, coloque a liberação em finally e deixe a exceção continuar até uma camada que saiba apresentar ou recuperar o problema."
+        }
+      ],
+      "code": "from contextlib import contextmanager\n\n@contextmanager\ndef sessao(eventos):\n    eventos.append(\"abriu\")\n    try:\n        yield \"recurso\"\n    finally:\n        eventos.append(\"fechou\")\n\neventos = []\ntry:\n    with sessao(eventos) as recurso:\n        print(recurso)\n        raise ValueError(\"falha simulada\")\nexcept ValueError:\n    print(\"erro tratado\")\nprint(eventos)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "recurso\nerro tratado\n['abriu', 'fechou']",
+      "quiz": {
+        "question": "Onde deve ficar a liberação de recurso num gerenciador com @contextmanager?",
+        "options": [
+          "Somente depois do with no código chamador.",
+          "Antes de criar o recurso.",
+          "Num except que sempre transforma qualquer erro em sucesso.",
+          "Num finally que envolva o yield, quando precisa ocorrer em sucesso e erro."
+        ],
+        "answer": 3,
+        "explanation": "finally representa a obrigação de limpeza sem depender de conclusão normal do bloco."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Sucesso e falha",
+          "prompt": "Execute sessao uma vez sem erro e outra com erro; comprove que fechou aparece nas duas.",
+          "hint": "Mantenha listas de eventos separadas.",
+          "solution": "O finally acrescenta fechou em ambos os percursos. No caminho de erro, a exceção ainda precisa ser tratada ou propagada.",
+          "criteria": [
+            "Duas execuções mostram abriu/fechou.",
+            "Erro não é confundido com sucesso."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Valor do contexto",
+          "prompt": "Mude o valor de yield para um dict com contador e altere esse dict dentro do with. Registre o estado na saída.",
+          "hint": "as recebe o valor produzido, não o gerenciador completo.",
+          "solution": "Produza o dict, use-o no bloco e observe o mesmo objeto no finally. O ciclo de vida deve continuar claramente delimitado.",
+          "criteria": [
+            "O valor recebido permite alteração consciente.",
+            "Liberação ocorre mesmo se a alteração gerar erro."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Fechamento de arquivo",
+          "prompt": "Reescreva open/try/finally/close como with open(..., encoding=\"utf-8\"). Use arquivo temporário.",
+          "hint": "O arquivo já implementa o protocolo de contexto.",
+          "solution": "Use with caminho.open(\"w\", encoding=\"utf-8\") as arquivo: arquivo.write(...). Verifique arquivo.closed depois do bloco.",
+          "criteria": [
+            "Arquivo está fechado após o contexto.",
+            "O conteúdo preserva acentos no round-trip."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/contextlib.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 16,
+      "level": 6,
+      "title": "Testes unitários e fronteiras",
+      "goal": "Escrever testes que falham quando uma regra é violada.",
+      "theory": [
+        {
+          "title": "Um teste precisa poder discordar",
+          "text": "Um teste arruma uma entrada, executa uma ação e verifica um resultado. unittest.TestCase oferece asserções com mensagens úteis. Apenas chamar a função sem verificar nada pode provar que ela não lançou exceção naquele cenário, mas não que seu resultado respeitou a regra."
+        },
+        {
+          "title": "Escolher cenários relevantes",
+          "text": "Particione as entradas conforme comportamentos diferentes: uma quantidade válida, zero e uma quantidade proibida. Verifique também limites exatos e causas de falha. Teste nomes e saídas que importam ao contrato; evite prender a suíte à organização interna que poderia mudar sem alterar comportamento."
+        },
+        {
+          "title": "Executar e observar falha",
+          "text": "O método de teste começa por test_. O comando python -m unittest descobre testes conforme sua organização. Introduza deliberadamente um defeito simples e confirme que um teste relevante falha; depois reverta. Cobertura de linhas, quando usada por uma ferramenta, não substitui asserções adequadas."
+        }
+      ],
+      "code": "import unittest\n\ndef total(preco, quantidade):\n    if preco < 0 or quantidade < 0:\n        raise ValueError(\"negativo\")\n    return preco * quantidade\n\nclass TestTotal(unittest.TestCase):\n    def test_calcula(self):\n        self.assertEqual(total(100, 3), 300)\n    def test_zero(self):\n        self.assertEqual(total(100, 0), 0)\n    def test_rejeita_negativo(self):\n        with self.assertRaises(ValueError):\n            total(100, -1)\n\nif __name__ == \"__main__\":\n    unittest.main(verbosity=2)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "Três testes executados e OK. O relatório de unittest é escrito em stderr e inclui duração variável.",
+      "quiz": {
+        "question": "Qual verificação comprova que uma quantidade negativa é rejeitada?",
+        "options": [
+          "assertRaises para a exceção esperada ao chamar com quantidade negativa.",
+          "Somente imprimir o resultado.",
+          "Verificar se o nome da função contém validar.",
+          "Executar uma entrada positiva mil vezes."
+        ],
+        "answer": 0,
+        "explanation": "O cenário deve alcançar a regra de rejeição e exigir o comportamento correspondente."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Defeito detectável",
+          "prompt": "Troque a multiplicação por adição, rode a suíte e identifique qual cenário detecta o defeito. Depois corrija.",
+          "hint": "O teste de total(100, 3) espera 300.",
+          "solution": "A implementação defeituosa devolve 103 e falha em assertEqual. Corrigir a regra restaura o teste sem mudar sua expectativa.",
+          "criteria": [
+            "Registra uma falha real antes da correção.",
+            "Não muda a asserção para acomodar o defeito."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Novo limite",
+          "prompt": "Acrescente testes para preço zero e preço negativo, além dos casos já presentes.",
+          "hint": "Preço e quantidade são dimensões diferentes da entrada.",
+          "solution": "Preço zero deve resultar em zero; preço negativo deve lançar ValueError. Cada teste verifica uma regra explícita.",
+          "criteria": [
+            "Cobre as duas entradas.",
+            "O caso negativo exige a exceção correta."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Descoberta",
+          "prompt": "Separe a regra em regras.py e os testes em test_regras.py. Execute com python -m unittest -v.",
+          "hint": "Importe a regra no arquivo de teste.",
+          "solution": "O módulo de regras não deve iniciar unittest. O arquivo test_regras.py contém a classe TestCase e pode ser descoberto.",
+          "criteria": [
+            "Comando encontra os testes.",
+            "Importar regras não executa a suíte."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/unittest.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 17,
+      "level": 6,
+      "title": "Dublês, relógios e fronteiras externas",
+      "goal": "Controlar dependências para testar decisões sem depender do mundo exterior.",
+      "theory": [
+        {
+          "title": "Controle o que varia",
+          "text": "Uma regra que usa a hora atual ou chama uma rede diretamente pode ser difícil de testar de modo determinístico. Passe o relógio ou o cliente como dependência. Assim, o teste fornece um resultado conhecido e observa a decisão sem esperar tempo real nem depender de um serviço externo."
+        },
+        {
+          "title": "Dublê não prova integração",
+          "text": "Mock e fake permitem simular uma fronteira. Eles ajudam a verificar como a regra reage a sucesso, indisponibilidade ou respostas inválidas, mas não demonstram que o protocolo real foi implementado corretamente. Mantenha testes de contrato ou integração para os pontos em que o formato externo importa."
+        },
+        {
+          "title": "Patch no lugar consultado",
+          "text": "Ao usar unittest.mock.patch, substitua o nome no módulo onde ele é consultado pelo código sob teste. Se um módulo importou uma função para seu próprio espaço de nomes, alterar apenas a definição original pode não afetar essa referência. Injeção explícita costuma tornar esse relacionamento mais fácil de entender."
+        }
+      ],
+      "code": "from datetime import datetime, timezone\nfrom unittest.mock import Mock\n\ndef vencida(vencimento, relogio):\n    return relogio() >= vencimento\n\nlimite = datetime(2026, 10, 1, tzinfo=timezone.utc)\nrelogio = Mock(return_value=limite)\nprint(vencida(limite, relogio))\nrelogio.assert_called_once_with()\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "True",
+      "quiz": {
+        "question": "Por que injetar um relógio na regra de vencimento?",
+        "options": [
+          "Para impedir que datas tenham timezone.",
+          "Para controlar o instante e testar fronteiras sem depender do dia de execução.",
+          "Para tornar qualquer rede determinística automaticamente.",
+          "Para substituir todas as asserções por sleeps."
+        ],
+        "answer": 1,
+        "explanation": "Um instante fixo torna os cenários antes, no limite e depois reproduzíveis."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Três instantes",
+          "prompt": "Teste vencida imediatamente antes, no limite e depois do vencimento com instantes UTC fixos.",
+          "hint": "Use timedelta para ajustar um segundo.",
+          "solution": "Crie três relógios que retornem limite-1s, limite e limite+1s. Os resultados esperados são False, True e True.",
+          "criteria": [
+            "Verifica a fronteira exata.",
+            "Não consulta a hora real."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Falha da dependência",
+          "prompt": "Faça um cliente fake lançar TimeoutError e teste se o serviço traduz isso para a falha pública definida pelo contrato.",
+          "hint": "Capture somente a falha prevista e preserve a causa.",
+          "solution": "O serviço pode levantar IntegracaoIndisponivel from erro. O teste exige essa falha sem executar rede real.",
+          "criteria": [
+            "Simula timeout de maneira determinística.",
+            "Não transforma indisponibilidade em uma lista vazia falsa."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Evite excesso de mock",
+          "prompt": "Compare testar uma soma com mocks de cada operador a testar sua saída. Escolha a verificação mais estável e explique.",
+          "hint": "Dublês são mais úteis nas fronteiras do que em operações puras pequenas.",
+          "solution": "Para uma função pura de soma, verifique entradas e resultados. Mocks de detalhes internos prendem o teste a uma implementação sem melhorar a regra observada.",
+          "criteria": [
+            "Apresenta cenário com asserção de resultado.",
+            "Justifica quando uma fronteira externa precisa de dublê."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/unittest.mock.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 18,
+      "level": 6,
+      "title": "Fixtures, arquivos temporários e regressão",
+      "goal": "Isolar testes de integração pequenos e manter contraexemplos encontrados.",
+      "theory": [
+        {
+          "title": "Cada teste começa conhecido",
+          "text": "Uma fixture prepara o estado necessário e o descarta ao terminar. Testes não devem depender de dados deixados por outra execução. TemporaryDirectory permite exercitar arquivos reais numa pasta isolada e removê-la depois, inclusive quando uma asserção falha."
+        },
+        {
+          "title": "Dados parametrizados com intenção",
+          "text": "subTest permite percorrer casos relacionados sem perder a identificação de qual entrada falhou. Uma tabela pequena com entradas e expectativas torna fronteiras explícitas. Não gere milhares de casos aleatórios sem registrar a semente ou guardar a entrada que revelou o defeito."
+        },
+        {
+          "title": "Fixar uma regressão",
+          "text": "Quando um erro for encontrado, reduza-o a um caso pequeno que falhe antes da correção. O teste deve registrar o comportamento desejado do contrato, não apenas reproduzir o passo a passo interno do bug. Use arquivos reais para verificar serialização e fakes para dependências que não fazem parte dessa fronteira."
+        }
+      ],
+      "code": "import json\nimport unittest\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\n\nclass TestArquivo(unittest.TestCase):\n    def test_round_trip(self):\n        with TemporaryDirectory() as pasta:\n            caminho = Path(pasta) / \"dados.json\"\n            for titulo in [\"Ação\", \"\", \"linha\\nseguinte\"]:\n                with self.subTest(titulo=titulo):\n                    caminho.write_text(json.dumps({\"titulo\": titulo}), encoding=\"utf-8\")\n                    self.assertEqual(json.loads(caminho.read_text(encoding=\"utf-8\"))[\"titulo\"], titulo)\n\nif __name__ == \"__main__\":\n    unittest.main(verbosity=2)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "Um teste com três subcasos passa com OK; duração e detalhes do relatório podem variar.",
+      "quiz": {
+        "question": "Qual é o benefício de TemporaryDirectory num teste de arquivo?",
+        "options": [
+          "Garantir que qualquer arquivo externo pode ser apagado.",
+          "Substituir a necessidade de asserções.",
+          "Criar estado isolado com limpeza ao sair do contexto.",
+          "Tornar todo teste de rede automaticamente rápido."
+        ],
+        "answer": 2,
+        "explanation": "O teste controla seus próprios arquivos e não depende de pastas pessoais ou da ordem da suíte."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Formato inválido",
+          "prompt": "Acrescente um teste que escreve JSON truncado e exige JSONDecodeError na leitura.",
+          "hint": "Não use o mesmo arquivo persistente entre testes.",
+          "solution": "Numa pasta temporária, grave \"{\"titulo\":\" e chame json.loads da leitura dentro de assertRaises(json.JSONDecodeError).",
+          "criteria": [
+            "O arquivo inválido é realmente lido.",
+            "O teste verifica o tipo de falha esperado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Regressão Unicode",
+          "prompt": "Crie um cenário com vírgula, aspas e acento em um campo e faça round-trip JSON e CSV.",
+          "hint": "Deixe os módulos de formato cuidar dos escapes.",
+          "solution": "Serialize e desserialize com json e csv. Compare o valor final ao original, sem concatenar campos manualmente.",
+          "criteria": [
+            "Todos os caracteres são preservados.",
+            "O teste falharia com uma divisão ingênua por vírgula."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Independência",
+          "prompt": "Execute a suíte duas vezes e também apenas um teste. Demonstre que o resultado não depende de arquivo anterior.",
+          "hint": "Cada teste cria seu ambiente.",
+          "solution": "Uma fixture temporária deve deixar o mesmo estado inicial em cada execução; dados de outra aula não participam da decisão.",
+          "criteria": [
+            "Passa isolado e em conjunto.",
+            "Não exige limpeza manual de arquivo pessoal."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/tempfile.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 19,
+      "level": 7,
+      "title": "Ambientes, dependências e pyproject.toml",
+      "goal": "Identificar o interpretador e descrever um projeto instalável.",
+      "theory": [
+        {
+          "title": "Um ambiente por projeto",
+          "text": "venv separa as instalações de pacotes de cada projeto. Não é uma máquina virtual de segurança e não instala outra versão de Python por conta própria. O comando python -m pip usa o pip daquele interpretador; um comando pip solto pode pertencer a outra instalação."
+        },
+        {
+          "title": "Metadados e construção",
+          "text": "pyproject.toml pode declarar o backend em build-system, os metadados padronizados em project e configurações específicas em tool. Nome de distribuição e nome importável não precisam ser iguais. Um layout src ajuda a testar o pacote instalado em vez de importar acidentalmente arquivos da raiz."
+        },
+        {
+          "title": "Uma instalação precisa ser reproduzível",
+          "text": "Registre versões e dependências diretas e verifique a instalação num ambiente novo. Um intervalo de compatibilidade em project.dependencies não é um arquivo de lock completo. Construir wheel e instalar localmente não exige publicar em PyPI nem criar uma conta; a distribuição pública é uma decisão separada."
+        }
+      ],
+      "code": "import sys\nimport tomllib\n\ntexto = '[project]\\nname = \"oficina-python-lab\"\\nversion = \"0.1.0\"\\nrequires-python = \">=3.12\"\\ndependencies = []\\n'\nconfig = tomllib.loads(texto)\nprint(config[\"project\"][\"name\"])\nprint(sys.version_info >= (3, 12))\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "oficina-python-lab\nTrue",
+      "quiz": {
+        "question": "O que python -m pip ajuda a garantir?",
+        "options": [
+          "Que todas as dependências foram congeladas em um lock.",
+          "Que o código roda dentro de uma sandbox de segurança.",
+          "Que qualquer projeto já pode ser publicado sem credenciais.",
+          "Que pip é executado pelo mesmo interpretador chamado python."
+        ],
+        "answer": 3,
+        "explanation": "O vínculo ao interpretador reduz instalações no ambiente errado, sem substituir resolução de dependências."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Ambiente novo",
+          "prompt": "Crie .venv numa pasta da aula e imprima sys.executable usando o executável desse ambiente.",
+          "hint": "Não é necessário ativar o ambiente para usar seu caminho direto.",
+          "solution": "No Windows use .venv\\Scripts\\python.exe -c \"import sys; print(sys.executable)\". O caminho deve apontar para essa .venv.",
+          "criteria": [
+            "Identifica a instalação escolhida.",
+            "Não altera a política global do PowerShell."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Pacote instalável",
+          "prompt": "Crie src/oficina/__init__.py e uma função total, declare backend e metadados em pyproject.toml e instale a pasta atual com o comando python -m pip install .",
+          "hint": "Use a documentação do backend escolhido, como setuptools.",
+          "solution": "Declare [build-system] com setuptools e build-backend setuptools.build_meta; [project] inclui nome, versão e requires-python. Instale pelo caminho do projeto e teste import oficina fora da raiz.",
+          "criteria": [
+            "Instala sem publicar em um índice.",
+            "Import funciona no ambiente e diretório de teste escolhido."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Dependência e lock",
+          "prompt": "Explique a diferença entre declarar uma faixa de dependência e registrar uma resolução exata de todas as dependências transitivas.",
+          "hint": "As duas informações atendem objetivos diferentes.",
+          "solution": "A faixa descreve compatibilidade do projeto. Uma resolução fixa registra versões específicas para repetir um ambiente; não é inferida apenas do nome da dependência.",
+          "criteria": [
+            "Não chama dependencies de lock completo.",
+            "Registra como recriar o ambiente usado no teste."
+          ]
+        }
+      ],
+      "source": "https://packaging.python.org/en/latest/guides/writing-pyproject-toml/",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 20,
+      "level": 7,
+      "title": "CLI com argparse e códigos de saída",
+      "goal": "Criar uma interface de terminal que se integra a outras ferramentas.",
+      "theory": [
+        {
+          "title": "Argumentos são uma interface pública",
+          "text": "argparse transforma a lista de argumentos em valores e gera ajuda básica. Defina nomes claros, tipos e valores permitidos. O parser pode rejeitar sintaxe inválida, mas regras de negócio como quantidade de estoque suficiente continuam no serviço de aplicação e precisam de validação própria."
+        },
+        {
+          "title": "Entrada e saída têm consumidores",
+          "text": "Uma CLI pode ser chamada por pessoas ou outros programas. Reserve stdout para o resultado contratado e stderr para diagnósticos. Um código de saída zero normalmente indica sucesso; erros devem produzir código diferente sem depender da leitura de uma frase em português."
+        },
+        {
+          "title": "Separe parsing e regra",
+          "text": "Faça main receber argumentos ou chamar uma função de parsing testável. A regra de total ou cadastro não precisa conhecer argparse. Testes conseguem passar uma lista de argumentos diretamente sem alterar sys.argv global. Documente exemplos e mantenha compatibilidade quando scripts externos dependerem da saída."
+        }
+      ],
+      "code": "import argparse\n\ndef criar_parser():\n    parser = argparse.ArgumentParser(description=\"Calcula um lote em centavos\")\n    parser.add_argument(\"preco\", type=int)\n    parser.add_argument(\"quantidade\", type=int)\n    return parser\n\nif __name__ == \"__main__\":\n    args = criar_parser().parse_args([\"1250\", \"3\"])\n    print(args.preco * args.quantidade)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "3750. Para uma CLI real, troque a lista fixa por parse_args() e execute python main.py 1250 3.",
+      "quiz": {
+        "question": "Por que uma CLI deve reservar stdout para dados contratados?",
+        "options": [
+          "Para que outro programa possa consumir o resultado sem misturá-lo a diagnósticos.",
+          "Porque stderr só aceita exceções Python.",
+          "Porque stdout garante autenticação do usuário.",
+          "Porque argparse proíbe logs em arquivos."
+        ],
+        "answer": 0,
+        "explanation": "Separar canais mantém integração previsível; mensagens de diagnóstico não devem corromper JSON ou CSV."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "CLI real",
+          "prompt": "Troque a lista fixa por leitura dos argumentos reais e teste --help, entrada válida e texto no lugar de inteiro.",
+          "hint": "parse_args() sem lista lê os argumentos do processo.",
+          "solution": "python main.py 1250 3 produz 3750; --help mostra uso; texto inválido é rejeitado pelo parser com retorno de erro.",
+          "criteria": [
+            "Ajuda e caso válido funcionam.",
+            "Registra código de saída e diagnóstico do caso inválido."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Subcomandos",
+          "prompt": "Crie subcomandos adicionar e listar para a lista de tarefas em memória.",
+          "hint": "Use add_subparsers e required=True.",
+          "solution": "Cada subparser declara seus próprios argumentos. O serviço recebe uma operação estruturada e não precisa conhecer detalhes de argparse.",
+          "criteria": [
+            "Ajuda lista os dois subcomandos.",
+            "Faltam argumentos resulta em erro claro."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Resultado JSON",
+          "prompt": "Acrescente uma opção --json e gere um documento único no stdout. Faça uma mensagem de diagnóstico ir para stderr.",
+          "hint": "json.dumps cuida da serialização e print(..., file=sys.stderr) do canal.",
+          "solution": "Mantenha o stdout como um objeto JSON válido. Redirecione os canais separadamente e confirme que o documento ainda pode ser lido por json.loads.",
+          "criteria": [
+            "stdout é JSON válido.",
+            "Diagnósticos ficam fora do documento."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/argparse.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 21,
+      "level": 7,
+      "title": "Logging, configuração e subprocessos seguros",
+      "goal": "Registrar decisões úteis e executar ferramentas com limites explícitos.",
+      "theory": [
+        {
+          "title": "Logs explicam o comportamento",
+          "text": "logging oferece níveis e destinos configuráveis. Registre um identificador de operação e o resultado, sem incluir tokens ou dados pessoais desnecessários. logging.exception inclui traceback quando existe uma exceção em tratamento; não apresente esse detalhe interno como resposta pública de uma API."
+        },
+        {
+          "title": "Configuração não é segredo protegido",
+          "text": "Variáveis de ambiente podem fornecer configuração ao processo, mas não tornam um valor automaticamente secreto. Leia e valide os valores na borda da aplicação. Uma porta precisa ser um inteiro dentro da faixa; um campo obrigatório ausente deve causar uma falha clara na inicialização."
+        },
+        {
+          "title": "Comandos sem interpretação desnecessária",
+          "text": "subprocess.run com uma lista de argumentos e shell=False evita que metacaracteres sejam interpretados por um shell. Ainda é preciso escolher um executável confiável e validar o significado dos argumentos. Use timeout, check e captura de saída conforme o contrato; nunca concatene entrada arbitrária a comandos do sistema."
+        }
+      ],
+      "code": "import logging\nimport subprocess\nimport sys\n\nlogging.basicConfig(level=logging.INFO, format=\"%(levelname)s %(message)s\")\nresultado = subprocess.run(\n    [sys.executable, \"-c\", \"print(2 + 3)\"],\n    capture_output=True, text=True, check=True, timeout=5,\n)\nlogging.info(\"operacao=calculo estado=concluida\")\nprint(resultado.stdout.strip())\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "stdout: 5\nstderr: INFO operacao=calculo estado=concluida",
+      "quiz": {
+        "question": "Uma lista de argumentos com shell=False torna qualquer comando seguro?",
+        "options": [
+          "Sim, qualquer executável fica isolado.",
+          "Não; ainda é necessário confiar no executável e validar a semântica dos argumentos.",
+          "Sim, timeout também autentica o chamador.",
+          "Não, porque shell=False concatena tudo automaticamente."
+        ],
+        "answer": 1,
+        "explanation": "Evitar interpretação pelo shell elimina uma classe de problemas, não todas as permissões e efeitos do comando."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Falha do comando",
+          "prompt": "Execute um subprocesso Python que encerre com código 2 e trate CalledProcessError sem esconder o código.",
+          "hint": "check=True exige retorno zero.",
+          "solution": "Use sys.exit(2) no processo filho e capture subprocess.CalledProcessError para registrar returncode. Não informe sucesso.",
+          "criteria": [
+            "Observa código 2.",
+            "Não inclui comando arbitrário vindo de entrada externa."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Timeout",
+          "prompt": "Crie um processo filho que espera um segundo e limite a chamada a 0.05 segundo. Registre TimeoutExpired.",
+          "hint": "O limite deve estar no run, não num sleep antes dele.",
+          "solution": "O processo filho usa time.sleep(1); o chamador usa timeout=0.05 e trata TimeoutExpired como falha esperada do laboratório.",
+          "criteria": [
+            "A chamada não espera o segundo inteiro para declarar sucesso.",
+            "Distingue timeout de retorno não zero."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Higiene dos logs",
+          "prompt": "Receba um token fictício e um ID de operação; registre apenas o ID e o resultado. Explique como verificar isso.",
+          "hint": "Teste o conteúdo do log com assertLogs ou um handler em memória.",
+          "solution": "A mensagem contém operacao=ID e estado, sem o token. O teste verifica que o token não aparece nem no caminho de exceção.",
+          "criteria": [
+            "Logs úteis identificam a operação.",
+            "O valor sensível fictício não aparece no texto capturado."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/subprocess.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 22,
+      "level": 8,
+      "title": "Cliente HTTP, JSON e limites de entrada",
+      "goal": "Distinguir resposta HTTP, falha de transporte e dados inválidos.",
+      "theory": [
+        {
+          "title": "HTTP não é uma chamada de função local",
+          "text": "Uma requisição pode falhar por conexão, timeout, status HTTP ou formato de resposta. Essas causas pedem decisões diferentes. urllib.request oferece recursos na biblioteca padrão; trate URLError e HTTPError conforme o contrato e não assuma que receber bytes comprova sucesso da regra de negócio."
+        },
+        {
+          "title": "Limitar antes de carregar",
+          "text": "Defina timeout e leia no máximo limite+1 bytes para detectar uma resposta maior do que o permitido. Depois valide encoding, JSON e campos. Um campo presente pode ter tipo errado; bool e int têm uma relação particular em Python que exige atenção em validações estritas."
+        },
+        {
+          "title": "Uma integração verificável",
+          "text": "O exemplo sobe um servidor apenas no endereço local e porta disponível, consulta-o e encerra os recursos. Isso permite observar o protocolo sem depender de internet. Num sistema real, valide destino e redirecionamentos para reduzir riscos de SSRF, e não repita indiscriminadamente operações com efeitos."
+        }
+      ],
+      "code": "import json\nfrom http.server import BaseHTTPRequestHandler, ThreadingHTTPServer\nfrom threading import Thread\nfrom urllib.request import urlopen\n\nclass Handler(BaseHTTPRequestHandler):\n    def do_GET(self):\n        corpo = b'{\"total\": 3}'\n        self.send_response(200)\n        self.send_header(\"Content-Type\", \"application/json\")\n        self.send_header(\"Content-Length\", str(len(corpo)))\n        self.end_headers()\n        self.wfile.write(corpo)\n    def log_message(self, *_args):\n        pass\n\nservidor = ThreadingHTTPServer((\"127.0.0.1\", 0), Handler)\ntarefa = Thread(target=servidor.serve_forever)\ntarefa.start()\ntry:\n    with urlopen(f\"http://127.0.0.1:{servidor.server_port}/\", timeout=2) as resposta:\n        bruto = resposta.read(1025)\n        if len(bruto) > 1024:\n            raise ValueError(\"resposta grande demais\")\n        dados = json.loads(bruto)\n        if type(dados.get(\"total\")) is not int:\n            raise ValueError(\"total inválido\")\n        print(resposta.status, dados[\"total\"])\nfinally:\n    servidor.shutdown()\n    servidor.server_close()\n    tarefa.join()\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "200 3",
+      "quiz": {
+        "question": "Por que ler limite+1 bytes em vez de apenas limite?",
+        "options": [
+          "Para garantir que qualquer JSON seja válido.",
+          "Para impedir todos os redirecionamentos.",
+          "Para distinguir uma resposta que cabe exatamente de outra que foi truncada pelo limite.",
+          "Para converter status 500 em sucesso."
+        ],
+        "answer": 2,
+        "explanation": "Sem o byte adicional, receber o limite exato não prova que a origem terminou ali."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Status diferente",
+          "prompt": "Altere o servidor local para responder 503 e registre como urllib sinaliza a resposta.",
+          "hint": "HTTPError também carrega informações da resposta HTTP.",
+          "solution": "A chamada normalmente levanta HTTPError para 503. Trate esse status como indisponibilidade; não confunda com uma falha de parsing de JSON.",
+          "criteria": [
+            "Registra o status 503.",
+            "Não considera qualquer corpo recebido como sucesso."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Resposta excessiva",
+          "prompt": "Faça o servidor local retornar mais de 1024 bytes e demonstre a rejeição antes de interpretar o documento.",
+          "hint": "Mantenha leitura limitada a 1025.",
+          "solution": "Se len(bruto) > 1024, rejeite. A prova deve alcançar esse ramo mesmo que a origem continue enviando mais bytes.",
+          "criteria": [
+            "Detecta excedente de tamanho.",
+            "Não usa leitura ilimitada antes da validação."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Contrato do documento",
+          "prompt": "Teste documentos {\"total\": true}, {\"total\": \"3\"} e {}. Explique por que todos devem falhar neste contrato estrito.",
+          "hint": "type(valor) is int evita aceitar bool como inteiro do domínio.",
+          "solution": "A API combinou um inteiro real no campo total; ausente, booleano e string devem ser rejeitados ou convertidos por regra explícita separada.",
+          "criteria": [
+            "Três documentos são rejeitados.",
+            "Não atribui essa validação automaticamente ao JSON parser."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/urllib.request.html",
+      "caution": "http.server é utilizado apenas no laboratório local. Não o exponha como servidor de produção.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 23,
+      "level": 8,
+      "title": "SQLite, consultas parametrizadas e conexões",
+      "goal": "Persistir registros com tipos, restrições e ciclo de vida definidos.",
+      "theory": [
+        {
+          "title": "Banco local, contrato durável",
+          "text": "sqlite3 permite usar SQLite sem iniciar um servidor separado. Uma conexão em :memory: dura enquanto essa conexão existir. Uma tabela deve expressar restrições como chave primária e unicidade quando elas pertencem à integridade dos dados. Validações na aplicação continuam úteis para mensagens e regras maiores."
+        },
+        {
+          "title": "Parâmetros não são concatenação",
+          "text": "Use placeholders e passe os valores separadamente a execute. Isso mantém entrada de usuário como dado, em vez de parte da estrutura SQL. Placeholders não substituem nomes de tabela ou coluna; identificadores dinâmicos precisam de uma lista explícita de opções permitidas."
+        },
+        {
+          "title": "Fechar e confirmar são decisões distintas",
+          "text": "O contexto da conexão administra commit ou rollback de transação conforme sua configuração; ele não fecha a conexão por si só. Use closing ou fechamento explícito quando terminar. Configure a política transacional com intenção e documente se outros colaboradores podem usar a mesma conexão."
+        }
+      ],
+      "code": "import sqlite3\nfrom contextlib import closing\n\nwith closing(sqlite3.connect(\":memory:\")) as con:\n    con.execute(\"CREATE TABLE item (id INTEGER PRIMARY KEY, nome TEXT NOT NULL UNIQUE)\")\n    con.execute(\"INSERT INTO item (nome) VALUES (?)\", (\"Sensor\",))\n    con.commit()\n    linha = con.execute(\"SELECT id, nome FROM item WHERE nome = ?\", (\"Sensor\",)).fetchone()\n    print(linha)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "(1, 'Sensor')",
+      "quiz": {
+        "question": "Qual uso mantém o valor de nome separado da estrutura SQL?",
+        "options": [
+          "Concatenar nome diretamente ao SQL.",
+          "Adicionar aspas manualmente ao nome.",
+          "Apagar espaços antes de concatenar o nome.",
+          "execute(\"SELECT ... WHERE nome = ?\", (nome,))."
+        ],
+        "answer": 3,
+        "explanation": "A parametrização do driver evita interpretar o valor como sintaxe SQL."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Consulta sem resultado",
+          "prompt": "Consulte um nome inexistente e trate o retorno de fetchone sem tentar acessar linha[0].",
+          "hint": "fetchone retorna None quando não há linha.",
+          "solution": "Teste if linha is None antes de ler campos. Ausência deve virar uma decisão de domínio, como item não encontrado.",
+          "criteria": [
+            "Consulta existente retorna os dados corretos.",
+            "Consulta ausente não gera TypeError por indexação."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Unicidade",
+          "prompt": "Tente inserir o mesmo nome duas vezes e observe IntegrityError. Proponha uma mensagem pública apropriada.",
+          "hint": "A restrição UNIQUE é garantida pelo banco.",
+          "solution": "Capture IntegrityError na fronteira conhecida para apresentar nome já cadastrado. Não remova a restrição para fazer a operação parecer bem-sucedida.",
+          "criteria": [
+            "Duplicidade não cria outra linha.",
+            "Diferencia mensagem pública e detalhe interno."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Entrada hostil",
+          "prompt": "Consulte um nome contendo aspas e uma tentativa textual de SQL usando parâmetros. Confira que a tabela continua existente.",
+          "hint": "O conteúdo deve continuar sendo um único valor.",
+          "solution": "Passe o texto como segundo argumento de execute. A consulta não encontra esse nome, mas não executa comandos extras nem altera a tabela.",
+          "criteria": [
+            "Tabela permanece íntegra.",
+            "Explica por que escape manual não é a estratégia escolhida."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/sqlite3.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 24,
+      "level": 8,
+      "title": "Transações, rollback e operações compostas",
+      "goal": "Agrupar mudanças que precisam acontecer juntas.",
+      "theory": [
+        {
+          "title": "Uma invariável atravessa tabelas",
+          "text": "Se confirmar uma ordem exige baixar estoque, as duas mudanças pertencem à mesma transação. Fazer commit entre elas permite registrar um estado que o domínio proíbe. Defina a condição de sucesso e escreva um cenário de falha depois da primeira mudança para verificar atomicidade."
+        },
+        {
+          "title": "Política transacional explícita",
+          "text": "Python 3.12 acrescentou a configuração autocommit em sqlite3. Nesta aula usamos autocommit=False para controle compatível com o modelo DB-API: commit e rollback encerram a transação atual, e outra é aberta implicitamente. Não misture esse contrato com autocommit=True sem entender o efeito."
+        },
+        {
+          "title": "Rollback não desfaz o mundo externo",
+          "text": "Uma transação do banco não volta no tempo para desfazer um e-mail ou requisição já enviados. Quando a operação precisa produzir um evento durável, grave-o junto aos dados e publique depois por um mecanismo apropriado. Também mantenha a conexão fechada ao encerrar seu uso."
+        }
+      ],
+      "code": "import sqlite3\nfrom contextlib import closing\n\nwith closing(sqlite3.connect(\":memory:\", autocommit=False)) as con:\n    con.execute(\"CREATE TABLE estoque (id INTEGER PRIMARY KEY, quantidade INTEGER CHECK(quantidade >= 0))\")\n    con.execute(\"INSERT INTO estoque VALUES (1, 5)\")\n    con.commit()\n    try:\n        with con:\n            con.execute(\"UPDATE estoque SET quantidade = quantidade - 3 WHERE id = 1\")\n            con.execute(\"UPDATE estoque SET quantidade = quantidade - 3 WHERE id = 1\")\n    except sqlite3.IntegrityError:\n        print(\"rollback\")\n    print(con.execute(\"SELECT quantidade FROM estoque WHERE id = 1\").fetchone()[0])\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "rollback\n5",
+      "quiz": {
+        "question": "A primeira baixa fica gravada depois que a segunda violou CHECK no exemplo?",
+        "options": [
+          "Não; o contexto faz rollback da transação inteira ao propagar o erro.",
+          "Sim, cada UPDATE é sempre confirmado imediatamente.",
+          "Sim, porque rollback só afeta SELECT.",
+          "Depende da cor do terminal."
+        ],
+        "answer": 0,
+        "explanation": "A transação agrupa as duas alterações; o cenário demonstra retorno à quantidade original."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Sucesso atômico",
+          "prompt": "Mude as duas baixas para 2 e 1 e confira a quantidade final. Depois provoque uma falha para comparar.",
+          "hint": "Sucesso deve confirmar o grupo; falha deve desfazê-lo.",
+          "solution": "Com estoque inicial 5, as baixas 2 e 1 deixam 2. Se a segunda baixa violar a restrição, o estoque volta a 5.",
+          "criteria": [
+            "Demonstra commit e rollback.",
+            "Não faz commit entre as duas baixas."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "OS e estoque",
+          "prompt": "Acrescente uma tabela de ordens e confirme status junto com a baixa. Provoque falha após atualizar status.",
+          "hint": "As operações devem usar a mesma conexão e transação.",
+          "solution": "Atualize status e estoque num único with con. Um erro propagado antes da saída deve manter ambos no estado anterior.",
+          "criteria": [
+            "Falha não deixa status confirmado com estoque antigo.",
+            "Uma confirmação válida modifica os dois."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Efeito externo",
+          "prompt": "Explique por que enviar uma mensagem antes do commit pode produzir inconsistência e desenhe uma tabela de eventos pendentes.",
+          "hint": "O rollback do banco não cancela uma mensagem já enviada.",
+          "solution": "Grave a alteração e um evento numa mesma transação. Um publicador lê eventos depois, usando tentativa e idempotência próprias.",
+          "criteria": [
+            "Identifica a fronteira entre banco e rede.",
+            "Não promete entrega externa exatamente uma vez sem protocolo adicional."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/sqlite3.html#transaction-control",
+      "caution": "O parâmetro sqlite3.connect(..., autocommit=False) exige Python 3.12 ou superior, conforme a base desta trilha.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 25,
+      "level": 9,
+      "title": "Threads, pools e estado compartilhado",
+      "goal": "Esperar tarefas e proteger invariantes sem usar sleeps como sincronização.",
+      "theory": [
+        {
+          "title": "Concorrência para espera",
+          "text": "ThreadPoolExecutor executa funções em um conjunto limitado de threads. Ele costuma ser útil quando o trabalho passa tempo esperando I/O. O exemplo usa uma espera curta simulada, não mede uma integração real. O limite de workers controla quantas chamadas podem estar em execução ao mesmo tempo."
+        },
+        {
+          "title": "Um resultado precisa ser observado",
+          "text": "map entrega resultados na ordem das entradas; outras interfaces permitem observar ordem de conclusão. Exceções das tarefas reaparecem quando seus resultados são consumidos. O contexto do executor aguarda a finalização ao sair. Dormir por um intervalo arbitrário não comprova que as tarefas terminaram."
+        },
+        {
+          "title": "A invariável precisa de proteção",
+          "text": "Operações compostas sobre estado compartilhado não devem depender de detalhes do GIL. Use Lock, filas ou um único dono dos dados. Mesmo que uma operação individual de um objeto tenha proteção interna numa implementação, uma sequência de ler, decidir e alterar pode continuar exigindo sincronização."
+        }
+      ],
+      "code": "from concurrent.futures import ThreadPoolExecutor\nfrom threading import Lock\nfrom time import sleep\n\ncontador = [0]\nlock = Lock()\ndef carregar(numero):\n    sleep(0.005)\n    with lock:\n        contador[0] += 1\n    return numero * 2\n\nwith ThreadPoolExecutor(max_workers=2) as pool:\n    resultados = list(pool.map(carregar, [1, 2, 3]))\nprint(resultados)\nprint(contador[0])\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "[2, 4, 6]\n3",
+      "quiz": {
+        "question": "O GIL elimina a necessidade de sincronizar toda operação composta compartilhada?",
+        "options": [
+          "Sim, qualquer sequência é uma transação.",
+          "Não; invariantes que envolvem várias operações precisam de coordenação explícita.",
+          "Sim, desde que as variáveis sejam inteiras.",
+          "Sim, se cada thread imprimir seu nome."
+        ],
+        "answer": 1,
+        "explanation": "O contrato de sincronização deve proteger a regra, sem depender de uma coincidência do escalonamento."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Falha em worker",
+          "prompt": "Faça carregar lançar ValueError para o número 2 e demonstre que consumir os resultados observa a falha.",
+          "hint": "A exceção não desaparece só porque ocorreu noutra thread.",
+          "solution": "Ao iterar pool.map ou chamar future.result, a exceção correspondente é propagada. Trate no nível que decide como lidar com aquele lote.",
+          "criteria": [
+            "Registra a falha do item 2.",
+            "Não informa lote completo quando parte falhou."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Limite de concorrência",
+          "prompt": "Instrumente quantas tarefas estão ativas e qual foi o máximo; execute dez itens com dois workers.",
+          "hint": "Proteja os contadores com o mesmo lock e decremente em finally.",
+          "solution": "Atualize ativos e maximo sob lock. A maior contagem observada deve ser no máximo 2, e ativos deve terminar em 0.",
+          "criteria": [
+            "Máximo respeita o limite configurado.",
+            "Liberação acontece também quando uma tarefa falha."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Agregação sem compartilhamento",
+          "prompt": "Reescreva a contagem para que cada worker só retorne um valor e o chamador agregue os resultados.",
+          "hint": "Um único dono pode evitar a necessidade de um contador compartilhado.",
+          "solution": "Retorne o resultado da tarefa e use len dos resultados concluídos no chamador. A decisão de sucesso parcial continua explícita.",
+          "criteria": [
+            "Mantém a saída contratada no caso de sucesso.",
+            "Explica por que o contador compartilhado deixou de ser necessário."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/concurrent.futures.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 26,
+      "level": 9,
+      "title": "Processos, CPU e a evolução do GIL",
+      "goal": "Escolher paralelismo considerando versão, serialização e custo.",
+      "theory": [
+        {
+          "title": "CPU e o GIL tradicional",
+          "text": "Na build convencional de CPython com GIL, somente uma thread executa bytecode Python por vez em um processo, embora extensões possam liberar o GIL e operações de I/O tenham comportamento diferente. Para uma carga de CPU em Python puro, múltiplas threads não garantem uso paralelo de vários núcleos."
+        },
+        {
+          "title": "Isolar trabalho em processos",
+          "text": "ProcessPoolExecutor usa processos com memória separada. Funções e argumentos precisam ser serializáveis conforme o mecanismo utilizado, e o módulo principal deve ser importável. Defina workers no topo do módulo e proteja o início com if __name__ == \"__main__\". O exemplo escolhe spawn para expor esse contrato de forma portátil."
+        },
+        {
+          "title": "Free threading exige uma decisão explícita",
+          "text": "Desde Python 3.13 existe build opcional sem GIL. Não é correto afirmar que todo Python atual é limitado pelo GIL nem que sua remoção elimina races. Extensões incompatíveis podem reativá-lo. Meça a carga real, valide dependências e considere o custo de iniciar processos e transferir dados antes de escolher."
+        }
+      ],
+      "code": "from concurrent.futures import ProcessPoolExecutor\nfrom multiprocessing import get_context\n\ndef soma_quadrados(limite):\n    return sum(n * n for n in range(limite))\n\nif __name__ == \"__main__\":\n    with ProcessPoolExecutor(max_workers=2, mp_context=get_context(\"spawn\")) as pool:\n        resultados = list(pool.map(soma_quadrados, [3, 4]))\n    print(resultados)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "[5, 14]",
+      "quiz": {
+        "question": "Por que proteger a criação do pool com o guarda de __main__?",
+        "options": [
+          "Para compartilhar automaticamente todas as variáveis globais.",
+          "Para desativar validação de argumentos.",
+          "Para que a importação do módulo nos novos processos não inicie outro pool recursivamente.",
+          "Para garantir que uma tarefa curta sempre fique mais rápida."
+        ],
+        "answer": 2,
+        "explanation": "Métodos como spawn importam o módulo principal; efeitos de inicialização devem estar protegidos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Resultados equivalentes",
+          "prompt": "Compare a versão sequencial e a de processos para limites 0, 1, 3 e 10.",
+          "hint": "A otimização não deve mudar o contrato do cálculo.",
+          "solution": "Calcule com a mesma função e compare as listas de resultados. Para 10, a soma dos quadrados de 0 a 9 é 285.",
+          "criteria": [
+            "Resultados são iguais nas duas estratégias.",
+            "Cobre limites vazios e pequenos."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Custo real",
+          "prompt": "Meça lotes pequenos e grandes em sequência e com pool. Registre tempo, versão, workers e hardware disponível.",
+          "hint": "Inicializar processos e copiar dados tem custo.",
+          "solution": "Faça repetições com a mesma entrada e não conclua ganho a partir de uma única amostra. Cargas pequenas podem ser mais lentas no pool.",
+          "criteria": [
+            "Relatório inclui condições da medição.",
+            "Não promete aceleração universal."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "GIL e build",
+          "prompt": "Verifique sua versão e documente se a build é convencional ou free-threaded, usando a documentação da versão instalada.",
+          "hint": "python -VV expõe informações; APIs de detecção novas não existem em 3.12.",
+          "solution": "Numa versão que oferece free threading, consulte sysconfig e a API de detecção documentada. Em 3.12, registre que a opção não existe em vez de presumir sua presença.",
+          "criteria": [
+            "Identifica os limites da versão usada.",
+            "Distingue ausência de GIL de segurança automática de estado compartilhado."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/howto/free-threading-python.html",
+      "caution": "Execute como arquivo main.py, não como função definida apenas num REPL. Free threading é assunto comparativo; os exemplos desta trilha funcionam na base Python 3.12 convencional.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 27,
+      "level": 9,
+      "title": "asyncio e grupos de tarefas",
+      "goal": "Executar concorrência cooperativa com um ciclo de vida observável.",
+      "theory": [
+        {
+          "title": "Corrotina não é execução imediata",
+          "text": "async def cria uma função de corrotina. Chamá-la cria um objeto que precisa ser aguardado ou agendado. asyncio.run inicia um loop para uma entrada assíncrona num script comum. Não use await solto no topo de um arquivo Python; alguns notebooks o permitem por conta de seu próprio ambiente."
+        },
+        {
+          "title": "Concorrência cooperativa",
+          "text": "No loop usual, uma tarefa avança até ceder controle, normalmente num await. Fazer I/O bloqueante ou um cálculo longo sem ceder impede o avanço das outras tarefas desse loop. async não torna automaticamente qualquer função rápida nem a executa em outra thread."
+        },
+        {
+          "title": "Uma vida em grupo",
+          "text": "TaskGroup aguarda as tarefas criadas ao sair do contexto. Se uma falhar com exceção comum, as restantes são canceladas e as falhas são agrupadas conforme o contrato. Use try/finally para limpeza e não engula CancelledError inadvertidamente; uma tarefa cancelada também precisa conseguir terminar."
+        }
+      ],
+      "code": "import asyncio\n\nasync def dobrar(numero):\n    await asyncio.sleep(0)\n    return numero * 2\n\nasync def main():\n    async with asyncio.TaskGroup() as grupo:\n        tarefas = [grupo.create_task(dobrar(n)) for n in [1, 2, 3]]\n    print([t.result() for t in tarefas])\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "[2, 4, 6]",
+      "quiz": {
+        "question": "O que acontece ao chamar dobrar(1) sem aguardar nem agendar a corrotina?",
+        "options": [
+          "O resultado 2 é devolvido imediatamente.",
+          "É criada uma thread obrigatoriamente.",
+          "Toda a função é convertida em código de máquina.",
+          "É criado um objeto de corrotina, sem executar normalmente o trabalho até sua conclusão."
+        ],
+        "answer": 3,
+        "explanation": "Uma corrotina precisa participar do ciclo de execução assíncrono para produzir seu resultado."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Execução em script",
+          "prompt": "Crie uma corrotina que retorna \"pronto\" e execute-a com asyncio.run a partir de main.py.",
+          "hint": "O await deve estar dentro de outra função assíncrona.",
+          "solution": "Defina async def main, aguarde a corrotina nele e inicie pelo guarda de __main__. Isso funciona num script sem recursos especiais do notebook.",
+          "criteria": [
+            "Imprime pronto.",
+            "Não usa await no topo do arquivo comum."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Falha do grupo",
+          "prompt": "Faça uma tarefa falhar e outra registrar limpeza em finally. Observe o encerramento do TaskGroup e trate ExceptionGroup apropriadamente.",
+          "hint": "Uma falha comum cancela as tarefas irmãs que ainda executam.",
+          "solution": "Use um evento ou espera assíncrona para manter a irmã ativa; registre seu finally. Ao sair, trate as falhas agrupadas sem anunciar sucesso do lote.",
+          "criteria": [
+            "A limpeza da tarefa cancelada é observável.",
+            "A falha original continua identificável."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Bloqueio do loop",
+          "prompt": "Compare time.sleep com await asyncio.sleep dentro de duas tarefas. Explique a diferença sem depender de tempos exatos.",
+          "hint": "A primeira operação bloqueia a thread do loop; a segunda cede controle.",
+          "solution": "Na versão bloqueante, outra tarefa não progride durante a espera. Na assíncrona, o loop pode avançar com outras tarefas prontas.",
+          "criteria": [
+            "Registra a ordem dos eventos.",
+            "Não conclui que async elimina qualquer custo de I/O."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/asyncio-task.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 28,
+      "level": 10,
+      "title": "Filas limitadas, timeout e cancelamento",
+      "goal": "Controlar o volume de trabalho e encerrar tarefas sem abandoná-las.",
+      "theory": [
+        {
+          "title": "Backpressure limita a produção",
+          "text": "Uma fila assíncrona com maxsize impede que produtores avancem indefinidamente quando consumidores não dão conta. await put aguarda capacidade; await get aguarda item. A fila limita itens enfileirados, e não substitui limites de tamanho de cada item nem limita automaticamente outros buffers."
+        },
+        {
+          "title": "Término faz parte do protocolo",
+          "text": "O produtor pode enviar um sentinela para informar que não haverá novos itens. Um consumidor deve chamar task_done para cada get quando o contrato usa join, inclusive em falhas. Com vários consumidores, planeje quantos sinais de fim serão necessários e quem é responsável por enviá-los."
+        },
+        {
+          "title": "Timeout e limpeza",
+          "text": "asyncio.timeout cancela o trabalho dentro de seu contexto e apresenta TimeoutError ao sair, conforme seu contrato. finally ainda deve liberar os recursos. Defina deadlines com intenção e não suprima cancelamento de forma que o chamador acredite que a tarefa terminou quando ela continua executando efeitos."
+        }
+      ],
+      "code": "import asyncio\n\nasync def main():\n    fila = asyncio.Queue(maxsize=2)\n    resultados = []\n    async def produzir():\n        for numero in range(3):\n            await fila.put(numero)\n        await fila.put(None)\n    async def consumir():\n        while True:\n            item = await fila.get()\n            try:\n                if item is None:\n                    return\n                resultados.append(item * 2)\n            finally:\n                fila.task_done()\n    async with asyncio.TaskGroup() as grupo:\n        grupo.create_task(produzir())\n        grupo.create_task(consumir())\n    print(resultados)\n    try:\n        async with asyncio.timeout(0.01):\n            await asyncio.sleep(1)\n    except TimeoutError:\n        print(\"prazo excedido\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "[0, 2, 4]\nprazo excedido",
+      "quiz": {
+        "question": "O que maxsize=2 garante neste exemplo?",
+        "options": [
+          "Limita a dois os itens que aguardam dentro dessa fila.",
+          "Limita cada item a dois bytes.",
+          "Impede que qualquer tarefa use mais de duas variáveis.",
+          "Garante que o sistema nunca ficará sem memória."
+        ],
+        "answer": 0,
+        "explanation": "Cada buffer e tamanho de item ainda precisa ser considerado no orçamento de recursos."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Dois consumidores",
+          "prompt": "Adapte o processamento para dois consumidores e encerre ambos corretamente. Compare os resultados sem exigir ordem.",
+          "hint": "Cada consumidor precisa receber uma indicação de fim.",
+          "solution": "Envie dois sentinelas após os itens e ordene resultados apenas na comparação, se o contrato não promete ordem de conclusão.",
+          "criteria": [
+            "Todos os itens são processados uma vez.",
+            "Ambos os consumidores terminam."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Prazo e finally",
+          "prompt": "Inclua um finally que registre liberação no trabalho que excede o timeout. Prove que ele rodou.",
+          "hint": "O cancelamento é entregue num ponto de suspensão.",
+          "solution": "Mantenha um log de eventos e use try/finally no trabalho. Após capturar TimeoutError no chamador, a liberação deve constar no registro.",
+          "criteria": [
+            "Registra prazo excedido.",
+            "Limpeza ocorre antes de anunciar encerramento."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Produtor mais rápido",
+          "prompt": "Faça um consumidor aguardar brevemente por item e observe um produtor usando maxsize=1. Registre eventos em vez de estimar por sleep externo.",
+          "hint": "put pode suspender enquanto a fila está cheia.",
+          "solution": "Registre antes e depois de cada await put. O produtor só conclui certos puts quando existe capacidade liberada pelo consumidor.",
+          "criteria": [
+            "Demonstra espera por capacidade.",
+            "Não usa fila ilimitada para esconder a lentidão."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/asyncio-queue.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 29,
+      "level": 10,
+      "title": "Fronteira HTTP e uma API WSGI didática",
+      "goal": "Separar protocolo, serviço de aplicação e serialização.",
+      "theory": [
+        {
+          "title": "HTTP é uma camada de adaptação",
+          "text": "Uma API recebe método, caminho, cabeçalhos e corpo, e produz status, cabeçalhos e bytes. A regra de confirmar uma OS deve poder existir sem conhecer HTTP. Uma rota traduz entrada externa em um comando e transforma resultado ou falha num contrato público previsível."
+        },
+        {
+          "title": "Aprender o protocolo sem um framework",
+          "text": "WSGI é uma interface entre servidor e aplicação síncrona. A aplicação recebe environ e start_response e retorna um iterável de bytes. O exemplo invoca essa interface em memória para verificar o contrato sem abrir uma porta. Isso ensina a fronteira, não substitui a escolha de framework e servidor adequados para produção."
+        },
+        {
+          "title": "Respostas e limites",
+          "text": "Defina status e Content-Type coerentes e serialize JSON com a biblioteca de formato. Separe 400 para entrada inválida, 404 para recurso ausente e falhas internas segundo o contrato. O servidor wsgiref é uma referência didática com verificações básicas; não o exponha como serviço de produção."
+        }
+      ],
+      "code": "import json\nfrom wsgiref.util import setup_testing_defaults\n\ndef app(environ, start_response):\n    if environ[\"REQUEST_METHOD\"] == \"GET\" and environ[\"PATH_INFO\"] == \"/health\":\n        status, documento = \"200 OK\", {\"status\": \"ok\"}\n    else:\n        status, documento = \"404 Not Found\", {\"erro\": \"rota ausente\"}\n    corpo = json.dumps(documento).encode(\"utf-8\")\n    start_response(status, [(\"Content-Type\", \"application/json\"), (\"Content-Length\", str(len(corpo)))])\n    return [corpo]\n\nenviron = {}\nsetup_testing_defaults(environ)\nenviron.update(REQUEST_METHOD=\"GET\", PATH_INFO=\"/health\")\nresposta = {}\ndef iniciar(status, cabecalhos, exc_info=None):\n    resposta[\"status\"] = status\ncorpo = b\"\".join(app(environ, iniciar))\nprint(resposta[\"status\"], corpo.decode(\"utf-8\"))\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "200 OK {\"status\": \"ok\"}",
+      "quiz": {
+        "question": "Qual é o papel adequado da rota HTTP na arquitetura proposta?",
+        "options": [
+          "Concentrar toda a regra de estoque em cabeçalhos.",
+          "Traduzir entrada e saída entre o protocolo e o serviço de aplicação.",
+          "Substituir qualquer teste de domínio.",
+          "Garantir transação apenas porque retorna JSON."
+        ],
+        "answer": 1,
+        "explanation": "A adaptação de protocolo deve preservar a independência e os contratos da regra de negócio."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Rota inexistente",
+          "prompt": "Invocar app com PATH_INFO=/ausente e conferir status, Content-Type e JSON.",
+          "hint": "Reaproveite a chamada em memória do exemplo.",
+          "solution": "A resposta deve ser 404 Not Found e conter erro com rota ausente. Verifique o documento decodificado, não apenas se existe algum corpo.",
+          "criteria": [
+            "Status 404 é verificado.",
+            "Corpo é JSON válido com erro contratado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Serviço compartilhado",
+          "prompt": "Crie obter_total como função de aplicação usada por uma CLI e por uma rota. Não duplique a regra nas interfaces.",
+          "hint": "Ambas as interfaces podem chamar a mesma função.",
+          "solution": "A CLI formata o retorno para terminal; a rota o coloca num JSON. Um teste da regra não precisa construir environ.",
+          "criteria": [
+            "O mesmo cenário tem resultado equivalente nas duas interfaces.",
+            "Regra não depende de WSGI."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Servidor local",
+          "prompt": "Em outra pasta de laboratório, sirva app com wsgiref.simple_server apenas em 127.0.0.1 e consulte /health. Documente seu limite de uso.",
+          "hint": "make_server recebe endereço, porta e app.",
+          "solution": "Use um gerenciador de contexto e uma porta disponível. Encerre o servidor ao concluir; classifique-o como implementação de referência, sem promessa de operação em produção.",
+          "criteria": [
+            "A consulta local retorna o contrato esperado.",
+            "README explicita que o servidor é didático."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/wsgiref.html",
+      "caution": "WSGI e wsgiref aqui servem para estudar contratos HTTP. Não são uma recomendação de servidor de produção; nenhum serviço pago é necessário.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 30,
+      "level": 10,
+      "title": "Validação, autorização e dados não confiáveis",
+      "goal": "Checar o recurso solicitado e limitar efeitos nas fronteiras.",
+      "theory": [
+        {
+          "title": "Validar antes de executar efeitos",
+          "text": "JSON válido ainda pode conter tipos, campos e tamanhos indevidos. A borda da aplicação deve rejeitar documentos excessivos, estruturas inesperadas e valores fora do domínio antes de gravar ou acionar integrações. Não use eval ou carregue pickle de origem não confiável para interpretar entradas de usuários."
+        },
+        {
+          "title": "Identidade e permissão são decisões distintas",
+          "text": "Autenticação estabelece quem fez a requisição por um mecanismo confiável. Autorização decide se essa identidade pode agir sobre aquele recurso. O exemplo pressupõe uma identidade já autenticada; aceitar tecnico_id enviado no corpo como identidade seria uma falha. Teste explicitamente o acesso a OS de outro técnico."
+        },
+        {
+          "title": "Falhar sem revelar segredos",
+          "text": "Uma mensagem pública não deve expor caminhos internos, consultas completas ou tokens. Logs precisam ajudar a investigar sem copiar dados sensíveis. Proteja caminhos contra saída da pasta permitida, restrinja destinos de integrações e use parâmetros SQL; cada fronteira tem seu próprio modelo de entrada hostil."
+        }
+      ],
+      "code": "from dataclasses import dataclass\n\n@dataclass(frozen=True)\nclass Identidade:\n    id: int\n    papel: str\n\ndef pode_consultar(usuario, tecnico_da_ordem):\n    if usuario.papel != \"admin\" and usuario.id != tecnico_da_ordem:\n        raise PermissionError(\"acesso negado\")\n    return \"permitido\"\n\n# Identidade fornecida por uma fronteira de autenticação confiável.\nusuario = Identidade(id=2, papel=\"tecnico\")\ntry:\n    print(pode_consultar(usuario, tecnico_da_ordem=7))\nexcept PermissionError as erro:\n    print(erro)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "acesso negado",
+      "quiz": {
+        "question": "Um técnico autenticado envia no corpo tecnico_id=7 para acessar a OS do técnico 7. O que verificar?",
+        "options": [
+          "Apenas se 7 é um inteiro.",
+          "Somente se o JSON está bem formado.",
+          "A permissão da identidade autenticada sobre a OS, sem confiar no ID do corpo como identidade.",
+          "Somente se a URL usa letras minúsculas."
+        ],
+        "answer": 2,
+        "explanation": "Dados controlados pelo cliente não devem redefinir quem ele é nem sua autorização."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Matriz de acesso",
+          "prompt": "Teste o próprio técnico, outro técnico e um administrador na mesma OS.",
+          "hint": "A regra combina papel com vínculo ao recurso.",
+          "solution": "Para OS de 7: identidade técnico 7 é permitida; técnico 2 é negada; admin é permitido segundo o contrato do exemplo.",
+          "criteria": [
+            "Cobre os três resultados.",
+            "Não troca a identidade por um campo da requisição."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Validador estrito",
+          "prompt": "Implemente validar_quantidade para aceitar somente int entre 1 e 100; rejeite True, \"2\", zero e 101.",
+          "hint": "bool é uma subclasse de int em Python.",
+          "solution": "Use type(valor) is int e 1 <= valor <= 100 se esse é o contrato. Converta strings apenas numa etapa explicitamente especificada.",
+          "criteria": [
+            "Aceita 1 e 100.",
+            "Rejeita os quatro exemplos inválidos."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Mensagem pública",
+          "prompt": "Provoque uma falha interna fictícia com token no detalhe e produza uma resposta pública genérica com ID de operação.",
+          "hint": "Não copie str(erro) diretamente para qualquer resposta externa.",
+          "solution": "A resposta pode informar falha interna e um ID. O log interno registra o contexto necessário com o token removido, conforme política definida.",
+          "criteria": [
+            "Token fictício não aparece na resposta.",
+            "Existe um identificador para correlacionar a investigação."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/security_warnings.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 31,
+      "level": 11,
+      "title": "Profiling e medições que sustentam decisões",
+      "goal": "Localizar custos com uma carga reproduzível antes de otimizar.",
+      "theory": [
+        {
+          "title": "Tempo precisa de contexto",
+          "text": "Uma única execução curta sofre influência de inicialização, cache, sistema operacional e outras tarefas. Defina uma carga, repita medições e registre ambiente e dispersão. time.perf_counter mede intervalos; timeit ajuda experimentos pequenos, mas nenhum número isolado representa todos os usos de uma aplicação."
+        },
+        {
+          "title": "Investigar onde custa",
+          "text": "cProfile registra chamadas e tempos para orientar hipóteses. Tempo cumulativo inclui funções chamadas; tempo próprio ajuda a ver o trabalho local. O profiler adiciona overhead, portanto use-o para localizar custos e compare o cenário completo também sem instrumentação."
+        },
+        {
+          "title": "Preserve a correção",
+          "text": "Trocar uma busca linear por um conjunto pode reduzir custo esperado, mas muda aspectos como ordenação, duplicidade e hashability. Antes de anunciar melhoria, use os testes para confirmar equivalência relevante ao domínio. Uma otimização que altera a resposta ou aumenta memória além do limite pode não servir ao sistema."
+        }
+      ],
+      "code": "import cProfile\nimport pstats\n\ndef contar_presentes():\n    catalogo = list(range(300))\n    return sum(1 for n in range(300) if n in catalogo)\n\nperfil = cProfile.Profile()\nresultado = perfil.runcall(contar_presentes)\nprint(\"resultado:\", resultado)\npstats.Stats(perfil).sort_stats(\"cumulative\").print_stats(5)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "A primeira linha é resultado: 300. Depois aparece uma tabela real de profiling; tempos e detalhes dependem do ambiente.",
+      "quiz": {
+        "question": "Qual conclusão é defensável após uma única execução curta ficar mais rápida?",
+        "options": [
+          "Toda aplicação Python ficará mais rápida com essa mudança.",
+          "O profiler provou ausência de bugs.",
+          "Memória e tamanho da entrada nunca importam.",
+          "É uma observação inicial; faltam repetição, contexto e verificação do contrato para generalizar."
+        ],
+        "answer": 3,
+        "explanation": "Medição precisa ser reproduzível e relacionada ao cenário que se pretende melhorar."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Hipótese de busca",
+          "prompt": "Compare a função com uma versão que usa set para o catálogo. Verifique resultado e meça entradas maiores.",
+          "hint": "Inclua o custo de construir a estrutura se ele pertence ao uso real.",
+          "solution": "As duas versões devem contar os mesmos presentes nesse domínio. Registre tempos repetidos com e sem a construção do set de forma claramente separada.",
+          "criteria": [
+            "Resultados coincidem.",
+            "Relatório diz quais custos foram incluídos."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Tempo cumulativo",
+          "prompt": "Leia a tabela do profiler e explique a diferença entre tempo próprio e cumulativo para uma função que chama outra.",
+          "hint": "O cumulativo atribui o trabalho das chamadas à função chamadora.",
+          "solution": "Uma função pode ter pouco tempo próprio e alto cumulativo por esperar trabalho de funções chamadas. Isso orienta qual implementação investigar.",
+          "criteria": [
+            "Usa valores observados da execução.",
+            "Não soma tempos cumulativos como se fossem todos disjuntos."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Regressão antes de ganho",
+          "prompt": "Crie um teste com duplicatas e um relatório que exige ordem. Avalie se substituir toda lista por set preserva esse contrato.",
+          "hint": "Unicidade e ordem de exibição não são a mesma coisa.",
+          "solution": "Um set pode servir para consulta, mantendo outra estrutura para ordem. A mudança indiscriminada pode eliminar duplicatas válidas ou alterar apresentação.",
+          "criteria": [
+            "Cobre duplicidade e ordem.",
+            "Mantém o contrato ou documenta por que a mudança seria inadequada."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/profile.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 32,
+      "level": 11,
+      "title": "Memória, generators e orçamento de recursos",
+      "goal": "Medir alocações e reduzir retenção sem presumir custo zero.",
+      "theory": [
+        {
+          "title": "Memória tem várias camadas",
+          "text": "tracemalloc observa alocações de memória rastreadas pelo Python e ajuda a localizar origem e pico. Ele não equivale a uma medição completa de toda a memória residente do processo ou de extensões nativas. Declare o que a ferramenta mede e o que ficou fora do experimento."
+        },
+        {
+          "title": "Comparar trabalho equivalente",
+          "text": "Uma lista de resultados intermediários materializa todos os itens; uma expressão geradora pode produzir um item por vez para uma redução como sum. Compare o mesmo resultado e mantenha constantes as entradas. O generator também tem estado e referências, portanto não significa uso de memória nulo."
+        },
+        {
+          "title": "Retenção importa",
+          "text": "Caches sem limite, closures e coleções globais podem manter objetos vivos por muito tempo. Descobrir uma alocação grande não prova vazamento: observe crescimento após ciclos equivalentes e verifique se o sistema deveria liberar aqueles dados. Defina limites e descarte consciente de resultados que não serão mais usados."
+        }
+      ],
+      "code": "import tracemalloc\n\ndef medir(funcao):\n    tracemalloc.start()\n    try:\n        resultado = funcao()\n        _, pico = tracemalloc.get_traced_memory()\n        return resultado, pico\n    finally:\n        tracemalloc.stop()\n\nsoma_lista, pico_lista = medir(lambda: sum([n for n in range(10000)]))\nsoma_gerador, pico_gerador = medir(lambda: sum(n for n in range(10000)))\nprint(soma_lista == soma_gerador)\nprint(pico_lista > pico_gerador)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "True\nTrue (comparação do experimento nesta carga; valores de bytes variam com versão e ambiente).",
+      "quiz": {
+        "question": "tracemalloc informa exatamente toda a memória residente usada pelo processo?",
+        "options": [
+          "Não; ele rastreia alocações do Python e não substitui toda medição do processo ou de bibliotecas nativas.",
+          "Sim, incluindo qualquer memória da máquina.",
+          "Somente quando o código usa generators.",
+          "Sim, e também verifica autorização HTTP."
+        ],
+        "answer": 0,
+        "explanation": "Cada instrumento mede um recorte; conclusões precisam respeitar esse alcance."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Escala da entrada",
+          "prompt": "Repita a comparação com 1000, 10000 e 100000 números, registrando resultado e pico.",
+          "hint": "Reinicie a instrumentação para tornar os cenários comparáveis.",
+          "solution": "Registre as duas somas iguais e os picos de cada abordagem. Analise a tendência sem fixar uma quantidade universal de bytes por elemento.",
+          "criteria": [
+            "Três tamanhos foram medidos.",
+            "Os cálculos continuam equivalentes."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Cache limitado",
+          "prompt": "Implemente uma função com functools.lru_cache(maxsize=16) e consulte mais de 16 chaves distintas. Inspecione cache_info.",
+          "hint": "O limite controla entradas, não o tamanho total de cada valor.",
+          "solution": "cache_info().currsize não deve superar 16. Ainda é necessário considerar quanto cada chave e resultado retém.",
+          "criteria": [
+            "Demonstra o limite de entradas.",
+            "Não chama esse limite de orçamento total em bytes."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Retenção por lista",
+          "prompt": "Guarde resultados em uma lista global em vários ciclos e compare com descartar os resultados por ciclo. Use snapshots para investigar.",
+          "hint": "Objetos referenciados continuam vivos mesmo depois do cálculo.",
+          "solution": "A coleção acumulada retém resultados; a versão sem histórico pode liberar objetos. Verifique a necessidade funcional desse histórico antes de removê-lo.",
+          "criteria": [
+            "Identifica uma referência que mantém dados vivos.",
+            "Distingue retenção intencional de vazamento."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/tracemalloc.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 33,
+      "level": 11,
+      "title": "Modelo de objetos, cópias e coleta",
+      "goal": "Entender identidade e tempo de vida sem depender de finalização imediata.",
+      "theory": [
+        {
+          "title": "Identidade e igualdade",
+          "text": "is compara identidade de objetos; == compara igualdade conforme o tipo. Use is None para testar o sentinela, mas não use is para comparar texto ou números pelo valor. Internamento e reutilização de objetos são detalhes que podem fazer exemplos pequenos parecerem funcionar até deixarem de funcionar."
+        },
+        {
+          "title": "Quem ainda aponta para o objeto",
+          "text": "Um objeto pode continuar vivo enquanto existirem referências a ele. del nome remove um vínculo, não uma ordem universal de destruir o objeto naquele instante. CPython combina mecanismos como contagem de referências e coleta de ciclos, mas recursos externos não devem depender do momento em que o coletor rodar."
+        },
+        {
+          "title": "Cópias precisam de intenção",
+          "text": "copy.copy e copy.deepcopy atendem contratos diferentes. Uma cópia profunda pode custar caro e não é uma solução geral para conexões, arquivos ou identidade de entidades. O exemplo usa weakref para observar a presença do objeto sem criar outra referência forte e gc.collect para solicitar uma coleta de laboratório."
+        }
+      ],
+      "code": "import gc\nimport weakref\n\nclass Caixa:\n    pass\n\nobjeto = Caixa()\nobservador = weakref.ref(objeto)\napelido = objeto\ndel objeto\nprint(observador() is not None)\ndel apelido\ngc.collect()\nprint(observador() is None)\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "True\nTrue nas implementações convencionais usadas neste laboratório; não use o momento da coleta para liberar recursos externos.",
+      "quiz": {
+        "question": "O comando del objeto garante que o recurso externo representado por ele foi fechado imediatamente?",
+        "options": [
+          "Sim, em qualquer implementação de Python.",
+          "Não; remova a dependência da coleta usando um ciclo de vida explícito como with.",
+          "Sim, se existir outro apelido.",
+          "Somente se o nome tiver letras minúsculas."
+        ],
+        "answer": 1,
+        "explanation": "Remover um vínculo não substitui o contrato de fechamento de arquivos, conexões ou sockets."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Identidade e valor",
+          "prompt": "Compare duas listas distintas com o mesmo conteúdo usando == e is. Depois crie um apelido.",
+          "hint": "Objetos diferentes podem ter valores iguais.",
+          "solution": "a=[1]; b=[1] produz a==b True e a is b False. c=a produz a is c True.",
+          "criteria": [
+            "Explica as três comparações.",
+            "Não depende de internamento de strings."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Cópia profunda",
+          "prompt": "Copie uma estrutura com lista interna usando copy e deepcopy e compare os efeitos de alterar o nível interno.",
+          "hint": "A profundidade da cópia define quais referências são recriadas.",
+          "solution": "A cópia rasa compartilha a lista interna; deepcopy a recria nesse exemplo de dados simples. Nenhuma operação promete clonar conexões ou efeitos externos.",
+          "criteria": [
+            "Mostra os dois resultados.",
+            "Explica o limite da técnica."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Ciclo de referências",
+          "prompt": "Crie duas instâncias que se referenciam, observe-as por weakref e remova os nomes externos. Compare antes e depois de gc.collect sem usar essa técnica para limpar arquivos.",
+          "hint": "Referências internas podem formar ciclos.",
+          "solution": "A coleta pode remover o ciclo quando não houver mais referências fortes externas. Registre o observado e mantenha recursos externos sob with.",
+          "criteria": [
+            "Não mantém referência forte de observação sem perceber.",
+            "Distingue experimento de contrato de liberação de recurso."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/gc.html",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 34,
+      "level": 12,
+      "title": "Arquitetura por casos de uso e contratos pequenos",
+      "goal": "Reutilizar a mesma regra por CLI e HTTP com dependências explícitas.",
+      "theory": [
+        {
+          "title": "Comece pelo caso de uso",
+          "text": "Uma aplicação pode separar domínio, serviço de aplicação e adaptadores. O domínio representa as regras, o serviço coordena a operação e os adaptadores conversam com terminal, HTTP ou banco. Essa divisão serve para tornar mudanças e testes compreensíveis, não para criar diretórios vazios ou camadas sem função."
+        },
+        {
+          "title": "Inverta a dependência quando ajuda",
+          "text": "O serviço depende de um contrato que descreve obter e salvar, enquanto uma implementação concreta cuida da persistência. Um fake em memória permite testar decisões rapidamente. Testes de integração continuam necessários para verificar transação, SQL e formato real dos adaptadores."
+        },
+        {
+          "title": "Uma regra não tem duas versões",
+          "text": "Se CLI e API confirmam a mesma OS, ambas devem chamar o mesmo caso de uso. Autorização, transação e idempotência precisam de limites definidos para não depender de qual interface foi usada. Retorne um resultado estruturado e deixe cada interface escolher a apresentação adequada."
+        }
+      ],
+      "code": "from dataclasses import dataclass\nfrom typing import Protocol\n\n@dataclass\nclass Ordem:\n    id: int\n    status: str = \"pendente\"\n\nclass Repo(Protocol):\n    def obter(self, identificador: int) -> Ordem | None: ...\n    def salvar(self, ordem: Ordem) -> None: ...\n\nclass Memoria:\n    def __init__(self):\n        self.dados = {1: Ordem(1)}\n    def obter(self, identificador):\n        return self.dados.get(identificador)\n    def salvar(self, ordem):\n        self.dados[ordem.id] = ordem\n\ndef concluir(repo: Repo, identificador: int):\n    ordem = repo.obter(identificador)\n    if ordem is None:\n        raise LookupError(\"ordem ausente\")\n    if ordem.status != \"pendente\":\n        raise ValueError(\"transição inválida\")\n    ordem.status = \"concluida\"\n    repo.salvar(ordem)\n    return {\"id\": ordem.id, \"status\": ordem.status}\n\nprint(concluir(Memoria(), 1))\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "{'id': 1, 'status': 'concluida'}",
+      "quiz": {
+        "question": "Qual parte deve ser reutilizada quando CLI e HTTP concluem a mesma ordem?",
+        "options": [
+          "Somente a string de mensagem de sucesso.",
+          "Um trecho SQL copiado para cada rota.",
+          "O caso de uso que aplica a regra e coordena as dependências.",
+          "A configuração visual da página."
+        ],
+        "answer": 2,
+        "explanation": "Reutilizar a operação evita divergência de regra entre interfaces."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Duas interfaces",
+          "prompt": "Crie uma função de CLI e uma função de adaptação HTTP que chamem concluir com repositórios novos e compare o resultado lógico.",
+          "hint": "A apresentação pode variar; os dados e efeitos devem seguir a mesma regra.",
+          "solution": "A CLI formata um texto e o adaptador HTTP serializa JSON a partir do mesmo retorno. Teste estado final e resultado antes da formatação.",
+          "criteria": [
+            "As duas interfaces concluem a OS uma vez.",
+            "Não duplica a transição de status."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Ausência e repetição",
+          "prompt": "Teste ID ausente e segunda conclusão no mesmo repositório. Compare os tipos de falha esperados.",
+          "hint": "Falhas de busca e de transição têm causas diferentes.",
+          "solution": "ID ausente gera LookupError; repetir a conclusão gera ValueError conforme o contrato desta aula. A próxima aula acrescenta idempotência explícita.",
+          "criteria": [
+            "Distingue as duas falhas.",
+            "Não trata repetição como idempotente sem definir sua chave e contrato."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Limite do fake",
+          "prompt": "Explique por que o fake retorna a mesma instância e como isso pode esconder um problema de salvar. Crie uma versão que devolve cópia.",
+          "hint": "Referência compartilhada pode persistir mudança mesmo sem salvar.",
+          "solution": "Retornar uma cópia da entidade obriga o serviço a chamar salvar para manter o estado. Ainda assim, o fake não prova atomicidade do adaptador SQL.",
+          "criteria": [
+            "Demonstra falha detectada ao omitir salvar.",
+            "Mantém teste de integração para persistência real."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/typing.html#typing.Protocol",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 35,
+      "level": 12,
+      "title": "Idempotência e confirmação atômica",
+      "goal": "Evitar efeitos duplicados quando uma operação é reenviada.",
+      "theory": [
+        {
+          "title": "Repetição acontece",
+          "text": "Um cliente pode não receber a resposta mesmo depois de a operação ter sido concluída e então tentar novamente. Idempotência define o efeito de repetir uma intenção conhecida. Uma chave estável ajuda a reconhecer essa intenção; não deve permitir que outra requisição com conteúdo diferente reutilize silenciosamente uma resposta incompatível."
+        },
+        {
+          "title": "Registro e efeito juntos",
+          "text": "Grave a chave, a identidade do comando e as alterações de domínio na mesma transação. Se a confirmação baixar estoque, uma falha antes do commit precisa desfazer tudo. Uma consulta prévia fora da transação, sozinha, não impede duplicidade sob concorrência; restrições únicas e protocolo transacional continuam necessários."
+        },
+        {
+          "title": "Escopo do laboratório",
+          "text": "O exemplo usa uma conexão local e uma chave única por confirmação de OS. Ele demonstra repetição sequencial e rollback, não prova escalabilidade de uma API distribuída. Produção exige definir escopo da chave, retenção, identidade autorizada, concorrência e como a resposta original será reproduzida com segurança."
+        }
+      ],
+      "code": "import sqlite3\nfrom contextlib import closing\n\ndef confirmar(con, ordem_id, chave):\n    with con:\n        existente = con.execute(\"SELECT ordem_id FROM operacao WHERE chave = ?\", (chave,)).fetchone()\n        if existente:\n            if existente[0] != ordem_id:\n                raise ValueError(\"chave usada em outro comando\")\n            return \"repeticao\"\n        alterada = con.execute(\"UPDATE ordem SET status='concluida' WHERE id=? AND status='pendente'\", (ordem_id,)).rowcount\n        if alterada != 1:\n            raise ValueError(\"ordem inválida\")\n        baixa = con.execute(\"UPDATE estoque SET quantidade=quantidade-1 WHERE id=1 AND quantidade>=1\").rowcount\n        if baixa != 1:\n            raise ValueError(\"estoque insuficiente\")\n        con.execute(\"INSERT INTO operacao VALUES (?, ?)\", (chave, ordem_id))\n    return \"confirmado\"\n\nwith closing(sqlite3.connect(\":memory:\", autocommit=False)) as con:\n    for sql in [\"CREATE TABLE ordem (id INTEGER PRIMARY KEY, status TEXT NOT NULL)\",\n                \"CREATE TABLE estoque (id INTEGER PRIMARY KEY, quantidade INTEGER CHECK(quantidade>=0))\",\n                \"CREATE TABLE operacao (chave TEXT PRIMARY KEY, ordem_id INTEGER NOT NULL)\"]:\n        con.execute(sql)\n    con.execute(\"INSERT INTO ordem VALUES (1, 'pendente')\")\n    con.execute(\"INSERT INTO estoque VALUES (1, 2)\")\n    con.commit()\n    print(confirmar(con, 1, \"confirmacao-1\"))\n    print(confirmar(con, 1, \"confirmacao-1\"))\n    print(con.execute(\"SELECT quantidade FROM estoque WHERE id=1\").fetchone()[0])\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "confirmado\nrepeticao\n1",
+      "quiz": {
+        "question": "Onde gravar a chave idempotente e a baixa de estoque?",
+        "options": [
+          "Em threads independentes sem coordenação.",
+          "Somente na memória do navegador.",
+          "Depois de responder sucesso, sem persistência.",
+          "Na mesma transação das alterações que representam aquela confirmação."
+        ],
+        "answer": 3,
+        "explanation": "A chave e o efeito precisam concordar duravelmente para que repetição não gere uma segunda baixa."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Repetição comprovada",
+          "prompt": "Execute a mesma confirmação três vezes e verifique status, estoque e quantidade de registros de operação.",
+          "hint": "Uma chave representa uma intenção definida.",
+          "solution": "Só a primeira confirmação baixa o estoque; repetições reconhecem a chave. Devem existir uma OS concluída, uma baixa e um registro de operação.",
+          "criteria": [
+            "Quantidade de estoque cai apenas uma vez.",
+            "Existe um único registro para a chave."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Falha parcial",
+          "prompt": "Inicie com estoque zero, tente confirmar e depois confira status e registro da chave.",
+          "hint": "A alteração de status acontece antes da baixa dentro da mesma transação.",
+          "solution": "A baixa não altera nenhuma linha e gera ValueError. O rollback deve manter a OS pendente e a tabela operacao sem aquela chave.",
+          "criteria": [
+            "OS não fica concluída após falha.",
+            "Chave não registra sucesso inexistente."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Conflito de chave",
+          "prompt": "Crie outra OS e tente usar a mesma chave da primeira. Descreva a resposta e o que permanece inalterado.",
+          "hint": "Comparar somente a presença da chave não basta.",
+          "solution": "O serviço rejeita chave usada em outro comando. A segunda OS e o estoque não podem ser alterados por essa tentativa.",
+          "criteria": [
+            "Conflito é visível ao chamador.",
+            "Dados da segunda intenção permanecem intactos."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/sqlite3.html#transaction-control",
+      "caution": "Usa sqlite3 autocommit=False, disponível na base Python 3.12+. A garantia demonstrada é do laboratório sequencial; concorrência e identidade do chamador exigem testes adicionais no sistema completo.",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    },
+    {
+      "id": 36,
+      "level": 12,
+      "title": "Entrega, backup e operação do projeto final",
+      "goal": "Demonstrar instalação, aceitação e recuperação de dados.",
+      "theory": [
+        {
+          "title": "Pronto inclui conseguir repetir",
+          "text": "Uma entrega precisa explicar como criar ambiente, instalar, rodar, testar e reproduzir cenários de aceitação. Registre versões e dados fictícios usados. Outra pessoa deve conseguir iniciar de uma pasta nova sem depender de um arquivo pessoal que existe apenas no seu computador."
+        },
+        {
+          "title": "Backup só vale quando restaura",
+          "text": "Para SQLite, a API de backup copia um banco de forma coordenada; copiar arbitrariamente arquivos enquanto há escrita exige atenção ao protocolo e ao modo de journal. Faça o backup, restaure num destino separado e consulte dados e versão de esquema. Nunca descubra a restauração pela primeira vez durante uma perda real."
+        },
+        {
+          "title": "Operação encerra o ciclo",
+          "text": "A aplicação precisa sinalizar falhas, limitar trabalho e encerrar recursos. Registre um roteiro que prova confirmação única, rollback, autorização e recuperação após reinício. A trilha fornece fundamentos e laboratórios avançados; concluir horas e quizzes não substitui revisão de código e experiência com um ambiente real."
+        }
+      ],
+      "code": "import sqlite3\nfrom contextlib import closing\n\nwith closing(sqlite3.connect(\":memory:\")) as origem, closing(sqlite3.connect(\":memory:\")) as restaurado:\n    origem.execute(\"CREATE TABLE ordem (id INTEGER PRIMARY KEY, status TEXT)\")\n    origem.executemany(\"INSERT INTO ordem VALUES (?, ?)\", [(1, \"pendente\"), (2, \"concluida\")])\n    origem.execute(\"PRAGMA user_version = 1\")\n    origem.commit()\n    origem.backup(restaurado)\n    print(restaurado.execute(\"SELECT COUNT(*) FROM ordem\").fetchone()[0])\n    print(restaurado.execute(\"PRAGMA user_version\").fetchone()[0])\n    print(restaurado.execute(\"PRAGMA integrity_check\").fetchone()[0])\n",
+      "filename": "main.py",
+      "language": "python",
+      "run": "python main.py",
+      "expected": "2\n1\nok",
+      "quiz": {
+        "question": "O que comprova que um backup é utilizável no cenário planejado?",
+        "options": [
+          "Restaurá-lo num destino separado e verificar dados, esquema e funcionamento esperado.",
+          "Somente existir um arquivo com extensão .bak.",
+          "Somente o comando de cópia retornar zero.",
+          "Apagar o banco original antes de testar."
+        ],
+        "answer": 0,
+        "explanation": "A recuperação precisa ser demonstrada sem colocar o original em risco."
+      },
+      "exercises": [
+        {
+          "id": 1,
+          "title": "Backup em arquivo",
+          "prompt": "Na pasta de laboratório, grave backup SQLite, reabra-o numa nova conexão e verifique contagem e esquema.",
+          "hint": "Use a API backup e feche as conexões.",
+          "solution": "Abra um destino SQLite, copie com origem.backup(destino), feche e reabra o destino. Consulte registros e user_version sem substituir o original.",
+          "criteria": [
+            "Destino reaberto contém os dados esperados.",
+            "Original continua preservado."
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Aceitação final",
+          "prompt": "Monte um roteiro automatizado: criar OS, confirmar, repetir, tentar acesso de outro técnico e simular falta de estoque.",
+          "hint": "Verifique status, quantidade e erros em cada fronteira.",
+          "solution": "O roteiro exige uma única baixa na repetição, nega acesso alheio e comprova rollback quando o estoque não permite concluir. Cada expectativa deve observar dados e resultado.",
+          "criteria": [
+            "Cobre os cinco cenários com asserções.",
+            "Falha em uma regra encerra a verificação com resultado de erro."
+          ]
+        },
+        {
+          "id": 3,
+          "title": "README de operação",
+          "prompt": "Documente ambiente novo, instalação local, testes, início, parada, backup e restauração. Peça uma execução sem consultar seu histórico.",
+          "hint": "Comandos completos e diretórios importam tanto quanto o código.",
+          "solution": "Inclua versões compatíveis, configuração fictícia, comandos e critérios de sucesso. Separe servidor didático local de requisitos futuros para produção.",
+          "criteria": [
+            "Procedimento é reproduzível numa pasta nova.",
+            "Limitações e recuperação são descritas sem prometer prontidão de produção."
+          ]
+        }
+      ],
+      "source": "https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.backup",
+      "caution": "",
+      "local": true,
+      "hours": 6,
+      "minutes": 45
+    }
+  ]
+}
